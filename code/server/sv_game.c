@@ -1083,3 +1083,12 @@ qboolean SV_GameCommand( void ) {
     return VM_Call( gvm, GAME_CONSOLE_COMMAND );
 }
 
+
+qboolean SV_SendRconLog(char* ip, char* command) {
+    if (sv.state != SS_GAME) {
+        return qfalse;
+    }
+
+    return VM_Call(gvm, GAME_RCON_LOG, ip, command);
+}
+

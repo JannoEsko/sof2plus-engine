@@ -760,6 +760,10 @@ static void SVC_RemoteCommand( netadr_t from, msg_t *msg ) {
         Q_strcat( remaining, sizeof(remaining), cmd_aux);
 
         Cmd_ExecuteString (remaining);
+        // allow the game module to log RCON actions.
+        // this was done with a patch in 1fx. Mod, but thanks to having an open-sourced engine
+        // we can do this here.
+        SV_SendRconLog(NET_AdrToString(from), remaining);
 
     }
 
