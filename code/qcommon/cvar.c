@@ -1265,8 +1265,23 @@ char *Cvar_InfoString_Big(int bit)
 
     for (var = cvar_vars; var; var = var->next)
     {
-        if(var->name && (var->flags & bit))
-            Info_SetValueForKey_Big (info, var->name, var->string);
+        if (var->name && (var->flags & bit)) {
+
+            if (bit == CVAR_SYSTEMINFO) {
+                if (!Q_stricmp(var->name, "fs_game")) {
+                    cvar_t* clientmod = Cvar_FindVar("sv_clientMod");
+
+                    if (clientmod && clientmod->string && strlen(clientmod->string) > 0) {
+                        Info_SetValueForKey_Big(info, var->name, clientmod->string);
+                        continue;
+                    }
+                }
+            }
+            
+
+            Info_SetValueForKey_Big(info, var->name, var->string);
+        }
+            
     }
     return info;
 }

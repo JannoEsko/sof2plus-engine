@@ -269,6 +269,7 @@ extern  cvar_t  *sv_floodProtect;
 extern  cvar_t  *sv_mapcycle;
 extern  cvar_t  *sv_lanForceRate;
 extern  cvar_t  *sv_banFile;
+extern  cvar_t  *sv_clientMod;
 
 extern  serverBan_t serverBans[SERVER_MAXBANS];
 extern  int serverBansCount;

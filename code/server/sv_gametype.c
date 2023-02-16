@@ -124,11 +124,17 @@ gametype module.
 void SV_GT_Init(const char *gametype, qboolean restart)
 {
     // Do a restart or a full initialization.
-    if(restart){
+    // restart commented out because map_restart crashes GT VM.
+    // therefore let the serverfully init the gt again.
+#if 0
+    if (restart) {
         SV_RestartGametypeProgs();
-    }else{
+    }else{ 
+#endif
         SV_InitGametypeProgs(gametype);
-    }
+#if 0 
+    } 
+#endif
 
     // Execute the initialization routine
     // of the loaded gametype module.

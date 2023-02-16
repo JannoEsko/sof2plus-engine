@@ -621,7 +621,7 @@ void SV_SpawnServer( char *server, qboolean killBots ) {
     Cvar_Set( "sv_referencedPaks", p );
     p = FS_ReferencedPakNames();
     Cvar_Set( "sv_referencedPakNames", p );
-
+    sv_clientMod = Cvar_Get("sv_clientMod", "", CVAR_LATCH); // sysinfo fs_game spoof
     // save systeminfo and serverinfo strings
     Q_strncpyz( systemInfo, Cvar_InfoString_Big( CVAR_SYSTEMINFO ), sizeof( systemInfo ) );
     cvar_modifiedFlags &= ~CVAR_SYSTEMINFO;
