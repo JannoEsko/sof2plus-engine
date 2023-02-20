@@ -1425,7 +1425,15 @@ static qboolean SV_ClientCommand( client_t *cl, msg_t *msg ) {
     }
 
     // don't allow another command for one second
-    cl->nextReliableTime = svs.time + 1000;
+    // janno 200223 - allow some commands to spam a bit faster.
+    
+    if (strstr(s, "uef") || strstr(s, "verified")) {
+        cl->nextReliableTime = svs.time + 250;
+    } else {
+        cl->nextReliableTime = svs.time + 1000;
+    }
+    
+    
 
     SV_ExecuteClientCommand( cl, s, clientOk );
 
