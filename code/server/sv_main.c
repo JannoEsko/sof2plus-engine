@@ -56,6 +56,7 @@ cvar_t  *sv_mapcycle;
 cvar_t  *sv_lanForceRate; // dedicated 1 (LAN) server forces local client rates to 99999 (bug #491)
 cvar_t  *sv_banFile;
 cvar_t  *sv_clientMod;
+cvar_t  *sv_smartDownload;      // if 1, then the referenced paks will only contain the pak names of the current map.
 
 serverBan_t serverBans[SERVER_MAXBANS];
 int serverBansCount = 0;

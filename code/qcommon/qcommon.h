@@ -692,6 +692,7 @@ void    FS_FilenameCompletion( const char *dir, const char *ext,
 
 const char *FS_GetCurrentGameDir(void);
 qboolean FS_Which(const char *filename, void *searchPath);
+qboolean FS_FindPakByFile(const char *fileName, char** gameName, char** baseName, int* checksumOut);
 
 /*
 ==============================================================

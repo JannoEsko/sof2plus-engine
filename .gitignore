@@ -40,3 +40,4 @@ profile
 *.opensdf
 *.suo
 .vs
+.vscode/settings.json

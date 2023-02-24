@@ -617,10 +617,35 @@ void SV_SpawnServer( char *server, qboolean killBots ) {
     }
     // the server sends these to the clients so they can figure
     // out which pk3s should be auto-downloaded
-    p = FS_ReferencedPakChecksums();
-    Cvar_Set( "sv_referencedPaks", p );
-    p = FS_ReferencedPakNames();
-    Cvar_Set( "sv_referencedPakNames", p );
+    sv_smartDownload = Cvar_Get("sv_smartDownload", "1", CVAR_LATCH);
+
+    if (sv_smartDownload->integer) {
+        // we only ask for the pk3 file which contains the current map.
+        char* gamename;
+        char* basename;
+        int pk3checksum = 0;
+
+        qboolean res = FS_FindPakByFile(va("maps/%s.bsp", server), &gamename, &basename, &pk3checksum);
+
+        if (res) {
+            Cvar_Set("sv_referencedPakNames", va("%s/%s", gamename, basename));
+            Cvar_Set("sv_referencedPaks", va("%d", pk3checksum));
+        } else {
+            p = FS_ReferencedPakChecksums();
+            Cvar_Set( "sv_referencedPaks", p );
+            p = FS_ReferencedPakNames();
+            Cvar_Set( "sv_referencedPakNames", p );
+        }
+
+
+
+    } else {
+        p = FS_ReferencedPakChecksums();
+        Cvar_Set( "sv_referencedPaks", p );
+        p = FS_ReferencedPakNames();
+        Cvar_Set( "sv_referencedPakNames", p );
+    }
+
     sv_clientMod = Cvar_Get("sv_clientMod", "", CVAR_LATCH); // sysinfo fs_game spoof
     // save systeminfo and serverinfo strings
     Q_strncpyz( systemInfo, Cvar_InfoString_Big( CVAR_SYSTEMINFO ), sizeof( systemInfo ) );
