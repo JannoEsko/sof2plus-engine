@@ -271,6 +271,7 @@ extern  cvar_t  *sv_lanForceRate;
 extern  cvar_t  *sv_banFile;
 extern  cvar_t  *sv_clientMod;
 extern  cvar_t  *sv_smartDownload;
+extern  cvar_t  *sv_smartAdditionalPaks;
 
 extern  serverBan_t serverBans[SERVER_MAXBANS];
 extern  int serverBansCount;

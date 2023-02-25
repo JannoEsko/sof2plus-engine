@@ -57,6 +57,7 @@ cvar_t  *sv_lanForceRate; // dedicated 1 (LAN) server forces local client rates 
 cvar_t  *sv_banFile;
 cvar_t  *sv_clientMod;
 cvar_t  *sv_smartDownload;      // if 1, then the referenced paks will only contain the pak names of the current map.
+cvar_t  *sv_smartAdditionalPaks;  // this is used to concat the additional pk3 files into the referenced files when sv_smartDownload is used (as that will only keep map pk3 in the ref files)
 
 serverBan_t serverBans[SERVER_MAXBANS];
 int serverBansCount = 0;
