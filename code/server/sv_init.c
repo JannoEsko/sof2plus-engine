@@ -635,7 +635,7 @@ void SV_SpawnServer( char *server, qboolean killBots ) {
         if (res) {
 
             // spoof the pk3 path name. Make sure to account for it when client is about to request a file.
-            if (Q_stricmp(gamename, sv_clientMod->string) && !Q_stricmp(gamename, fsGame)) {
+            if (sv_clientMod->string && strlen(sv_clientMod->string) > 0 && Q_stricmp(gamename, sv_clientMod->string) && !Q_stricmp(gamename, fsGame)) {
                 gamename = sv_clientMod->string;
             }
 
