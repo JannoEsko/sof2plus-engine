@@ -3517,7 +3517,8 @@ const char *FS_ReferencedPakNames( void ) {
     searchpath_t    *search;
 
     info[0] = 0;
-
+    char* clientModString = Cvar_VariableString("sv_clientMod");
+    
     // we want to return ALL pk3's from the fs_game path
     // and referenced one's from baseq3
     for ( search = fs_searchpaths ; search ; search = search->next ) {
@@ -3527,7 +3528,14 @@ const char *FS_ReferencedPakNames( void ) {
                 if (*info) {
                     Q_strcat(info, sizeof( info ), " " );
                 }
-                Q_strcat( info, sizeof( info ), search->pack->pakGamename );
+
+                if (clientModString && Q_stricmp(search->pack->pakGamename, clientModString) && fs_gamedirvar && fs_gamedirvar->string && !Q_stricmp(fs_gamedirvar->string, search->pack->pakGamename)) {
+                    Q_strcat( info, sizeof( info ), clientModString );
+                } else {
+                    Q_strcat( info, sizeof( info ), search->pack->pakGamename );
+                }
+
+                
                 Q_strcat( info, sizeof( info ), "/" );
                 Q_strcat( info, sizeof( info ), search->pack->pakBasename );
             }

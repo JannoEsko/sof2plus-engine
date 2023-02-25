@@ -793,7 +793,7 @@ int SV_WriteDownloadToClient(client_t *cl, msg_t *msg)
     int curindex;
     int unreferenced = 1;
     char errorMessage[1024];
-    char pakbuf[MAX_QPATH], *pakptr;
+    char pakbuf[MAX_QPATH], spoofBuf[MAX_QPATH], *pakptr;
     int numRefPaks;
 
     if (!*cl->downloadName)
@@ -803,7 +803,35 @@ int SV_WriteDownloadToClient(client_t *cl, msg_t *msg)
     {
         qboolean idPack = qfalse;
 
-        // Chop off filename extension.
+        // As fs_game is spoofed and the client sees a different fs_game than what the server uses,
+        // there's an issue with autodownloads, where the download will just keep on looping because 
+        // it is written into a folder not referenced by the client game.
+        // so the solution / workaround is to spoof fs_game vals to sv_clientMod (given that is entered)
+        // in the referenced paks. This here now undoes the spoof and directs the request to the correct file.
+        Com_sprintf(pakbuf, sizeof(pakbuf), "%s", cl->downloadName);
+
+        char* token = strtok(pakbuf, "/");
+        qboolean fsGameSpoofReplaced = qfalse, isFirstToken = qtrue;
+        char* fsGame = Cvar_VariableString("fs_game");
+
+        while (token != NULL) {
+
+            if (isFirstToken) {
+                isFirstToken = qfalse;
+
+                if (!Q_stricmp(token, sv_clientMod->string)) {
+                    fsGameSpoofReplaced = qtrue;
+                    Q_strncpyz(spoofBuf, fsGame, sizeof(spoofBuf));
+                } else {
+                    break;
+                }
+            } else {
+                Q_strcat(spoofBuf, sizeof(spoofBuf), va("/%s", token));
+            }
+
+            token = strtok(NULL, "/");
+        }
+
         Com_sprintf(pakbuf, sizeof(pakbuf), "%s", cl->downloadName);
         pakptr = strrchr(pakbuf, '.');
 
@@ -843,7 +871,7 @@ int SV_WriteDownloadToClient(client_t *cl, msg_t *msg)
         if ( !(sv_allowDownload->integer & DLF_ENABLE) ||
             (sv_allowDownload->integer & DLF_NO_UDP) ||
             idPack || unreferenced ||
-            ( cl->downloadSize = FS_SV_FOpenFileRead( cl->downloadName, &cl->download ) ) < 0 ) {
+            ( cl->downloadSize = FS_SV_FOpenFileRead( fsGameSpoofReplaced ? spoofBuf : cl->downloadName, &cl->download ) ) < 0 ) {
             // cannot auto-download file
             if(unreferenced)
             {

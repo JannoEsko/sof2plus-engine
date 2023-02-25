@@ -615,6 +615,9 @@ void SV_SpawnServer( char *server, qboolean killBots ) {
         Cvar_Set( "sv_paks", "" );
         Cvar_Set( "sv_pakNames", "" );
     }
+
+    sv_clientMod = Cvar_Get("sv_clientMod", "", CVAR_ARCHIVE | CVAR_LATCH); // sysinfo fs_game spoof
+
     // the server sends these to the clients so they can figure
     // out which pk3s should be auto-downloaded
     sv_smartDownload = Cvar_Get("sv_smartDownload", "1", CVAR_ARCHIVE | CVAR_LATCH);
@@ -626,10 +629,16 @@ void SV_SpawnServer( char *server, qboolean killBots ) {
         char* basename;
         int checksum = 0;
         char refPaks[BIG_INFO_STRING], refChecksums[BIG_INFO_STRING];
-
+        char* fsGame = Cvar_VariableString("fs_game");
         qboolean res = FS_FindPakByFile(va("maps/%s.bsp", server), &gamename, &basename, &checksum);
 
         if (res) {
+
+            // spoof the pk3 path name. Make sure to account for it when client is about to request a file.
+            if (Q_stricmp(gamename, sv_clientMod->string) && !Q_stricmp(gamename, fsGame)) {
+                gamename = sv_clientMod->string;
+            }
+
             Q_strncpyz(refPaks, va("%s/%s", gamename, basename), sizeof(refPaks));
             Q_strncpyz(refChecksums, va("%d", checksum), sizeof(refChecksums));
 
@@ -644,6 +653,10 @@ void SV_SpawnServer( char *server, qboolean killBots ) {
                     res = FS_FindPakByPakName(token, &gamename, &basename, &checksum);
 
                     if (res) {
+
+                        if (Q_stricmp(gamename, sv_clientMod->string) && !Q_stricmp(gamename, fsGame)) {
+                            gamename = sv_clientMod->string;
+                        }
                         Q_strcat(refPaks, sizeof(refPaks), va(" %s/%s", gamename, basename));
                         Q_strcat(refChecksums, sizeof(refChecksums), va(" %d", checksum));
                     }
@@ -671,7 +684,6 @@ void SV_SpawnServer( char *server, qboolean killBots ) {
         Cvar_Set( "sv_referencedPakNames", p );
     }
 
-    sv_clientMod = Cvar_Get("sv_clientMod", "", CVAR_ARCHIVE | CVAR_LATCH); // sysinfo fs_game spoof
     // save systeminfo and serverinfo strings
     Q_strncpyz( systemInfo, Cvar_InfoString_Big( CVAR_SYSTEMINFO ), sizeof( systemInfo ) );
     cvar_modifiedFlags &= ~CVAR_SYSTEMINFO;
