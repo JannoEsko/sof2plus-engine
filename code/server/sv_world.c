@@ -446,7 +446,7 @@ typedef struct {
     vec3_t      boxmins, boxmaxs;// enclose the test object along entire move
     const float *mins;
     const float *maxs;  // size of the moving object
-    const float *start;
+    vec3_t      start;
     vec3_t      end;
     trace_t     trace;
     int         passEntityNum;
@@ -487,8 +487,8 @@ void SV_ClipToEntity( trace_t *trace, const vec3_t start, const vec3_t mins, con
         angles = vec3_origin;   // boxes don't rotate
     }
 
-    CM_TransformedBoxTrace ( trace, (float *)start, (float *)end,
-        (float *)mins, (float *)maxs, clipHandle,  contentmask,
+    CM_TransformedBoxTrace ( trace, start, end,
+        mins, maxs, clipHandle,  contentmask,
         origin, angles, capsule);
 
     if ( trace->fraction < 1 ) {
@@ -559,14 +559,20 @@ static void SV_ClipMoveToEntities( moveclip_t *clip ) {
             angles = vec3_origin;   // boxes don't rotate
         }
 
-        CM_TransformedBoxTrace ( &trace, (float *)clip->start, (float *)clip->end,
-            (float *)clip->mins, (float *)clip->maxs, clipHandle,  clip->contentmask,
+        CM_TransformedBoxTrace ( &trace, clip->start, clip->end,
+            clip->mins, clip->maxs, clipHandle,  clip->contentmask,
             origin, angles, clip->capsule);
 
         if ( trace.allsolid ) {
+            if (!clip->trace.allsolid) {
+                clip->trace.entityNum = touch->s.number;
+            }
             clip->trace.allsolid = qtrue;
             trace.entityNum = touch->s.number;
         } else if ( trace.startsolid ) {
+            if (!clip->trace.allsolid) {
+                clip->trace.entityNum = touch->s.number;
+            }
             clip->trace.startsolid = qtrue;
             trace.entityNum = touch->s.number;
         }
@@ -615,7 +621,8 @@ void SV_Trace( trace_t *results, const vec3_t start, vec3_t mins, vec3_t maxs, c
     }
 
     clip.contentmask = contentmask;
-    clip.start = start;
+    //clip.start = start;
+    VectorCopy( start, clip.start );
 //  VectorCopy( clip.trace.endpos, clip.end );
     VectorCopy( end, clip.end );
     clip.mins = mins;

@@ -1084,7 +1084,7 @@ qboolean SV_GameCommand( void ) {
 }
 
 
-qboolean SV_SendRconLog(char* ip, char* command) {
+qboolean SV_SendRconLog(const char* ip, char* command) {
     if (sv.state != SS_GAME) {
         return qfalse;
     }

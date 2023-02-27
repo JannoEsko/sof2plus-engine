@@ -79,7 +79,7 @@ SV_RestartGametypeProgs
 Called on a map_restart, but
 not on a normal map change.
 ===================
-*/
+
 
 static void SV_RestartGametypeProgs(void)
 {
@@ -93,7 +93,7 @@ static void SV_RestartGametypeProgs(void)
         Com_Error(ERR_FATAL, "VM_Restart on gametype failed");
     }
 }
-
+*/
 /*
 ===============
 SV_InitGametypeProgs
