@@ -596,7 +596,7 @@ static void SV_SendClientGameState( client_t *client ) {
     MSG_WriteLong( &msg, sv.checksumFeed);
 
     //rwwRMG - send info for the terrain
-    MSG_WriteShort ( &msg, 0 );
+    //MSG_WriteShort ( &msg, 0 ); // Working assumption was that this is RMG info. But this is not present in 1.00
 
     // no Roger Wilco voice communication support in SoF2Plus
     MSG_WriteLong ( &msg, 0 );
