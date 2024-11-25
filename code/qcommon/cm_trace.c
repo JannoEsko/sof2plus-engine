@@ -1289,6 +1289,17 @@ void CM_TraceThroughTree(clipMap_t *cm, traceWork_t *tw, int num, float p1f, flo
     node = cm->nodes + num;
     plane = node->plane;
 
+    cvar_t* traceTest = Cvar_Get("deb_tracetest", "0", CVAR_ARCHIVE);
+
+    if (traceTest->integer) {
+        CM_TraceThroughTree(cm, tw, node->children[0], p1f, p2f, p1, p2);
+        CM_TraceThroughTree(cm, tw, node->children[1], p1f, p2f, p1, p2);
+
+        return;
+    }
+
+    
+
     // adjust the plane distance appropriately for mins/maxs
     if ( plane->type < 3 ) {
         t1 = p1[plane->type] - plane->dist;
@@ -1376,7 +1387,7 @@ CM_Trace
 ==================
 */
 void CM_Trace( trace_t *results, const vec3_t start, const vec3_t end, vec3_t mins, vec3_t maxs,
-                          clipHandle_t model, const vec3_t origin, int brushmask, int capsule, sphere_t *sphere ) {
+                          clipHandle_t model, const vec3_t origin, int brushmask, int capsule, sphere_t *sphere ) { // float *__cdecl sub_8064298 in sof2ded 1.00
     int         i;
     traceWork_t tw;
     vec3_t      offset;
@@ -1508,6 +1519,16 @@ void CM_Trace( trace_t *results, const vec3_t start, const vec3_t end, vec3_t mi
                 CM_TestInLeaf( cm, &tw, &cmod->leaf );
             }
             else
+                /*
+                254 = CAPSULE_MODEL_HANDLE
+                if ( a6 == 254 )
+                {
+                  if ( v75 == 0.0 )
+                    sub_8062058(&v30, v10, 254);
+                  else
+                    sub_8061B18(&v30, v10, 254);
+                }
+                */
 #elif defined(ALWAYS_CAPSULE_VS_CAPSULE)
             if ( model == BOX_MODEL_HANDLE || model == CAPSULE_MODEL_HANDLE) {
                 CM_TestCapsuleInCapsule( &tw, model );
@@ -1518,6 +1539,15 @@ void CM_Trace( trace_t *results, const vec3_t start, const vec3_t end, vec3_t mi
                 if ( tw.sphere.use ) {
                     CM_TestCapsuleInCapsule( &tw, model );
                 }
+                /*
+                if ( a6 == 254 )
+                {
+                  if ( v75 == 0.0 )
+                    sub_8062058(&v30, v10, 254);
+                  else
+                    sub_8061B18(&v30, v10, 254);
+                }
+                */
                 else {
                     CM_TestBoundingBoxInCapsule( &tw, model );
                 }
@@ -1525,11 +1555,11 @@ void CM_Trace( trace_t *results, const vec3_t start, const vec3_t end, vec3_t mi
             else {
                 CM_TestInLeaf( cm, &tw, &cmod->leaf );
             }
-        } else /*if ( cmod->firstNode == -1 )*/ { // this is commented out due to this check causing a clipping issue. FIXME find the actual reason
+        } else if ( cmod->firstNode == -1 ) { // this is commented out due to this check causing a clipping issue. FIXME find the actual reason
             CM_PositionTest( &tw );
-        /*} else { 
+        } else { 
             CM_TraceThroughTree( cm, &tw, cmod->firstNode, 0, 1, tw.start, tw.end );
-        */}
+        }
     } else {
         //
         // check for point special case
