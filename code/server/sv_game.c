@@ -400,7 +400,7 @@ intptr_t SV_GameSystemCalls( intptr_t *args ) {
     case G_ENTITY_CONTACTCAPSULE:
         return SV_EntityContact( VMA(1), VMA(2), VMA(3), /*int capsule*/ qtrue );
     case G_TRACE:
-        SV_Trace( VMA(1), VMA(2), VMA(3), VMA(4), VMA(5), args[6], args[7], /*int capsule*/ qfalse ); // sub_8058058 in sof2ded
+        SV_Trace( VMA(1), VMA(2), VMA(3), VMA(4), VMA(5), args[6], args[7], /*int capsule*/ qfalse );
         return 0;
     case G_TRACECAPSULE:
         SV_Trace( VMA(1), VMA(2), VMA(3), VMA(4), VMA(5), args[6], args[7], /*int capsule*/ qtrue );
