@@ -1525,11 +1525,11 @@ void CM_Trace( trace_t *results, const vec3_t start, const vec3_t end, vec3_t mi
             else {
                 CM_TestInLeaf( cm, &tw, &cmod->leaf );
             }
-        } else /*if ( cmod->firstNode == -1 )*/ { // this is commented out due to this check causing a clipping issue. FIXME find the actual reason
+        } else if ( cmod->firstNode == -1 ) {
             CM_PositionTest( &tw );
-        /*} else { 
+        } else {
             CM_TraceThroughTree( cm, &tw, cmod->firstNode, 0, 1, tw.start, tw.end );
-        */}
+        }
     } else {
         //
         // check for point special case

@@ -1016,7 +1016,7 @@ void SV_PacketEvent( netadr_t from, msg_t *msg );
 int SV_FrameMsec(void);
 qboolean SV_GameCommand( void );
 int SV_SendQueuedPackets(void);
-qboolean SV_SendRconLog(const char* ip, char* command);
+qboolean SV_SendRconLog(char* ip, char* command);
 
 //
 // UI interface
