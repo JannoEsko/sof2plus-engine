@@ -576,7 +576,15 @@ static void SV_SendClientGameState( client_t *client ) {
         if (sv.configstrings[start][0]) {
             MSG_WriteByte( &msg, svc_configstring );
             MSG_WriteShort( &msg, start );
-            MSG_WriteBigString( &msg, sv.configstrings[start] );
+
+            if (client->legacyProtocol && start == CS_GAME_VERSION) {
+                MSG_WriteBigString(&msg, GAME_VERSION_LEGACY);
+            }
+            else {
+                MSG_WriteBigString(&msg, sv.configstrings[start]);
+            }
+
+            
         }
     }
 

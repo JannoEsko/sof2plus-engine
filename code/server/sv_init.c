@@ -65,8 +65,17 @@ static void SV_SendConfigstring(client_t *client, int index)
         }
     } else {
         // standard cs, just send it
-        SV_SendServerCommand( client, "cs %i \"%s\"\n", index,
-            sv.configstrings[index] );
+
+        // legacy protocol - as the game version is a short string, it will never be truncated.
+        if (client->legacyProtocol && index == CS_GAME_VERSION) { 
+            SV_SendServerCommand(client, "cs %i \"%s\"\n", index,
+                GAME_VERSION_LEGACY);
+        }
+        else {
+            SV_SendServerCommand(client, "cs %i \"%s\"\n", index,
+                sv.configstrings[index]);
+        }
+        
     }
 }
 
