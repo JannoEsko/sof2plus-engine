@@ -109,6 +109,19 @@ static cvar_t   *net_port6;
 static cvar_t   *net_mcast6addr;
 static cvar_t   *net_mcast6iface;
 
+/*
+* Legacy protocol.
+* In effect, the game will listen to 2 sockets 
+* (IPv6 and SOCKS will be disabled with having multiprotocol, as vanilla SoF2MP does not support IPv6 and SOCKS hasn't been in use in the game).
+* Whilst there are possibilities to also listen from a single socket and have a differentiation done by the client,
+* the problem is that the masterserver will query for serverinfo to understand which game should see the server information.
+* With 1fxmaster, we could have a workaround for it, but with the "official" masterserver, we are tied.
+* So, the game will have different sockets and the "isLegacy" qboolean will be set depending on which socket the call came from.
+*/
+//static cvar_t*  net_multiprotocol; moved to com_ group to have access to it in e.g. masterserver function.
+static cvar_t*  legacy_net_port;
+static cvar_t*  legacy_net_port6; // CVAR for it will be kept because if iosof2mp will be finalized at one point, then that means that this could become useful again.
+
 static cvar_t   *net_dropsim;
 
 static struct sockaddr  socksRelayAddr;
@@ -117,6 +130,12 @@ static SOCKET   ip_socket = INVALID_SOCKET;
 static SOCKET   ip6_socket = INVALID_SOCKET;
 static SOCKET   socks_socket = INVALID_SOCKET;
 static SOCKET   multicast6_socket = INVALID_SOCKET;
+
+static SOCKET   legacy_ip_socket = INVALID_SOCKET;
+static SOCKET   legacy_ip6_socket = INVALID_SOCKET;
+static SOCKET   legacy_socks_socket = INVALID_SOCKET;
+static SOCKET   legacy_multicast6_socket = INVALID_SOCKET;
+
 
 // Keep track of currently joined multicast group.
 static struct ipv6_mreq curgroup;
@@ -520,7 +539,7 @@ NET_GetPacket
 Receive one packet
 ==================
 */
-qboolean NET_GetPacket(netadr_t *net_from, msg_t *net_message, fd_set *fdr)
+qboolean NET_GetPacket(netadr_t *net_from, msg_t *net_message, fd_set *fdr, qboolean *legacyProtocol)
 {
     int     ret;
     struct sockaddr_storage from;
@@ -599,6 +618,82 @@ qboolean NET_GetPacket(netadr_t *net_from, msg_t *net_message, fd_set *fdr)
         }
     }
 
+    // legacy protocol.
+    if (legacy_ip_socket != INVALID_SOCKET && FD_ISSET(legacy_ip_socket, fdr))
+    {
+        fromlen = sizeof(from);
+        ret = recvfrom(legacy_ip_socket, (void*)net_message->data, net_message->maxsize, 0, (struct sockaddr*)&from, &fromlen);
+
+        if (ret == SOCKET_ERROR)
+        {
+            err = socketError;
+
+            if (err != EAGAIN && err != ECONNRESET)
+                Com_Printf("NET_GetPacket: %s\n", NET_ErrorString());
+        }
+        else
+        {
+
+            memset(((struct sockaddr_in*)&from)->sin_zero, 0, 8);
+
+            if (usingSocks && memcmp(&from, &socksRelayAddr, fromlen) == 0) {
+                if (ret < 10 || net_message->data[0] != 0 || net_message->data[1] != 0 || net_message->data[2] != 0 || net_message->data[3] != 1) {
+                    return qfalse;
+                }
+                net_from->type = NA_IP;
+                net_from->ip[0] = net_message->data[4];
+                net_from->ip[1] = net_message->data[5];
+                net_from->ip[2] = net_message->data[6];
+                net_from->ip[3] = net_message->data[7];
+                net_from->port = *(short*)&net_message->data[8];
+                net_message->readcount = 10;
+            }
+            else {
+                SockadrToNetadr((struct sockaddr*)&from, net_from);
+                net_message->readcount = 0;
+            }
+
+            if (ret >= net_message->maxsize) {
+                Com_Printf("Oversize packet from %s\n", NET_AdrToString(*net_from));
+                return qfalse;
+            }
+
+            net_message->cursize = ret;
+            *legacyProtocol = qtrue;
+            return qtrue;
+        }
+    }
+
+    if (legacy_ip6_socket != INVALID_SOCKET && FD_ISSET(legacy_ip6_socket, fdr))
+    {
+        fromlen = sizeof(from);
+        ret = recvfrom(legacy_ip6_socket, (void*)net_message->data, net_message->maxsize, 0, (struct sockaddr*)&from, &fromlen);
+
+        if (ret == SOCKET_ERROR)
+        {
+            err = socketError;
+
+            if (err != EAGAIN && err != ECONNRESET)
+                Com_Printf("NET_GetPacket: %s\n", NET_ErrorString());
+        }
+        else
+        {
+            SockadrToNetadr((struct sockaddr*)&from, net_from);
+            net_message->readcount = 0;
+
+            if (ret >= net_message->maxsize)
+            {
+                Com_Printf("Oversize packet from %s\n", NET_AdrToString(*net_from));
+                return qfalse;
+            }
+
+            net_message->cursize = ret;
+            *legacyProtocol = qtrue;
+            return qtrue;
+        }
+    }
+
+    // No multicast support when legacy protocol is enabled, but that is already disabled before this call.
     if(multicast6_socket != INVALID_SOCKET && multicast6_socket != ip6_socket && FD_ISSET(multicast6_socket, fdr))
     {
         fromlen = sizeof(from);
@@ -640,7 +735,7 @@ static char socksBuf[4096];
 Sys_SendPacket
 ==================
 */
-void Sys_SendPacket( int length, const void *data, netadr_t to ) {
+void Sys_SendPacket( int length, const void *data, netadr_t to, qboolean legacyProtocol ) {
     int             ret = SOCKET_ERROR;
     struct sockaddr_storage addr;
 
@@ -653,7 +748,10 @@ void Sys_SendPacket( int length, const void *data, netadr_t to ) {
     if( (ip_socket == INVALID_SOCKET && to.type == NA_IP) ||
         (ip_socket == INVALID_SOCKET && to.type == NA_BROADCAST) ||
         (ip6_socket == INVALID_SOCKET && to.type == NA_IP6) ||
-        (ip6_socket == INVALID_SOCKET && to.type == NA_MULTICAST6) )
+        (ip6_socket == INVALID_SOCKET && to.type == NA_MULTICAST6) || 
+        (legacy_ip_socket == INVALID_SOCKET && to.type == NA_IP) ||
+        (legacy_ip_socket == INVALID_SOCKET && to.type == NA_BROADCAST)
+        )
         return;
 
     if(to.type == NA_MULTICAST6 && (net_enabled->integer & NET_DISABLEMCAST))
@@ -673,10 +771,19 @@ void Sys_SendPacket( int length, const void *data, netadr_t to ) {
         ret = sendto( ip_socket, socksBuf, length+10, 0, &socksRelayAddr, sizeof(socksRelayAddr) );
     }
     else {
-        if(addr.ss_family == AF_INET)
-            ret = sendto( ip_socket, data, length, 0, (struct sockaddr *) &addr, sizeof(struct sockaddr_in) );
-        else if(addr.ss_family == AF_INET6)
-            ret = sendto( ip6_socket, data, length, 0, (struct sockaddr *) &addr, sizeof(struct sockaddr_in6) );
+        if (legacyProtocol) {
+            if (addr.ss_family == AF_INET)
+                ret = sendto(legacy_ip_socket, data, length, 0, (struct sockaddr*)&addr, sizeof(struct sockaddr_in));
+            else if (addr.ss_family == AF_INET6)
+                ret = sendto(legacy_ip6_socket, data, length, 0, (struct sockaddr*)&addr, sizeof(struct sockaddr_in6));
+        }
+        else {
+            if (addr.ss_family == AF_INET)
+                ret = sendto(ip_socket, data, length, 0, (struct sockaddr*)&addr, sizeof(struct sockaddr_in));
+            else if (addr.ss_family == AF_INET6)
+                ret = sendto(ip6_socket, data, length, 0, (struct sockaddr*)&addr, sizeof(struct sockaddr_in6));
+        }
+        
     }
     if( ret == SOCKET_ERROR ) {
         int err = socketError;
@@ -1064,7 +1171,7 @@ void NET_LeaveMulticast6()
 NET_OpenSocks
 ====================
 */
-void NET_OpenSocks( int port ) {
+void NET_OpenSocks( int port, qboolean isLegacy ) {
     struct sockaddr_in  address;
     struct hostent      *h;
     int                 len;
@@ -1353,8 +1460,14 @@ void NET_OpenIP( void ) {
     int     port;
     int     port6;
 
+    int     legacy_port;
+    int     legacy_port6;
+
     port = net_port->integer;
     port6 = net_port6->integer;
+
+    legacy_port = legacy_net_port->integer;
+    legacy_port6 = legacy_net_port6->integer;
 
     NET_GetLocalAddress();
 
@@ -1380,6 +1493,27 @@ void NET_OpenIP( void ) {
         }
         if(ip6_socket == INVALID_SOCKET)
             Com_Printf( "WARNING: Couldn't bind to a v6 ip address.\n");
+
+        // legacy - IPv6 is actually disabled but keeping this here so that IF e.g. iosof2mp will ever happen, then it is easier to get it back.
+        if (net_multiprotocol->integer) {
+            for (i = 0; i < 10; i++)
+            {
+                legacy_ip6_socket = NET_IP6Socket(net_ip6->string, legacy_port6 + i, &boundto, &err);
+                if (ip6_socket != INVALID_SOCKET)
+                {
+                    Cvar_SetValue("legacy_net_port6", legacy_port6 + i);
+                    break;
+                }
+                else
+                {
+                    if (err == EAFNOSUPPORT)
+                        break;
+                }
+            }
+            if (legacy_ip6_socket == INVALID_SOCKET)
+                Com_Printf("WARNING: Couldn't bind to a v6 ip address.\n");
+        }
+        
     }
 
     if(net_enabled->integer & NET_ENABLEV4)
@@ -1390,7 +1524,7 @@ void NET_OpenIP( void ) {
                 Cvar_SetValue( "net_port", port + i );
 
                 if (net_socksEnabled->integer)
-                    NET_OpenSocks( port + i );
+                    NET_OpenSocks( port + i, qfalse );
 
                 break;
             }
@@ -1403,6 +1537,30 @@ void NET_OpenIP( void ) {
 
         if(ip_socket == INVALID_SOCKET)
             Com_Printf( "WARNING: Couldn't bind to a v4 ip address.\n");
+
+        // legacy
+        if (net_multiprotocol->integer) {
+            for (i = 0; i < 10; i++) {
+                legacy_ip_socket = NET_IPSocket(net_ip->string, legacy_port + i, &err);
+                if (legacy_ip_socket != INVALID_SOCKET) {
+                    Cvar_SetValue("net_port", legacy_port + i);
+
+                    if (net_socksEnabled->integer) // this is actually redundant as with multiprotocol set, this will not be reached. 
+                                                   // but I'm keeping it here in case someone ever wants to have SOCKS setup with multiprotocol.  
+                        NET_OpenSocks(legacy_port + i, qtrue);
+
+                    break;
+                }
+                else
+                {
+                    if (err == EAFNOSUPPORT)
+                        break;
+                }
+            }
+
+            if (legacy_ip_socket == INVALID_SOCKET)
+                Com_Printf("WARNING: Couldn't bind to a v4 ip address.\n");
+        }
     }
 }
 
@@ -1445,6 +1603,20 @@ static qboolean NET_GetCvars( void ) {
     modified += net_port6->modified;
     net_port6->modified = qfalse;
 
+    // legacy ports.
+
+    net_multiprotocol = Cvar_Get("net_multiprotocol", "0", CVAR_ARCHIVE | CVAR_INIT);
+    modified += net_multiprotocol->modified;
+    net_multiprotocol->modified = qfalse;
+
+    legacy_net_port = Cvar_Get("legacy_net_port", va("%i", LEGACY_PORT_SERVER), CVAR_LATCH);
+    modified += legacy_net_port->modified;
+    legacy_net_port->modified = qfalse;
+
+    legacy_net_port6 = Cvar_Get("legacy_net_port6", va("%i", LEGACY_PORT_SERVER), CVAR_LATCH);
+    modified += legacy_net_port6->modified;
+    legacy_net_port6->modified = qfalse;
+
     // Some cvars for configuring multicast options which facilitates scanning for servers on local subnets.
     net_mcast6addr = Cvar_Get( "net_mcast6addr", NET_MULTICAST_IP6, CVAR_LATCH | CVAR_ARCHIVE );
     modified += net_mcast6addr->modified;
@@ -1458,9 +1630,18 @@ static qboolean NET_GetCvars( void ) {
     modified += net_mcast6iface->modified;
     net_mcast6iface->modified = qfalse;
 
-    net_socksEnabled = Cvar_Get( "net_socksEnabled", "0", CVAR_LATCH | CVAR_ARCHIVE );
+    net_socksEnabled = Cvar_Get( "net_socksEnabled", "0", CVAR_ARCHIVE | CVAR_INIT );
     modified += net_socksEnabled->modified;
     net_socksEnabled->modified = qfalse;
+
+    if (net_multiprotocol->integer && net_socksEnabled->integer) {  // Dropping SOCKS and IPv6 support for multiprotocol. Haven't seen SOCKS in use and vanilla SoF2MP does not support IPv6. 
+                                                                    // FIXME when iosof2mp project will reach a stage that this becomes useful again.
+        Com_Printf("Disabling SOCKS and IPv6 due to having multiprotocol enabled.\n");
+        Cvar_SetValue("net_socksEnabled", 0);
+        Cvar_SetValue("net_enabled", 1);
+
+        modified += 2;
+    }
 
     net_socksServer = Cvar_Get( "net_socksServer", "", CVAR_LATCH | CVAR_ARCHIVE );
     modified += net_socksServer->modified;
@@ -1621,12 +1802,13 @@ void NET_Event(fd_set *fdr)
     byte bufData[MAX_MSGLEN + 1];
     netadr_t from = {0};
     msg_t netmsg;
+    qboolean legacyProtocol = qfalse;
 
     while(1)
     {
         MSG_Init(&netmsg, bufData, sizeof(bufData));
 
-        if(NET_GetPacket(&from, &netmsg, fdr))
+        if(NET_GetPacket(&from, &netmsg, fdr, &legacyProtocol))
         {
             if(net_dropsim->value > 0.0f && net_dropsim->value <= 100.0f)
             {
@@ -1636,7 +1818,7 @@ void NET_Event(fd_set *fdr)
             }
 
             if(com_sv_running->integer)
-                Com_RunAndTimeServerPacket(&from, &netmsg);
+                Com_RunAndTimeServerPacket(&from, &netmsg, legacyProtocol);
             else
                 CL_PacketEvent(from, &netmsg);
         }
@@ -1676,6 +1858,13 @@ void NET_Sleep(int msec)
 
         if(highestfd == INVALID_SOCKET || ip6_socket > highestfd)
             highestfd = ip6_socket;
+    }
+
+    if (legacy_ip_socket != INVALID_SOCKET) {
+        FD_SET(legacy_ip_socket, &fdr);
+
+        if (highestfd == INVALID_SOCKET || legacy_ip_socket > highestfd)
+            highestfd = legacy_ip_socket;
     }
 
 #ifdef _WIN32

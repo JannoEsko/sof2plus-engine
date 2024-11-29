@@ -742,6 +742,63 @@ typedef struct {
 // using the stringizing operator to save typing...
 #define NETF(x) #x,(size_t)&((entityState_t*)0)->x
 
+netField_t  legacyEntityStateFields[] =
+{
+    {NETF(pos.trTime), 32},
+    {NETF(pos.trBase[0]), 0},
+    {NETF(pos.trBase[1]), 0},
+    {NETF(pos.trDelta[0]), 0},
+    {NETF(pos.trDelta[1]), 0},
+    {NETF(pos.trBase[2]), 0},
+    {NETF(apos.trBase[1]), 0},
+    {NETF(pos.trDelta[2]), 0},
+    {NETF(apos.trBase[0]), 0},
+    {NETF(event), 10},
+    {NETF(angles2[1]), 0},
+    {NETF(eType), 8},
+    {NETF(torsoAnim), 12},
+    {NETF(torsoTimer), 12},
+    {NETF(eventParm), 0},
+    {NETF(legsAnim), 12},
+    {NETF(groundEntityNum), GENTITYNUM_BITS},
+    {NETF(pos.trType), 8},
+    {NETF(eFlags), 32},
+    {NETF(otherEntityNum), GENTITYNUM_BITS},
+    {NETF(weapon), 8},
+    {NETF(clientNum), 8},
+    {NETF(angles[1]), 0},
+    {NETF(pos.trDuration), 32},
+    {NETF(apos.trType), 8},
+    {NETF(origin[0]), 0},
+    {NETF(origin[1]), 0},
+    {NETF(origin[2]), 0},
+    {NETF(solid), 24},
+    {NETF(gametypeitems), 8},
+    {NETF(modelindex), 8},
+    {NETF(otherEntityNum2), GENTITYNUM_BITS},
+    {NETF(loopSound), 8},
+    {NETF(generic1), 8},
+    {NETF(mSoundSet), 6},
+    {NETF(origin2[2]), 0},
+    {NETF(origin2[0]), 0},
+    {NETF(origin2[1]), 0},
+    {NETF(modelindex2), 8},
+    {NETF(angles[0]), 0},
+    {NETF(time), 32},
+    {NETF(apos.trTime), 32},
+    {NETF(apos.trDuration), 32},
+    {NETF(apos.trBase[2]), 0},
+    {NETF(apos.trDelta[0]), 0},
+    {NETF(apos.trDelta[1]), 0},
+    {NETF(apos.trDelta[2]), 0},
+    {NETF(time2), 32},
+    {NETF(angles[2]), 0},
+    {NETF(angles2[0]), 0},
+    {NETF(angles2[2]), 0},
+    {NETF(frame), 16},
+    {NETF(leanOffset), 6},
+};
+
 netField_t  entityStateFields[] =
 {
     {NETF(pos.trTime), 32},
@@ -817,13 +874,15 @@ identical, under the assumption that the in-order delta code will catch it.
 ==================
 */
 void MSG_WriteDeltaEntity( msg_t *msg, struct entityState_s *from, struct entityState_s *to,
-                           qboolean force ) {
+                           qboolean force, qboolean legacyProtocol ) {
     int         i, lc;
     int         numFields;
     netField_t  *field;
     int         trunc;
     float       fullFloat;
     int         *fromF, *toF;
+
+    netField_t* entityStateFields_Local = legacyProtocol ? legacyEntityStateFields : entityStateFields;
 
     numFields = ARRAY_LEN( entityStateFields );
 
@@ -849,7 +908,7 @@ void MSG_WriteDeltaEntity( msg_t *msg, struct entityState_s *from, struct entity
 
     lc = 0;
     // build the change vector as bytes so it is endien independent
-    for ( i = 0, field = entityStateFields ; i < numFields ; i++, field++ ) {
+    for ( i = 0, field = entityStateFields_Local; i < numFields ; i++, field++ ) {
         fromF = (int *)( (byte *)from + field->offset );
         toF = (int *)( (byte *)to + field->offset );
         if ( *fromF != *toF ) {
@@ -877,7 +936,7 @@ void MSG_WriteDeltaEntity( msg_t *msg, struct entityState_s *from, struct entity
 
     oldsize += numFields;
 
-    for ( i = 0, field = entityStateFields ; i < lc ; i++, field++ ) {
+    for ( i = 0, field = entityStateFields_Local; i < lc ; i++, field++ ) {
         fromF = (int *)( (byte *)from + field->offset );
         toF = (int *)( (byte *)to + field->offset );
 
@@ -1061,6 +1120,73 @@ plyer_state_t communication
 // using the stringizing operator to save typing...
 #define PSF(x) #x,(size_t)&((playerState_t*)0)->x
 
+netField_t  legacyPlayerStateFields[] =
+{
+    {PSF(commandTime), 32},
+    {PSF(origin[0]), 0},
+    {PSF(origin[1]), 0},
+    {PSF(bobCycle), 8},
+    {PSF(velocity[0]), 0},
+    {PSF(velocity[1]), 0},
+    {PSF(viewangles[1]), 0},
+    {PSF(viewangles[0]), 0},
+    {PSF(weaponTime), -16},
+    {PSF(weaponAnimTime), -16},
+    {PSF(weaponFireBurstCount), 3},
+    {PSF(weaponAnimId), -16},
+    {PSF(weaponAnimIdChoice), -16},
+    {PSF(weaponCallbackTime), 16},
+    {PSF(weaponCallbackStep), -8},
+    {PSF(origin[2]), 0},
+    {PSF(velocity[2]), 0},
+    {PSF(pm_time), -16},
+    {PSF(eventSequence), 16},
+    {PSF(torsoAnim), 12},
+    {PSF(movementDir), 4},
+    {PSF(events[0]), 10},
+    {PSF(events[1]), 10},
+    {PSF(events[2]), 10},
+    {PSF(events[3]), 10},
+    {PSF(legsAnim), 12},
+    {PSF(pm_flags), 32},
+    {PSF(pm_debounce), 16},
+    {PSF(groundEntityNum), GENTITYNUM_BITS},
+    {PSF(weaponstate), 4},
+    {PSF(eFlags), 32},
+    {PSF(externalEvent), 10},
+    {PSF(gravity), 16},
+    {PSF(speed), 16},
+    {PSF(delta_angles[1]), 16},
+    {PSF(externalEventParm), 8},
+    {PSF(viewheight), -8},
+    {PSF(damageEvent), 8},
+    {PSF(damageYaw), 8},
+    {PSF(damagePitch), 8},
+    {PSF(damageCount), 8},
+    {PSF(inaccuracy), 32},
+    {PSF(inaccuracyTime), 16},
+    {PSF(kickPitch), 18},
+    {PSF(generic1), 8},
+    {PSF(pm_type), 8},
+    {PSF(delta_angles[0]), 16},
+    {PSF(delta_angles[2]), 16},
+    {PSF(torsoTimer), 12},
+    {PSF(eventParms[0]), 32},
+    {PSF(eventParms[1]), 32},
+    {PSF(eventParms[2]), 32},
+    {PSF(eventParms[3]), 32},
+    {PSF(clientNum), 8},
+    {PSF(weapon), 5},
+    {PSF(viewangles[2]), 0},
+    {PSF(loopSound), 16},
+    {PSF(zoomTime), 32},
+    {PSF(zoomFov), 6},
+    {PSF(ladder), 6},
+    {PSF(leanTime), 16},
+    {PSF(grenadeTimer), 13},
+    {PSF(respawnTimer), 32},
+};
+
 netField_t  playerStateFields[] =
 {
     {PSF(commandTime), 32},
@@ -1134,7 +1260,7 @@ MSG_WriteDeltaPlayerstate
 
 =============
 */
-void MSG_WriteDeltaPlayerstate( msg_t *msg, struct playerState_s *from, struct playerState_s *to ) {
+void MSG_WriteDeltaPlayerstate( msg_t *msg, struct playerState_s *from, struct playerState_s *to, qboolean legacyProtocol ) {
     int             i;
     playerState_t   dummy;
     int             statsbits;
@@ -1149,6 +1275,8 @@ void MSG_WriteDeltaPlayerstate( msg_t *msg, struct playerState_s *from, struct p
     float           fullFloat;
     int             trunc, lc;
 
+    netField_t* playerStateFields_Local = legacyProtocol ? legacyPlayerStateFields : playerStateFields;
+
     if (!from) {
         from = &dummy;
         Com_Memset (&dummy, 0, sizeof(dummy));
@@ -1157,7 +1285,7 @@ void MSG_WriteDeltaPlayerstate( msg_t *msg, struct playerState_s *from, struct p
     numFields = ARRAY_LEN( playerStateFields );
 
     lc = 0;
-    for ( i = 0, field = playerStateFields ; i < numFields ; i++, field++ ) {
+    for ( i = 0, field = playerStateFields_Local; i < numFields ; i++, field++ ) {
         fromF = (int *)( (byte *)from + field->offset );
         toF = (int *)( (byte *)to + field->offset );
         if ( *fromF != *toF ) {
@@ -1169,7 +1297,7 @@ void MSG_WriteDeltaPlayerstate( msg_t *msg, struct playerState_s *from, struct p
 
     oldsize += numFields - lc;
 
-    for ( i = 0, field = playerStateFields ; i < lc ; i++, field++ ) {
+    for ( i = 0, field = playerStateFields_Local; i < lc ; i++, field++ ) {
         fromF = (int *)( (byte *)from + field->offset );
         toF = (int *)( (byte *)to + field->offset );
 

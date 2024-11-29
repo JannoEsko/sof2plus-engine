@@ -88,9 +88,12 @@ cvar_t  *com_maxfpsMinimized;
 cvar_t  *com_abnormalExit;
 cvar_t  *com_gamename;
 cvar_t  *com_protocol;
+cvar_t  *com_legacyProtocol;
 cvar_t  *com_basegame;
 cvar_t  *com_homepath;
 cvar_t  *com_busyWait;
+
+cvar_t* net_multiprotocol;
 #ifndef DEDICATED
 cvar_t  *con_autochat;
 #endif
@@ -125,28 +128,30 @@ void CIN_CloseAllVideos( void );
 
 static char *rd_buffer;
 static int  rd_buffersize;
-static void (*rd_flush)( char *buffer );
+static void (*rd_flush)( char *buffer, qboolean legacyProtocol );
+static qboolean rd_legacyProtocol;
 
-void Com_BeginRedirect (char *buffer, int buffersize, void (*flush)( char *) )
+void Com_BeginRedirect (char *buffer, int buffersize, void (*flush)( char *, qboolean ), qboolean legacyProtocol )
 {
     if (!buffer || !buffersize || !flush)
         return;
     rd_buffer = buffer;
     rd_buffersize = buffersize;
     rd_flush = flush;
-
+    rd_legacyProtocol = legacyProtocol;
     *rd_buffer = 0;
 }
 
 void Com_EndRedirect (void)
 {
     if ( rd_flush ) {
-        rd_flush(rd_buffer);
+        rd_flush(rd_buffer, rd_legacyProtocol);
     }
 
     rd_buffer = NULL;
     rd_buffersize = 0;
     rd_flush = NULL;
+    rd_legacyProtocol = qfalse;
 }
 
 /*
@@ -171,7 +176,7 @@ void QDECL Com_Printf( const char *fmt, ... ) {
 
     if ( rd_buffer ) {
         if ((strlen (msg) + strlen(rd_buffer)) > (rd_buffersize - 1)) {
-            rd_flush(rd_buffer);
+            rd_flush(rd_buffer, rd_legacyProtocol);
             *rd_buffer = 0;
         }
         Q_strcat(rd_buffer, rd_buffersize, msg);
@@ -2183,7 +2188,7 @@ sysEvent_t  Com_GetEvent( void ) {
 Com_RunAndTimeServerPacket
 =================
 */
-void Com_RunAndTimeServerPacket( netadr_t *evFrom, msg_t *buf ) {
+void Com_RunAndTimeServerPacket( netadr_t *evFrom, msg_t *buf, qboolean legacyProtocol ) {
     int     t1, t2, msec;
 
     t1 = 0;
@@ -2192,7 +2197,7 @@ void Com_RunAndTimeServerPacket( netadr_t *evFrom, msg_t *buf ) {
         t1 = Sys_Milliseconds ();
     }
 
-    SV_PacketEvent( *evFrom, buf );
+    SV_PacketEvent( *evFrom, buf, legacyProtocol );
 
     if ( com_speeds->integer ) {
         t2 = Sys_Milliseconds ();
@@ -2231,7 +2236,7 @@ int Com_EventLoop( void ) {
             while ( NET_GetLoopPacket( NS_SERVER, &evFrom, &buf ) ) {
                 // if the server just shut down, flush the events
                 if ( com_sv_running->integer ) {
-                    Com_RunAndTimeServerPacket( &evFrom, &buf );
+                    Com_RunAndTimeServerPacket( &evFrom, &buf, qfalse ); // NB - no multiprotocol support for loopback connections.
                 }
             }
 
@@ -2688,6 +2693,7 @@ void Com_Init( char *commandLine ) {
     com_version = Cvar_Get ("version", s, CVAR_ROM | CVAR_SERVERINFO );
     com_gamename = Cvar_Get("com_gamename", GAMENAME_FOR_MASTER, CVAR_SERVERINFO | CVAR_INIT);
     com_protocol = Cvar_Get("protocol", va("%i", PROTOCOL_VERSION), CVAR_SERVERINFO | CVAR_INIT);
+    com_legacyProtocol = Cvar_Get("legacyprotocol", va("%i", PROTOCOL_LEGACY_VERSION), CVAR_SERVERINFO | CVAR_INIT);
     /*
 #ifdef LEGACY_PROTOCOL
     com_legacyprotocol = Cvar_Get("com_legacyprotocol", va("%i", PROTOCOL_LEGACY_VERSION), CVAR_INIT);

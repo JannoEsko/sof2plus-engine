@@ -52,7 +52,7 @@ SV_EmitPacketEntities
 Writes a delta update of an entityState_t list to the message.
 =============
 */
-static void SV_EmitPacketEntities( clientSnapshot_t *from, clientSnapshot_t *to, msg_t *msg ) {
+static void SV_EmitPacketEntities( clientSnapshot_t *from, clientSnapshot_t *to, msg_t *msg, qboolean legacyProtocol ) {
     entityState_t   *oldent, *newent;
     int     oldindex, newindex;
     int     oldnum, newnum;
@@ -88,7 +88,7 @@ static void SV_EmitPacketEntities( clientSnapshot_t *from, clientSnapshot_t *to,
             // delta update from old position
             // because the force parm is qfalse, this will not result
             // in any bytes being emitted if the entity has not changed at all
-            MSG_WriteDeltaEntity (msg, oldent, newent, qfalse );
+            MSG_WriteDeltaEntity (msg, oldent, newent, qfalse, legacyProtocol );
             oldindex++;
             newindex++;
             continue;
@@ -96,14 +96,14 @@ static void SV_EmitPacketEntities( clientSnapshot_t *from, clientSnapshot_t *to,
 
         if ( newnum < oldnum ) {
             // this is a new entity, send it from the baseline
-            MSG_WriteDeltaEntity (msg, &sv.svEntities[newnum].baseline, newent, qtrue );
+            MSG_WriteDeltaEntity (msg, &sv.svEntities[newnum].baseline, newent, qtrue, legacyProtocol );
             newindex++;
             continue;
         }
 
         if ( newnum > oldnum ) {
             // the old entity isn't present in the new message
-            MSG_WriteDeltaEntity (msg, oldent, NULL, qtrue );
+            MSG_WriteDeltaEntity (msg, oldent, NULL, qtrue, legacyProtocol );
             oldindex++;
             continue;
         }
@@ -191,13 +191,13 @@ static void SV_WriteSnapshotToClient( client_t *client, msg_t *msg ) {
 
     // delta encode the playerstate
     if ( oldframe ) {
-        MSG_WriteDeltaPlayerstate( msg, &oldframe->ps, &frame->ps );
+        MSG_WriteDeltaPlayerstate( msg, &oldframe->ps, &frame->ps, client->legacyProtocol );
     } else {
-        MSG_WriteDeltaPlayerstate( msg, NULL, &frame->ps );
+        MSG_WriteDeltaPlayerstate( msg, NULL, &frame->ps, client->legacyProtocol);
     }
 
     // delta encode the entities
-    SV_EmitPacketEntities (oldframe, frame, msg);
+    SV_EmitPacketEntities (oldframe, frame, msg, client->legacyProtocol);
 
     // padding for rate debugging
     if ( sv_padPackets->integer ) {

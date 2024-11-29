@@ -48,7 +48,7 @@ to hi-jack client connections.
 =================
 */
 
-void SV_GetChallenge(netadr_t from)
+void SV_GetChallenge(netadr_t from, qboolean legacyProtocol)
 {
     int     i;
     int     oldest;
@@ -117,8 +117,8 @@ void SV_GetChallenge(netadr_t from)
     challenge->wasrefused = qfalse;
     challenge->time = svs.time;
     challenge->pingTime = svs.time;
-    NET_OutOfBandPrint(NS_SERVER, challenge->adr, "challengeResponse %d %d %d",
-               challenge->challenge, clientChallenge, com_protocol->integer);
+    NET_OutOfBandPrint(NS_SERVER, challenge->adr, legacyProtocol, "challengeResponse %d %d %d",
+               challenge->challenge, clientChallenge, legacyProtocol ? com_legacyProtocol->integer : com_protocol->integer);
 }
 
 /*
@@ -163,7 +163,7 @@ A "connect" OOB command has been received
 ==================
 */
 
-void SV_DirectConnect( netadr_t from ) {
+void SV_DirectConnect( netadr_t from, qboolean legacyProtocol ) {
     char        userinfo[MAX_INFO_STRING];
     int         i;
     client_t    *cl, *newcl;
@@ -184,7 +184,7 @@ void SV_DirectConnect( netadr_t from ) {
     // Check whether this client is banned.
     if(SV_IsBanned(&from, qfalse))
     {
-        NET_OutOfBandPrint(NS_SERVER, from, "print\nYou are banned from this server.\n");
+        NET_OutOfBandPrint(NS_SERVER, from, legacyProtocol, "print\nYou are banned from this server.\n"); // legacyProtocol does not block this message anyhow
         return;
     }
 
@@ -198,10 +198,10 @@ void SV_DirectConnect( netadr_t from ) {
     else
 #endif
     {
-        if(version != com_protocol->integer)
+        if(version != com_protocol->integer && version != com_legacyProtocol->integer)
         {
-            NET_OutOfBandPrint(NS_SERVER, from, "print\nServer uses protocol version %i "
-                       "(yours is %i).\n", com_protocol->integer, version);
+            NET_OutOfBandPrint(NS_SERVER, from, legacyProtocol, "print\nServer uses protocol versions %i and %i "
+                       "(yours is %i).\n", com_protocol->integer, com_legacyProtocol->integer, version);
             Com_DPrintf("    rejected connect from version %i\n", version);
             return;
         }
@@ -233,7 +233,7 @@ void SV_DirectConnect( netadr_t from ) {
     else
         ip = (char *)NET_AdrToString( from );
     if( ( strlen( ip ) + strlen( userinfo ) + 4 ) >= MAX_INFO_STRING ) {
-        NET_OutOfBandPrint( NS_SERVER, from,
+        NET_OutOfBandPrint( NS_SERVER, from, legacyProtocol,
             "print\nUserinfo string length exceeded.  "
             "Try removing setu cvars from your config.\n" );
         return;
@@ -257,7 +257,7 @@ void SV_DirectConnect( netadr_t from ) {
 
         if (i == MAX_CHALLENGES)
         {
-            NET_OutOfBandPrint( NS_SERVER, from, "print\nNo or bad challenge for your address.\n" );
+            NET_OutOfBandPrint( NS_SERVER, from, legacyProtocol, "print\nNo or bad challenge for your address.\n" );
             return;
         }
 
@@ -274,13 +274,13 @@ void SV_DirectConnect( netadr_t from ) {
         // never reject a LAN client based on ping
         if ( !Sys_IsLANAddress( from ) ) {
             if ( sv_minPing->value && ping < sv_minPing->value ) {
-                NET_OutOfBandPrint( NS_SERVER, from, "print\nServer is for high pings only\n" );
+                NET_OutOfBandPrint( NS_SERVER, from, legacyProtocol, "print\nServer is for high pings only\n" );
                 Com_DPrintf ("Client %i rejected on a too low ping\n", i);
                 challengeptr->wasrefused = qtrue;
                 return;
             }
             if ( sv_maxPing->value && ping > sv_maxPing->value ) {
-                NET_OutOfBandPrint( NS_SERVER, from, "print\nServer is for low pings only\n" );
+                NET_OutOfBandPrint( NS_SERVER, from, legacyProtocol, "print\nServer is for low pings only\n" );
                 Com_DPrintf ("Client %i rejected on a too high ping\n", i);
                 challengeptr->wasrefused = qtrue;
                 return;
@@ -363,7 +363,7 @@ void SV_DirectConnect( netadr_t from ) {
             }
         }
         else {
-            NET_OutOfBandPrint( NS_SERVER, from, "print\nServer is full.\n" );
+            NET_OutOfBandPrint( NS_SERVER, from, legacyProtocol, "print\nServer is full.\n" );
             Com_DPrintf ("Rejected a connection.\n");
             return;
         }
@@ -385,6 +385,9 @@ gotnewcl:
     // save the challenge
     newcl->challenge = challenge;
 
+    // set the client legacy information.
+    newcl->legacyProtocol = legacyProtocol;
+
     // save the address
 #ifdef LEGACY_PROTOCOL
     newcl->compat = compat;
@@ -404,7 +407,7 @@ gotnewcl:
         // we can't just use VM_ArgPtr, because that is only valid inside a VM_Call
         char *str = VM_ExplicitArgPtr( gvm, denied );
 
-        NET_OutOfBandPrint( NS_SERVER, from, "print\n%s\n", str );
+        NET_OutOfBandPrint( NS_SERVER, from, legacyProtocol, "print\n%s\n", str );
         Com_DPrintf ("Game rejected a connection: %s.\n", str);
         return;
     }
@@ -412,7 +415,7 @@ gotnewcl:
     SV_UserinfoChanged( newcl );
 
     // send the connect packet to the client
-    NET_OutOfBandPrint(NS_SERVER, from, "connectResponse %d", challenge);
+    NET_OutOfBandPrint(NS_SERVER, from, legacyProtocol, "connectResponse %d", challenge);
 
     Com_DPrintf( "Going from CS_FREE to CS_CONNECTED for %s\n", newcl->name );
 
@@ -585,7 +588,7 @@ static void SV_SendClientGameState( client_t *client ) {
             continue;
         }
         MSG_WriteByte( &msg, svc_baseline );
-        MSG_WriteDeltaEntity( &msg, &nullstate, base, qtrue );
+        MSG_WriteDeltaEntity( &msg, &nullstate, base, qtrue, client->legacyProtocol );
     }
 
     MSG_WriteByte( &msg, svc_EOF );
@@ -596,7 +599,10 @@ static void SV_SendClientGameState( client_t *client ) {
     MSG_WriteLong( &msg, sv.checksumFeed);
 
     //rwwRMG - send info for the terrain
-    MSG_WriteShort ( &msg, 0 );
+
+    if (!client->legacyProtocol) {
+        MSG_WriteShort(&msg, 0);
+    }
 
     // no Roger Wilco voice communication support in SoF2Plus
     MSG_WriteLong ( &msg, 0 );

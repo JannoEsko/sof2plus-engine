@@ -321,9 +321,16 @@ void SV_MasterHeartbeat(const char *message, qboolean shutdown)
         }
 
         if(adr[i][0].type != NA_BAD)
-            NET_OutOfBandPrint( NS_SERVER, adr[i][0], "%s %s\n", command, message);
+            NET_OutOfBandPrint( NS_SERVER, adr[i][0], qfalse, "%s %s\n", command, message);
         if(adr[i][1].type != NA_BAD)
-            NET_OutOfBandPrint( NS_SERVER, adr[i][1], "%s %s\n", command, message);
+            NET_OutOfBandPrint( NS_SERVER, adr[i][1], qfalse, "%s %s\n", command, message);
+
+        if (net_multiprotocol->integer) {
+            if (adr[i][0].type != NA_BAD)
+                NET_OutOfBandPrint(NS_SERVER, adr[i][0], qtrue, "%s %s\n", command, message);
+            if (adr[i][1].type != NA_BAD)
+                NET_OutOfBandPrint(NS_SERVER, adr[i][1], qtrue, "%s %s\n", command, message);
+        }
     }
 }
 
@@ -526,7 +533,7 @@ and all connected players.  Used for getting detailed information after
 the simple info query.
 ================
 */
-static void SVC_Status( netadr_t from ) {
+static void SVC_Status( netadr_t from, qboolean legacyProtocol ) {
     char    player[1024];
     char    status[MAX_MSGLEN];
     int     i;
@@ -576,7 +583,13 @@ static void SVC_Status( netadr_t from ) {
     Info_SetValueForKey(infostring, "sv_keywords", keywords);
 
     // Add the game version to the status response.
-    Info_SetValueForKey(infostring, "game_version", GAME_VERSION);
+    if (legacyProtocol) {
+        Info_SetValueForKey(infostring, "game_version", GAME_VERSION_LEGACY);
+    }
+    else {
+        Info_SetValueForKey(infostring, "game_version", GAME_VERSION);
+    }
+    
 
     // Add the player information to the status response.
     status[0] = 0;
@@ -597,7 +610,7 @@ static void SVC_Status( netadr_t from ) {
         }
     }
 
-    NET_OutOfBandPrint( NS_SERVER, from, "statusResponse\n%s\n%s", infostring, status );
+    NET_OutOfBandPrint( NS_SERVER, from, legacyProtocol, "statusResponse\n%s\n%s", infostring, status );
 }
 
 /*
@@ -608,7 +621,7 @@ Responds with a short info message that should be enough to determine
 if a user is interested in a server to do a full status
 ================
 */
-void SVC_Info( netadr_t from ) {
+void SVC_Info( netadr_t from, qboolean legacyProtocol ) {
     int     i, count;
     char    *gamedir;
     char    infostring[MAX_INFO_STRING];
@@ -655,7 +668,7 @@ void SVC_Info( netadr_t from ) {
         Info_SetValueForKey(infostring, "protocol", va("%i", com_legacyprotocol->integer));
     else
 #endif
-        Info_SetValueForKey(infostring, "protocol", va("%i", com_protocol->integer));
+        Info_SetValueForKey(infostring, "protocol", va("%i", legacyProtocol ? com_legacyProtocol->integer : com_protocol->integer));
 
     Info_SetValueForKey( infostring, "hostname", sv_hostname->string );
     Info_SetValueForKey( infostring, "mapname", sv_mapname->string );
@@ -678,7 +691,7 @@ void SVC_Info( netadr_t from ) {
     }
     Info_SetValueForKey( infostring, "sv_allowDownload", va("%i", sv_allowDownload->integer) );
 
-    NET_OutOfBandPrint( NS_SERVER, from, "infoResponse\n%s", infostring );
+    NET_OutOfBandPrint( NS_SERVER, from, legacyProtocol, "infoResponse\n%s", infostring );
 }
 
 /*
@@ -687,8 +700,8 @@ SVC_FlushRedirect
 
 ================
 */
-static void SV_FlushRedirect( char *outputbuf ) {
-    NET_OutOfBandPrint( NS_SERVER, svs.redirectAddress, "print\n%s", outputbuf );
+static void SV_FlushRedirect( char *outputbuf, qboolean legacyProtocol ) {
+    NET_OutOfBandPrint( NS_SERVER, svs.redirectAddress, legacyProtocol, "print\n%s", outputbuf );
 }
 
 /*
@@ -700,7 +713,7 @@ Shift down the remaining args
 Redirect all printfs
 ===============
 */
-static void SVC_RemoteCommand( netadr_t from, msg_t *msg ) {
+static void SVC_RemoteCommand( netadr_t from, msg_t *msg, qboolean legacyProtocol ) {
     qboolean    valid;
     char        remaining[1024];
     // TTimo - scaled down to accumulate, but not overflow anything network wise, print wise etc.
@@ -735,7 +748,7 @@ static void SVC_RemoteCommand( netadr_t from, msg_t *msg ) {
 
     // start redirecting all print outputs to the packet
     svs.redirectAddress = from;
-    Com_BeginRedirect (sv_outputbuf, SV_OUTPUTBUF_LENGTH, SV_FlushRedirect);
+    Com_BeginRedirect (sv_outputbuf, SV_OUTPUTBUF_LENGTH, SV_FlushRedirect, legacyProtocol);
 
     if ( !strlen( sv_rconPassword->string ) ) {
         Com_Printf ("No rconpassword set on the server.\n");
@@ -776,7 +789,7 @@ Clients that are in the game can still send
 connectionless packets.
 =================
 */
-static void SV_ConnectionlessPacket( netadr_t from, msg_t *msg ) {
+static void SV_ConnectionlessPacket( netadr_t from, msg_t *msg, qboolean legacyProtocol ) {
     char    *s;
     char    *c;
 
@@ -794,15 +807,15 @@ static void SV_ConnectionlessPacket( netadr_t from, msg_t *msg ) {
     Com_DPrintf ("SV packet %s : %s\n", NET_AdrToString(from), c);
 
     if (!Q_stricmp(c, "getstatus")) {
-        SVC_Status( from );
+        SVC_Status( from, legacyProtocol );
   } else if (!Q_stricmp(c, "getinfo")) {
-        SVC_Info( from );
+        SVC_Info( from, legacyProtocol);
     } else if (!Q_stricmp(c, "getchallenge")) {
-        SV_GetChallenge(from);
+        SV_GetChallenge(from, legacyProtocol);
     } else if (!Q_stricmp(c, "connect")) {
-        SV_DirectConnect( from );
+        SV_DirectConnect( from, legacyProtocol );
     } else if (!Q_stricmp(c, "rcon")) {
-        SVC_RemoteCommand( from, msg );
+        SVC_RemoteCommand( from, msg, legacyProtocol );
     } else if (!Q_stricmp(c, "disconnect")) {
         // if a client starts up a local server, we may see some spurious
         // server disconnect messages when their new server sees our final
@@ -820,14 +833,14 @@ static void SV_ConnectionlessPacket( netadr_t from, msg_t *msg ) {
 SV_PacketEvent
 =================
 */
-void SV_PacketEvent( netadr_t from, msg_t *msg ) {
+void SV_PacketEvent( netadr_t from, msg_t *msg, qboolean legacyProtocol ) {
     int         i;
     client_t    *cl;
     int         qport;
 
     // check for connectionless packet (0xffffffff) first
     if ( msg->cursize >= 4 && *(int *)msg->data == -1) {
-        SV_ConnectionlessPacket( from, msg );
+        SV_ConnectionlessPacket( from, msg, legacyProtocol );
         return;
     }
 
@@ -866,6 +879,10 @@ void SV_PacketEvent( netadr_t from, msg_t *msg ) {
             // reliable message, but they don't do any other processing
             if (cl->state != CS_ZOMBIE) {
                 cl->lastPacketTime = svs.time;  // don't timeout
+
+                // set if the client is legacy.
+                cl->legacyProtocol = legacyProtocol;
+
                 SV_ExecuteClientMessage( cl, msg );
             }
         }

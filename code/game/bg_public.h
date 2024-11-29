@@ -12,6 +12,7 @@
 #include "inv.h"
 
 #define GAME_VERSION        "sof2mp-1.03"
+#define GAME_VERSION_LEGACY "sof2mp-1.00"
 
 #define DEFAULT_GRAVITY     800
 #define ARMOR_PROTECTION    0.55
