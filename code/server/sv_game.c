@@ -961,6 +961,12 @@ intptr_t SV_GameSystemCalls( intptr_t *args ) {
         SV_GT_Shutdown();
         return 0;
 
+    case G_CLIENT_ISLEGACYPROTOCOL:
+        if (args[1] < 0 || args[1] >= sv_maxclients->integer) {
+            Com_Error(ERR_DROP, "Syscall IsLegacyProtocol: bad clientNum %i", args[1]);
+        }
+        return svs.clients[args[1]].legacyProtocol;
+
     //=======================================================
     default:
         Com_Error( ERR_DROP, "Bad game system trap: %ld", (long int) args[0] );

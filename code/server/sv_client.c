@@ -580,6 +580,9 @@ static void SV_SendClientGameState( client_t *client ) {
             if (client->legacyProtocol && start == CS_GAME_VERSION) {
                 MSG_WriteBigString(&msg, GAME_VERSION_LEGACY);
             }
+            else if (client->legacyProtocol && start >= CS_HUDICONS) {
+                continue;
+            }
             else {
                 MSG_WriteBigString(&msg, sv.configstrings[start]);
             }

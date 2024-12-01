@@ -936,6 +936,19 @@ void MSG_WriteDeltaEntity( msg_t *msg, struct entityState_s *from, struct entity
 
     oldsize += numFields;
 
+    if (legacyProtocol) {
+        // change the eType on temporary entities.
+        // Rest of the events should be catered in the game module.
+        
+        if (to->eType >= ET_EVENTS + EV_ITEM_PICKUP_QUIET - 2) { // -2 because ET_ ENUM is also smaller in 1.00.
+            to->eType -= 3;
+        }
+
+        if ((to->event & ~EV_EVENT_BITS) > EV_ITEM_PICKUP_QUIET) {
+            to->event--;
+        }
+    }
+
     for ( i = 0, field = entityStateFields_Local; i < lc ; i++, field++ ) {
         fromF = (int *)( (byte *)from + field->offset );
         toF = (int *)( (byte *)to + field->offset );
@@ -976,6 +989,18 @@ void MSG_WriteDeltaEntity( msg_t *msg, struct entityState_s *from, struct entity
                 // integer
                 MSG_WriteBits( msg, *toF, field->bits );
             }
+        }
+    }
+
+
+    if (legacyProtocol) {
+
+        if (to->eType >= ET_EVENTS + EV_ITEM_PICKUP_QUIET - 4) {
+            to->eType += 3;
+        }
+
+        if ((to->event & ~EV_EVENT_BITS) >= EV_ITEM_PICKUP_QUIET) {
+            to->event++;
         }
     }
 }
@@ -1297,6 +1322,32 @@ void MSG_WriteDeltaPlayerstate( msg_t *msg, struct playerState_s *from, struct p
 
     oldsize += numFields - lc;
 
+    if (legacyProtocol) {
+
+        if (to->events[0] > EV_ITEM_PICKUP_QUIET) {
+            to->events[0]--;
+        }
+
+
+        if (to->events[1] > EV_ITEM_PICKUP_QUIET) {
+            to->events[1]--;
+        }
+
+
+        if (to->events[2] > EV_ITEM_PICKUP_QUIET) {
+            to->events[2]--;
+        }
+
+
+        if (to->events[3] > EV_ITEM_PICKUP_QUIET) {
+            to->events[3]--;
+        } 
+
+        if ((to->externalEvent & ~EV_EVENT_BITS) > EV_ITEM_PICKUP_QUIET) {
+            to->externalEvent--;
+        }
+    }
+
     for ( i = 0, field = playerStateFields_Local; i < lc ; i++, field++ ) {
         fromF = (int *)( (byte *)from + field->offset );
         toF = (int *)( (byte *)to + field->offset );
@@ -1441,6 +1492,36 @@ void MSG_WriteDeltaPlayerstate( msg_t *msg, struct playerState_s *from, struct p
     else {
         MSG_WriteBits( msg, 0, 1 );   // no change
     }
+
+    // undo the change.
+
+    if (legacyProtocol) {
+
+        if (to->events[0] >= EV_ITEM_PICKUP_QUIET) {
+            to->events[0]++;
+        }
+
+
+        if (to->events[1] >= EV_ITEM_PICKUP_QUIET) {
+            to->events[1]++;
+        }
+
+
+        if (to->events[2] >= EV_ITEM_PICKUP_QUIET) {
+            to->events[2]++;
+        }
+
+
+        if (to->events[3] >= EV_ITEM_PICKUP_QUIET) {
+            to->events[3]++;
+        }
+
+        if ((to->externalEvent & ~EV_EVENT_BITS) >= EV_ITEM_PICKUP_QUIET) {
+            to->externalEvent++;
+        }
+    }
+
+
 }
 
 
