@@ -29,6 +29,15 @@ static qboolean         msgInit = qfalse;
 
 int pcount[256];
 
+static int translateGoldModelIdxToSilverModelIdx(int input) {
+    return modelIndexTranslations[input].translatedIndex;
+}
+
+static int translateGoldWeaponToSilverWeapon(int input) {
+
+}
+
+
 /*
 ==============================================================================
 
