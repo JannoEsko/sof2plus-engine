@@ -106,7 +106,7 @@ ammoDiff_t ammoTranslations[] = {
     { AMMO_ANM14, L_AMMO_ANM14 },
     { AMMO_762_BELT, L_AMMO_NONE }, // JANFIXME what gun uses 762?
     { AMMO_MP5_9, L_AMMO_NONE },
-    { AMMO_MAX, L_AMMO_MAX },
+    { AMMO_MAX, L_AMMO_NONE },
     { AMMO_NONE, L_AMMO_NONE }
 };
 
@@ -1016,6 +1016,16 @@ void MSG_ReadDeltaUsercmdKey( msg_t *msg, int key, usercmd_t *from, usercmd_t *t
             to->upmove = -127;
         to->buttons = MSG_ReadDeltaKey( msg, key, from->buttons, 16);
         to->weapon = MSG_ReadDeltaKey( msg, key, from->weapon, 8);
+
+        if (legacyProtocol) {
+            if (to->weapon & WP_DELAYED_CHANGE_BIT) {
+                to->weapon = translateSilverWeaponToGoldWeapon(to->weapon & ~WP_DELAYED_CHANGE_BIT) | WP_DELAYED_CHANGE_BIT;
+            }
+            else {
+                to->weapon = translateSilverWeaponToGoldWeapon(to->weapon);
+            }
+        }
+
     } else {
         to->angles[0] = from->angles[0];
         to->angles[1] = from->angles[1];
@@ -1027,14 +1037,7 @@ void MSG_ReadDeltaUsercmdKey( msg_t *msg, int key, usercmd_t *from, usercmd_t *t
         to->weapon = from->weapon;
     }
 
-    /*if (legacyProtocol) {
-        if (to->weapon & WP_DELAYED_CHANGE_BIT) {
-            to->weapon = translateSilverWeaponToGoldWeapon(to->weapon & ~WP_DELAYED_CHANGE_BIT) | WP_DELAYED_CHANGE_BIT;
-        }
-        else {
-            to->weapon = translateSilverWeaponToGoldWeapon(to->weapon);
-        }
-    }*/
+    
 }
 
 /*
