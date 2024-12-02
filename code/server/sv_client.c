@@ -1521,7 +1521,7 @@ static void SV_UserMove( client_t *cl, msg_t *msg, qboolean delta ) {
     oldcmd = &nullcmd;
     for ( i = 0 ; i < cmdCount ; i++ ) {
         cmd = &cmds[i];
-        MSG_ReadDeltaUsercmdKey( msg, key, oldcmd, cmd );
+        MSG_ReadDeltaUsercmdKey( msg, key, oldcmd, cmd, cl->legacyProtocol );
         oldcmd = cmd;
     }
 

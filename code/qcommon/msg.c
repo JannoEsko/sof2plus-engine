@@ -29,32 +29,194 @@ static qboolean         msgInit = qfalse;
 
 int pcount[256];
 
-static int translateGoldModelIdxToSilverModelIdx(int input) {
 
+meansOfDeathDiff_t meansOfDeathTranslations[] = {
+    { MOD_UNKNOWN, L_MOD_UNKNOWN },
+    { MOD_KNIFE, L_MOD_KNIFE },
+    { MOD_M1911A1_PISTOL, L_MOD_M1911A1_PISTOL },
+    { MOD_USSOCOM_PISTOL, L_MOD_USSOCOM_PISTOL },
+    { MOD_SILVER_TALON, L_MOD_M1911A1_PISTOL },
+    { MOD_M590_SHOTGUN, L_MOD_M590_SHOTGUN },
+    { MOD_MICRO_UZI_SUBMACHINEGUN, L_MOD_MICRO_UZI_SUBMACHINEGUN },
+    { MOD_M3A1_SUBMACHINEGUN, L_MOD_M3A1_SUBMACHINEGUN },
+    { MOD_MP5, L_MOD_M4_ASSAULT_RIFLE },
+    { MOD_USAS_12_SHOTGUN, L_MOD_USAS_12_SHOTGUN },
+    { MOD_M4_ASSAULT_RIFLE, L_MOD_M4_ASSAULT_RIFLE },
+    { MOD_AK74_ASSAULT_RIFLE, L_MOD_AK74_ASSAULT_RIFLE },
+    { MOD_SIG551, L_MOD_M4_ASSAULT_RIFLE },
+    { MOD_MSG90A1_SNIPER_RIFLE, L_MOD_MSG90A1_SNIPER_RIFLE },
+    { MOD_M60_MACHINEGUN, L_MOD_M60_MACHINEGUN },
+    { MOD_MM1_GRENADE_LAUNCHER, L_MOD_MM1_GRENADE_LAUNCHER },
+    { MOD_RPG7_LAUNCHER, L_MOD_RPG7_LAUNCHER },
+    { MOD_M84_GRENADE, L_MOD_M84_GRENADE },
+    { MOD_SMOHG92_GRENADE, L_MOD_SMOHG92_GRENADE },
+    { MOD_ANM14_GRENADE, L_MOD_ANM14_GRENADE },
+    { MOD_M15_GRENADE, L_MOD_M15_GRENADE },
+    { MOD_WATER, L_MOD_WATER },
+    { MOD_CRUSH, L_MOD_CRUSH },
+    { MOD_TELEFRAG, L_MOD_TELEFRAG },
+    { MOD_FALLING, L_MOD_FALLING },
+    { MOD_SUICIDE, L_MOD_SUICIDE },
+    { MOD_TEAMCHANGE, L_MOD_TEAMCHANGE },
+    { MOD_TARGET_LASER, L_MOD_TARGET_LASER },
+    { MOD_TRIGGER_HURT, L_MOD_TRIGGER_HURT },
+    { MOD_TRIGGER_HURT_NOSUICIDE, L_MOD_TRIGGER_HURT_NOSUICIDE }
+};
+
+weaponDiff_t weaponTranslations[] = {
+    { WP_NONE, L_WP_NONE },
+    { WP_KNIFE, L_WP_KNIFE },
+    { WP_M1911A1_PISTOL, L_WP_M1911A1_PISTOL },
+    { WP_USSOCOM_PISTOL, L_WP_USSOCOM_PISTOL },
+    { WP_SILVER_TALON, L_WP_M1911A1_PISTOL },
+    { WP_M590_SHOTGUN, L_WP_M590_SHOTGUN },
+    { WP_MICRO_UZI_SUBMACHINEGUN, L_WP_MICRO_UZI_SUBMACHINEGUN },
+    { WP_M3A1_SUBMACHINEGUN, L_WP_M3A1_SUBMACHINEGUN },
+    { WP_MP5, L_WP_M4_ASSAULT_RIFLE },
+    { WP_USAS_12_SHOTGUN, L_WP_USAS_12_SHOTGUN },
+    { WP_M4_ASSAULT_RIFLE, L_WP_M4_ASSAULT_RIFLE },
+    { WP_AK74_ASSAULT_RIFLE, L_WP_AK74_ASSAULT_RIFLE },
+    { WP_SIG551, L_WP_M4_ASSAULT_RIFLE },
+    { WP_MSG90A1, L_WP_MSG90A1 },
+    { WP_M60_MACHINEGUN, L_WP_M60_MACHINEGUN },
+    { WP_MM1_GRENADE_LAUNCHER, L_WP_MM1_GRENADE_LAUNCHER },
+    { WP_RPG7_LAUNCHER, L_WP_RPG7_LAUNCHER },
+    { WP_M84_GRENADE, L_WP_M84_GRENADE },
+    { WP_SMOHG92_GRENADE, L_WP_SMOHG92_GRENADE },
+    { WP_ANM14_GRENADE, L_WP_ANM14_GRENADE },
+    { WP_M15_GRENADE, L_WP_M15_GRENADE },
+    //{ WP_M67_GRENADE, L_WP_M67_GRENADE },
+    //{ WP_F1_GRENADE, L_WP_F1_GRENADE },
+    //{ WP_L2A2_GRENADE, L_WP_L2A2_GRENADE },
+    //{ WP_MDN11_GRENADE, L_WP_MDN11_GRENADE }
+};
+
+ammoDiff_t ammoTranslations[] = {
+    { AMMO_KNIFE, L_AMMO_KNIFE},
+    { AMMO_045, L_AMMO_045 },
+    { AMMO_556, L_AMMO_556 },
+    { AMMO_9, L_AMMO_9 },
+    { AMMO_12, L_AMMO_12 },
+    { AMMO_762, L_AMMO_762 },
+    { AMMO_40, L_AMMO_40 },
+    { AMMO_RPG7, L_AMMO_RPG7 },
+    { AMMO_M15, L_AMMO_M15 },
+    { AMMO_M84, L_AMMO_M84 },
+    { AMMO_SMOHG92, L_AMMO_SMOHG92 },
+    { AMMO_ANM14, L_AMMO_ANM14 },
+    { AMMO_762_BELT, L_AMMO_NONE }, // JANFIXME what gun uses 762?
+    { AMMO_MP5_9, L_AMMO_NONE },
+    { AMMO_MAX, L_AMMO_MAX },
+    { AMMO_NONE, L_AMMO_NONE }
+};
+
+int translateSilverAmmoToGoldAmmo(int input) {
+
+    for (int i = 0; i < sizeof(ammoTranslations) / sizeof(ammoTranslations[0]); i++) {
+        ammoDiff_t dif = ammoTranslations[i];
+
+        if (dif.translatedAmmo == input) {
+            return dif.ammo;
+        }
+    }
+
+
+    return L_AMMO_045;
+
+}
+
+modelIndexDiff_t modelIndexTranslations[] = {
+    {MODELINDEX_NONE, L_MODELINDEX_NONE},
+    {MODELINDEX_ARMOR_BIG, L_MODELINDEX_ARMOR_BIG},
+    {MODELINDEX_ARMOR_MEDIUM, L_MODELINDEX_ARMOR_MEDIUM},
+    {MODELINDEX_ARMOR_SMALL, L_MODELINDEX_ARMOR_SMALL},
+    {MODELINDEX_HEALTH_BIG, L_MODELINDEX_HEALTH_BIG},
+    {MODELINDEX_HEALTH_SMALL, L_MODELINDEX_HEALTH_BIG},
+    {MODELINDEX_WEAPON_KNIFE, L_MODELINDEX_WEAPON_KNIFE},
+    {MODELINDEX_WEAPON_SOCOM, L_MODELINDEX_WEAPON_SOCOM},
+    {MODELINDEX_WEAPON_M19, L_MODELINDEX_WEAPON_M19},
+    {MODELINDEX_WEAPON_SILVERTALON, L_MODELINDEX_WEAPON_M19}, // whilst M19 would be fine as for displaying purposes, Silver Talon should be removed.
+    {MODELINDEX_WEAPON_MICROUZI, L_MODELINDEX_WEAPON_MICROUZI},
+    {MODELINDEX_WEAPON_M3A1, L_MODELINDEX_WEAPON_M3A1},
+    {MODELINDEX_WEAPON_MP5, L_MODELINDEX_WEAPON_MICROUZI},
+    {MODELINDEX_WEAPON_USAS12, L_MODELINDEX_WEAPON_USAS12},
+    {MODELINDEX_WEAPON_M590, L_MODELINDEX_WEAPON_M590},
+    {MODELINDEX_WEAPON_MSG90A1, L_MODELINDEX_WEAPON_MSG90A1},
+    {MODELINDEX_WEAPON_M4, L_MODELINDEX_WEAPON_M4},
+    {MODELINDEX_WEAPON_AK74, L_MODELINDEX_WEAPON_AK74},
+    {MODELINDEX_WEAPON_SIG551, L_MODELINDEX_WEAPON_M4}, // SIG551 should be disabled altogether due to scope.
+    {MODELINDEX_WEAPON_M60, L_MODELINDEX_WEAPON_M60},
+    {MODELINDEX_WEAPON_RPG7, L_MODELINDEX_WEAPON_RPG7},
+    {MODELINDEX_WEAPON_MM1, L_MODELINDEX_WEAPON_MM1},
+    {MODELINDEX_WEAPON_M84, L_MODELINDEX_WEAPON_M84},
+    {MODELINDEX_WEAPON_SMOHG92, L_MODELINDEX_WEAPON_SMOHG92},
+    {MODELINDEX_WEAPON_ANM14, L_MODELINDEX_WEAPON_ANM14},
+    {MODELINDEX_WEAPON_M15, L_MODELINDEX_WEAPON_M15},
+    {MODELINDEX_AMMO_045, L_MODELINDEX_AMMO_045},
+    {MODELINDEX_AMMO_9MM, L_MODELINDEX_AMMO_9MM},
+    {MODELINDEX_AMMO_12GAUGE, L_MODELINDEX_AMMO_12GAUGE},
+    {MODELINDEX_AMMO_762, L_MODELINDEX_AMMO_762},
+    {MODELINDEX_AMMO_556, L_MODELINDEX_AMMO_556},
+    {MODELINDEX_AMMO_40MM, L_MODELINDEX_AMMO_40MM},
+    {MODELINDEX_AMMO_RPG7, L_MODELINDEX_AMMO_RPG7},
+    {MODELINDEX_BACKPACK, L_MODELINDEX_BACKPACK},
+    {MODELINDEX_GAMETYPE_ITEM, L_MODELINDEX_GAMETYPE_ITEM},
+    {MODELINDEX_GAMETYPE_ITEM_2, L_MODELINDEX_GAMETYPE_ITEM_2},
+    {MODELINDEX_GAMETYPE_ITEM_3, L_MODELINDEX_GAMETYPE_ITEM_3},
+    {MODELINDEX_GAMETYPE_ITEM_4, L_MODELINDEX_GAMETYPE_ITEM_4},
+    {MODELINDEX_GAMETYPE_ITEM_5, L_MODELINDEX_GAMETYPE_ITEM_5},
+    {MODELINDEX_ARMOR, L_MODELINDEX_ARMOR},
+    {MODELINDEX_NIGHTVISION, L_MODELINDEX_NIGHTVISION},
+    {MODELINDEX_THERMAL, L_MODELINDEX_THERMAL},
+    //{MODELINDEX_WEAPON_M67, L_MODELINDEX_WEAPON_M67},
+    //{MODELINDEX_WEAPON_F1, L_MODELINDEX_WEAPON_F1},
+    //{MODELINDEX_WEAPON_L2A2, L_MODELINDEX_WEAPON_L2A2},
+    //{MODELINDEX_WEAPON_MDN11, L_MODELINDEX_WEAPON_MDN11}
+};
+
+
+static int translateGoldModelIdxToSilverModelIdx(int input) {
+    //return input;
     if (input < 0 || input >= sizeof(modelIndexTranslations) / sizeof(modelIndexTranslations[0])) {
-        Com_DPrintf("[D] Cannot translate model index %d into a valid legacy model index.", input);
+        Com_DPrintf("[D] Cannot translate model index %d into a valid legacy model index.\n", input);
 
         return input;
     }
-
+    Com_DPrintf("[DS] %d => %d\n", input, modelIndexTranslations[input].translatedIndex);
     return modelIndexTranslations[input].translatedIndex;
 }
 
 static int translateGoldWeaponToSilverWeapon(int input) {
-
+    return input;
     if (input < 0 || input >= sizeof(weaponTranslations) / sizeof(weaponTranslations[0])) {
-        Com_DPrintf("[D] Cannot translate weapon index %d into a valid legacy weapon index.", input);
+        //Com_DPrintf("[D] Cannot translate weapon index %d into a valid legacy weapon index.\n", input);
 
         return input;
     }
 
+    //Com_DPrintf("GoldWpn: Translate %d => %d\n", input, weaponTranslations[input].translatedWeapon);
+
     return weaponTranslations[input].translatedWeapon;
 }
 
-static int translateGoldAmmoToSilverAmmo(int input) {
+static int translateSilverWeaponToGoldWeapon(int input) {
 
+    for (int i = 0; i < sizeof(weaponTranslations) / sizeof(weaponTranslations[0]); i++) {
+        weaponDiff_t dif = weaponTranslations[i];
+
+        if (dif.translatedWeapon == input) {
+            //Com_DPrintf("[D] LOOKAHEAD? Wpn %d FOUND wpn %d\n", input, dif.weapon);
+            return dif.weapon;
+        }
+    }
+
+    return L_WP_USSOCOM_PISTOL;
+}
+
+static int translateGoldAmmoToSilverAmmo(int input) {
+    //return input;
     if (input < 0 || input >= sizeof(ammoTranslations) / sizeof(ammoTranslations[0])) {
-        Com_DPrintf("[D] Cannot translate ammo index %d into a valid legacy ammo index.", input);
+        Com_DPrintf("[D] Cannot translate ammo index %d into a valid legacy ammo index.\n", input);
         return input;
     }
 
@@ -62,9 +224,9 @@ static int translateGoldAmmoToSilverAmmo(int input) {
 }
 
 static int translateGoldModToSilverMod(int input) {
-
+    return input;
     if (input < 0 || input >= sizeof(meansOfDeathTranslations) / sizeof(meansOfDeathTranslations[0])) {
-        Com_DPrintf("[D] Cannot translate MOD index %d into a valid legacy MOD index.", input);
+        Com_DPrintf("[D] Cannot translate MOD index %d into a valid legacy MOD index.\n", input);
 
         return input;
     }
@@ -72,6 +234,117 @@ static int translateGoldModToSilverMod(int input) {
     return meansOfDeathTranslations[input].translatedMod;
 }
 
+static int translateGoldStatWpnsToSilver(int input) {
+
+    // assume valid input.
+    int newStats = 0;
+
+    for (int i = 0; i < sizeof(weaponTranslations) / sizeof(weaponTranslations[0]); i++) {
+        weaponDiff_t dif = weaponTranslations[i];
+
+        if (input & (1 << dif.weapon)) {
+            newStats |= 1 << dif.translatedWeapon;
+        }
+    }
+
+    return newStats;
+
+}
+
+
+
+// Gold-to-legacy weapon mapping
+int weaponGoldToLegacyMapping[] = {
+    L_WP_NONE,                // WP_NONE
+    L_WP_KNIFE,               // WP_KNIFE
+    L_WP_M1911A1_PISTOL,      // WP_M1911A1_PISTOL
+    L_WP_USSOCOM_PISTOL,      // WP_USSOCOM_PISTOL
+    L_WP_NONE,                // WP_SILVER_TALON (no equivalent)
+    L_WP_M590_SHOTGUN,        // WP_M590_SHOTGUN
+    L_WP_MICRO_UZI_SUBMACHINEGUN, // WP_MICRO_UZI_SUBMACHINEGUN
+    L_WP_M3A1_SUBMACHINEGUN,  // WP_M3A1_SUBMACHINEGUN
+    L_WP_NONE,                // WP_MP5 (no equivalent)
+    L_WP_USAS_12_SHOTGUN,     // WP_USAS_12_SHOTGUN
+    L_WP_M4_ASSAULT_RIFLE,    // WP_M4_ASSAULT_RIFLE
+    L_WP_AK74_ASSAULT_RIFLE,  // WP_AK74_ASSAULT_RIFLE
+    L_WP_NONE,                // WP_SIG551 (no equivalent)
+    L_WP_MSG90A1,             // WP_MSG90A1
+    L_WP_M60_MACHINEGUN,      // WP_M60_MACHINEGUN
+    L_WP_MM1_GRENADE_LAUNCHER,// WP_MM1_GRENADE_LAUNCHER
+    L_WP_RPG7_LAUNCHER,       // WP_RPG7_LAUNCHER
+    L_WP_M84_GRENADE,         // WP_M84_GRENADE
+    L_WP_SMOHG92_GRENADE,     // WP_SMOHG92_GRENADE
+    L_WP_ANM14_GRENADE,       // WP_ANM14_GRENADE
+    L_WP_M15_GRENADE          // WP_M15_GRENADE
+};
+
+// Gold-to-legacy ammo mapping
+int ammoGoldToLegacyMapping[] = {
+    L_AMMO_KNIFE,             // AMMO_KNIFE
+    L_AMMO_045,               // AMMO_045
+    L_AMMO_556,               // AMMO_556
+    L_AMMO_9,                 // AMMO_9
+    L_AMMO_12,                // AMMO_12
+    L_AMMO_762,               // AMMO_762
+    L_AMMO_40,                // AMMO_40
+    L_AMMO_RPG7,              // AMMO_RPG7
+    L_AMMO_M15,               // AMMO_M15
+    L_AMMO_NONE,              // No legacy equivalent for AMMO_M84
+    L_AMMO_SMOHG92,           // AMMO_SMOHG92
+    L_AMMO_ANM14              // AMMO_ANM14
+};
+
+// Translate clip values from gold to legacy
+int translateClipToLegacy(int weaponIndex, int clipValue) {
+    int legacyWeaponIndex = weaponGoldToLegacyMapping[weaponIndex];
+    if (legacyWeaponIndex == L_WP_NONE) return 0; // No equivalent
+    return clipValue; // Clip values are directly translatable
+}
+
+// Translate firemode values from gold to legacy
+int translateFiremodeToLegacy(int weaponIndex, int firemodeValue) {
+    int legacyWeaponIndex = weaponGoldToLegacyMapping[weaponIndex];
+    if (legacyWeaponIndex == L_WP_NONE) return 0; // No equivalent
+    return firemodeValue; // Firemode values are directly translatable
+}
+
+// Translate ammo values from gold to legacy
+int translateAmmoToLegacy(int ammoIndex, int ammoValue) {
+    int legacyAmmoIndex = ammoGoldToLegacyMapping[ammoIndex];
+    if (legacyAmmoIndex == L_AMMO_NONE) return 0; // No equivalent
+    return ammoValue; // Ammo values are directly translatable
+}
+
+// Translate STAT_WEAPONS bitmask from gold to legacy
+int translateStatWeaponsToLegacy(int goldWeaponsBitmask) {
+    int legacyWeaponsBitmask = 0;
+    for (int i = 0; i < WP_NUM_WEAPONS; i++) {
+        if (goldWeaponsBitmask & (1 << i)) {
+            int legacyWeaponIndex = weaponGoldToLegacyMapping[i];
+            if (legacyWeaponIndex != L_WP_NONE) {
+                legacyWeaponsBitmask |= (1 << legacyWeaponIndex);
+            }
+        }
+    }
+    return legacyWeaponsBitmask;
+}
+
+
+/*
+static int translateGoldClipToSilverClip(int* clip) {
+
+    int newClip[32] = 0;
+
+    for (int i = 0; i < sizeof(weaponTranslations) / sizeof(weaponTranslations[0]); i++) {
+        weaponDiff_t dif = weaponTranslations[i];
+
+        if ()
+    }
+
+    return newClip;
+
+}
+*/
 
 /*
 ==============================================================================
@@ -679,6 +952,8 @@ usercmd_t communication
 /*
 =====================
 MSG_WriteDeltaUsercmdKey
+
+JANFIXME - wpn might need a change here too
 =====================
 */
 void MSG_WriteDeltaUsercmdKey( msg_t *msg, int key, usercmd_t *from, usercmd_t *to ) {
@@ -719,7 +994,7 @@ void MSG_WriteDeltaUsercmdKey( msg_t *msg, int key, usercmd_t *from, usercmd_t *
 MSG_ReadDeltaUsercmdKey
 =====================
 */
-void MSG_ReadDeltaUsercmdKey( msg_t *msg, int key, usercmd_t *from, usercmd_t *to ) {
+void MSG_ReadDeltaUsercmdKey( msg_t *msg, int key, usercmd_t *from, usercmd_t *to, qboolean legacyProtocol ) {
     if ( MSG_ReadBits( msg, 1 ) ) {
         to->serverTime = from->serverTime + MSG_ReadBits( msg, 8 );
     } else {
@@ -751,6 +1026,15 @@ void MSG_ReadDeltaUsercmdKey( msg_t *msg, int key, usercmd_t *from, usercmd_t *t
         to->buttons = from->buttons;
         to->weapon = from->weapon;
     }
+
+    /*if (legacyProtocol) {
+        if (to->weapon & WP_DELAYED_CHANGE_BIT) {
+            to->weapon = translateSilverWeaponToGoldWeapon(to->weapon & ~WP_DELAYED_CHANGE_BIT) | WP_DELAYED_CHANGE_BIT;
+        }
+        else {
+            to->weapon = translateSilverWeaponToGoldWeapon(to->weapon);
+        }
+    }*/
 }
 
 /*
@@ -994,15 +1278,19 @@ void MSG_WriteDeltaEntity( msg_t *msg, struct entityState_s *from, struct entity
             to->event--;
         }
 
-        if (to->modelindex > 0 && to->modelindex < sizeof(modelIndexTranslations)) {
+        if (to->modelindex > 0 && to->modelindex < sizeof(modelIndexTranslations) / sizeof(modelIndexTranslations[0]) && to->eType == ET_ITEM) {
             originalModelIdx1 = to->modelindex;
             to->modelindex = translateGoldModelIdxToSilverModelIdx(to->modelindex);
         }
 
-        if (to->modelindex2 > 0 && to->modelindex2 < sizeof(modelIndexTranslations)) {
+        originalModelIdx2 = to->weapon;
+        from->weapon = translateGoldWeaponToSilverWeapon(from->weapon);
+        to->weapon = translateGoldWeaponToSilverWeapon(to->weapon);
+
+        /*if (to->modelindex2 > 0 && to->modelindex2 < sizeof(modelIndexTranslations)) {
             originalModelIdx2 = to->modelindex2;
             to->modelindex2 = translateGoldModelIdxToSilverModelIdx(to->modelindex2);
-        }
+        }*/
     }
 
     for ( i = 0, field = entityStateFields_Local; i < lc ; i++, field++ ) {
@@ -1064,8 +1352,10 @@ void MSG_WriteDeltaEntity( msg_t *msg, struct entityState_s *from, struct entity
         }
 
         if (originalModelIdx2 != -1) {
-            to->modelindex2 = originalModelIdx2;
+            to->weapon = originalModelIdx2;
         }
+
+        from->weapon = translateSilverWeaponToGoldWeapon(from->weapon);
         
     }
 }
@@ -1365,6 +1655,8 @@ void MSG_WriteDeltaPlayerstate( msg_t *msg, struct playerState_s *from, struct p
     float           fullFloat;
     int             trunc, lc;
 
+    int originalStats = -1;
+
     netField_t* playerStateFields_Local = legacyProtocol ? legacyPlayerStateFields : playerStateFields;
 
     if (!from) {
@@ -1411,6 +1703,8 @@ void MSG_WriteDeltaPlayerstate( msg_t *msg, struct playerState_s *from, struct p
         if ((to->externalEvent & ~EV_EVENT_BITS) > EV_ITEM_PICKUP_QUIET) {
             to->externalEvent--;
         }
+
+        to->weapon = translateGoldWeaponToSilverWeapon(to->weapon);
     }
 
     for ( i = 0, field = playerStateFields_Local; i < lc ; i++, field++ ) {
@@ -1449,20 +1743,17 @@ void MSG_WriteDeltaPlayerstate( msg_t *msg, struct playerState_s *from, struct p
     //
     // send the arrays
     //
+
+    
     statsbits = 0;
     for (i=0 ; i<MAX_STATS ; i++) {
         if (to->stats[i] != from->stats[i]) {
-
-            if (legacyProtocol && i == STAT_WEAPONS) {
-                statsbits |= 1 << translateGoldWeaponToSilverWeapon(i);
-            }
-            else {
-                statsbits |= 1 << i;
-            }
-
-            
+            statsbits |= 1 << i;
         }
     }
+
+    
+
     persistantbits = 0;
     for (i=0 ; i<MAX_PERSISTANT ; i++) {
         if (to->persistant[i] != from->persistant[i]) {
@@ -1471,55 +1762,76 @@ void MSG_WriteDeltaPlayerstate( msg_t *msg, struct playerState_s *from, struct p
     }
     ammobits = 0;
     for (i=0 ; i<MAX_AMMO ; i++) {
-        if (to->ammo[i] != from->ammo[i]) {
 
-            if (legacyProtocol) {
-                ammobits |= 1 << translateGoldAmmoToSilverAmmo(i);
-            }
-            else {
+        if (legacyProtocol) {
+            int legacyInt = translateSilverAmmoToGoldAmmo(i);
+            if (to->ammo[legacyInt] != from->ammo[legacyInt]) {
                 ammobits |= 1 << i;
             }
+        }
+        else {
 
-            
+
+            if (to->ammo[i] != from->ammo[i]) {
+                ammobits |= 1 << i;
+            }
         }
     }
+
+
+
     clipbits = 0;
     for(i = 0; i<MAX_WEAPONS; i++) {
-        if(to->clip[ATTACK_NORMAL][i] != from->clip[ATTACK_NORMAL][i]) {
 
-            if (legacyProtocol) {
-                clipbits |= 1 << translateGoldWeaponToSilverWeapon(i);
-            }
-            else {
+        if (legacyProtocol) {
+            int legacyInt = translateSilverWeaponToGoldWeapon(i);
+            if (to->clip[ATTACK_NORMAL][legacyInt] != from->clip[ATTACK_NORMAL][legacyInt]) {
                 clipbits |= 1 << i;
             }
+        }
+        else {
 
-            
+            if (to->clip[ATTACK_NORMAL][i] != from->clip[ATTACK_NORMAL][i]) {
+                clipbits |= 1 << i;
+
+
+            }
         }
     }
     altclipbits = 0;
     for(i = 0; i<MAX_WEAPONS; i++) {
-        if(to->clip[ATTACK_ALTERNATE][i] != from->clip[ATTACK_ALTERNATE][i]) {
-            if (legacyProtocol) {
-                altclipbits |= 1 << translateGoldWeaponToSilverWeapon(i);
+
+        if (legacyProtocol) {
+            int legacyInt = translateSilverWeaponToGoldWeapon(i);
+            if (to->clip[ATTACK_ALTERNATE][legacyInt] != from->clip[ATTACK_ALTERNATE][legacyInt]) {
+                altclipbits |= 1 << i;
             }
-            else {
+        } else {
+
+            if(to->clip[ATTACK_ALTERNATE][i] != from->clip[ATTACK_ALTERNATE][i]) {
                 altclipbits |= 1 << i;
             }
         }
     }
+
+
+
     firemodebits = 0;
     for(i = 0; i<MAX_WEAPONS; i++) {
-        if(to->firemode[i] != from->firemode[i]) {
-
-            if (legacyProtocol) {
-                firemodebits |= 1 << translateGoldWeaponToSilverWeapon(i);
-            }
-            else {
+        
+        if (legacyProtocol) {
+            int legacyInt = translateSilverWeaponToGoldWeapon(i);
+            if (to->firemode[legacyInt] != from->firemode[legacyInt]) {
                 firemodebits |= 1 << i;
             }
-
         }
+        else {
+            if (to->firemode[i] != from->firemode[i]) {
+                firemodebits |= 1 << i;
+            }
+        }
+
+        
     }
 
     if (!statsbits && !persistantbits && !ammobits && !clipbits && !altclipbits && !firemodebits) {
@@ -1534,9 +1846,12 @@ void MSG_WriteDeltaPlayerstate( msg_t *msg, struct playerState_s *from, struct p
         MSG_WriteBits( msg, statsbits, MAX_STATS );
         for (i = 0; i < MAX_STATS; i++) {
 
-            if (legacyProtocol) {
-                if (statsbits & (1 << translateGoldWeaponToSilverWeapon(i)))
-                    MSG_WriteLong(msg, to->stats[i]);
+            if (legacyProtocol && i == STAT_WEAPONS && statsbits & (1 << i)) {
+
+                MSG_WriteLong(msg, translateGoldStatWpnsToSilver(to->stats[i]));
+
+                //if (statsbits & (1 << translateGoldWeaponToSilverWeapon(i)))
+                    //MSG_WriteLong(msg, to->stats[i]);
             }
             else {
                 if (statsbits & (1 << i))
@@ -1560,19 +1875,24 @@ void MSG_WriteDeltaPlayerstate( msg_t *msg, struct playerState_s *from, struct p
         MSG_WriteBits( msg, 0, 1 ); // no change
     }
 
-
     if ( ammobits ) {
         MSG_WriteBits( msg, 1, 1 ); // changed
         MSG_WriteBits( msg, ammobits, MAX_AMMO );
         for (i = 0; i < MAX_AMMO; i++) {
+            
             if (legacyProtocol) {
-                if (ammobits & (1 << translateGoldAmmoToSilverAmmo(i)))
-                    MSG_WriteShort(msg, to->ammo[i]);
+                if (ammobits & (1 << i)) {
+                    MSG_WriteShort(msg, to->ammo[translateSilverAmmoToGoldAmmo(i)]);
+                }
             }
             else {
-                if (ammobits & (1 << i))
+                if (ammobits & (1 << i)) {
                     MSG_WriteShort(msg, to->ammo[i]);
+                }
             }
+
+            
+                
         }
             
     } else {
@@ -1585,14 +1905,18 @@ void MSG_WriteDeltaPlayerstate( msg_t *msg, struct playerState_s *from, struct p
         for (i = 0; i < MAX_WEAPONS; i++) {
 
             if (legacyProtocol) {
-                if (clipbits & (1 << translateGoldWeaponToSilverWeapon(i)))
-                    MSG_WriteByte(msg, to->clip[ATTACK_NORMAL][i]);
+                if (clipbits & (1 << i)) {
+                    MSG_WriteByte(msg, to->clip[ATTACK_NORMAL][translateSilverWeaponToGoldWeapon(i)]);
+                }
             }
             else {
-                if (clipbits & (1 << i))
+                if (clipbits & (1 << i)) {
                     MSG_WriteByte(msg, to->clip[ATTACK_NORMAL][i]);
+                }
             }
 
+            
+                
         }
             
     }
@@ -1606,14 +1930,19 @@ void MSG_WriteDeltaPlayerstate( msg_t *msg, struct playerState_s *from, struct p
         for (i = 0; i < MAX_WEAPONS; i++) {
 
             if (legacyProtocol) {
-                if (altclipbits & (1 << translateGoldWeaponToSilverWeapon(i)))
-                    MSG_WriteByte(msg, to->clip[ATTACK_ALTERNATE][i]);
+                if (altclipbits & (1 << i)) {
+                    MSG_WriteByte(msg, to->clip[ATTACK_ALTERNATE][translateSilverWeaponToGoldWeapon(i)]);
+                }
+
             }
             else {
-                if (altclipbits & (1 << i))
+                if (altclipbits & (1 << i)) {
                     MSG_WriteByte(msg, to->clip[ATTACK_ALTERNATE][i]);
+                }
             }
 
+            
+                
         }
             
     }
@@ -1627,20 +1956,22 @@ void MSG_WriteDeltaPlayerstate( msg_t *msg, struct playerState_s *from, struct p
         for (i = 0; i < MAX_WEAPONS; i++) {
 
             if (legacyProtocol) {
-                if (firemodebits & (1 << translateGoldWeaponToSilverWeapon(i)))
-                    MSG_WriteBits(msg, to->firemode[i], WP_FIREMODE_MAX);
+                if (firemodebits & (1 << i)) {
+                    MSG_WriteBits(msg, to->firemode[translateSilverWeaponToGoldWeapon(i)], WP_FIREMODE_MAX);
+                }
             }
             else {
-                if (firemodebits & (1 << i))
+                if (firemodebits & (1 << i)) {
                     MSG_WriteBits(msg, to->firemode[i], WP_FIREMODE_MAX);
+                }
             }
-
         }
             
     }
     else {
         MSG_WriteBits( msg, 0, 1 );   // no change
     }
+    
 
     // undo the change.
 
@@ -1668,6 +1999,8 @@ void MSG_WriteDeltaPlayerstate( msg_t *msg, struct playerState_s *from, struct p
         if ((to->externalEvent & ~EV_EVENT_BITS) >= EV_ITEM_PICKUP_QUIET) {
             to->externalEvent++;
         }
+
+        to->weapon = translateSilverWeaponToGoldWeapon(to->weapon);
     }
 
 
