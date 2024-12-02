@@ -1519,9 +1519,17 @@ void MSG_WriteDeltaPlayerstate( msg_t *msg, struct playerState_s *from, struct p
     if ( ammobits ) {
         MSG_WriteBits( msg, 1, 1 ); // changed
         MSG_WriteBits( msg, ammobits, MAX_AMMO );
-        for (i=0 ; i<MAX_AMMO ; i++)
-            if (ammobits & (1<<i) )
-                MSG_WriteShort (msg, to->ammo[i]);
+        for (i = 0; i < MAX_AMMO; i++) {
+            if (legacyProtocol) {
+                if (ammobits & (1 << translateGoldAmmoToSilverAmmo(i)))
+                    MSG_WriteShort(msg, to->ammo[i]);
+            }
+            else {
+                if (ammobits & (1 << i))
+                    MSG_WriteShort(msg, to->ammo[i]);
+            }
+        }
+            
     } else {
         MSG_WriteBits( msg, 0, 1 ); // no change
     }
@@ -1529,9 +1537,19 @@ void MSG_WriteDeltaPlayerstate( msg_t *msg, struct playerState_s *from, struct p
     if ( clipbits ) {
         MSG_WriteBits( msg, 1, 1 );   // changed
         MSG_WriteBits( msg, clipbits, MAX_WEAPONS );
-        for (i = 0; i<MAX_WEAPONS; i++)
-            if (clipbits & (1 << i))
-                MSG_WriteByte (msg, to->clip[ATTACK_NORMAL][i]);
+        for (i = 0; i < MAX_WEAPONS; i++) {
+
+            if (legacyProtocol) {
+                if (clipbits & (1 << translateGoldWeaponToSilverWeapon(i)))
+                    MSG_WriteByte(msg, to->clip[ATTACK_NORMAL][i]);
+            }
+            else {
+                if (clipbits & (1 << i))
+                    MSG_WriteByte(msg, to->clip[ATTACK_NORMAL][i]);
+            }
+
+        }
+            
     }
     else {
         MSG_WriteBits( msg, 0, 1 );   // no change
@@ -1540,9 +1558,19 @@ void MSG_WriteDeltaPlayerstate( msg_t *msg, struct playerState_s *from, struct p
     if ( altclipbits ) {
         MSG_WriteBits( msg, 1, 1 );   // changed
         MSG_WriteBits( msg, altclipbits, MAX_WEAPONS );
-        for (i = 0; i<MAX_WEAPONS; i++)
-            if (altclipbits & (1 << i))
-                MSG_WriteByte (msg, to->clip[ATTACK_ALTERNATE][i]);
+        for (i = 0; i < MAX_WEAPONS; i++) {
+
+            if (legacyProtocol) {
+                if (altclipbits & (1 << translateGoldWeaponToSilverWeapon(i)))
+                    MSG_WriteByte(msg, to->clip[ATTACK_ALTERNATE][i]);
+            }
+            else {
+                if (altclipbits & (1 << i))
+                    MSG_WriteByte(msg, to->clip[ATTACK_ALTERNATE][i]);
+            }
+
+        }
+            
     }
     else {
         MSG_WriteBits( msg, 0, 1 );   // no change
@@ -1551,9 +1579,19 @@ void MSG_WriteDeltaPlayerstate( msg_t *msg, struct playerState_s *from, struct p
     if ( firemodebits ) {
         MSG_WriteBits( msg, 1, 1 );   // changed
         MSG_WriteBits( msg, firemodebits, MAX_WEAPONS );
-        for (i = 0; i<MAX_WEAPONS; i++)
-            if (firemodebits & (1 << i))
-                MSG_WriteBits (msg, to->firemode[i], WP_FIREMODE_MAX);
+        for (i = 0; i < MAX_WEAPONS; i++) {
+
+            if (legacyProtocol) {
+                if (firemodebits & (1 << translateGoldWeaponToSilverWeapon(i)))
+                    MSG_WriteBits(msg, to->firemode[i], WP_FIREMODE_MAX);
+            }
+            else {
+                if (firemodebits & (1 << i))
+                    MSG_WriteBits(msg, to->firemode[i], WP_FIREMODE_MAX);
+            }
+
+        }
+            
     }
     else {
         MSG_WriteBits( msg, 0, 1 );   // no change
