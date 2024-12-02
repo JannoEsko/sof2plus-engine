@@ -199,13 +199,12 @@ static int translateGoldWeaponToSilverWeapon(int input) {
     return weaponTranslations[input].translatedWeapon;
 }
 
-static int translateSilverWeaponToGoldWeapon(int input) {
+int translateSilverWeaponToGoldWeapon(int input) {
 
     for (int i = 0; i < sizeof(weaponTranslations) / sizeof(weaponTranslations[0]); i++) {
         weaponDiff_t dif = weaponTranslations[i];
 
         if (dif.translatedWeapon == input) {
-            //Com_DPrintf("[D] LOOKAHEAD? Wpn %d FOUND wpn %d\n", input, dif.weapon);
             return dif.weapon;
         }
     }
@@ -1017,7 +1016,7 @@ void MSG_ReadDeltaUsercmdKey( msg_t *msg, int key, usercmd_t *from, usercmd_t *t
         to->buttons = MSG_ReadDeltaKey( msg, key, from->buttons, 16);
         to->weapon = MSG_ReadDeltaKey( msg, key, from->weapon, 8);
 
-        if (legacyProtocol) {
+        /*if (legacyProtocol) {
             if (to->weapon & WP_DELAYED_CHANGE_BIT) {
                 to->weapon = translateSilverWeaponToGoldWeapon(to->weapon & ~WP_DELAYED_CHANGE_BIT) | WP_DELAYED_CHANGE_BIT;
             }
@@ -1025,7 +1024,7 @@ void MSG_ReadDeltaUsercmdKey( msg_t *msg, int key, usercmd_t *from, usercmd_t *t
                 to->weapon = translateSilverWeaponToGoldWeapon(to->weapon);
             }
         }
-
+        */
     } else {
         to->angles[0] = from->angles[0];
         to->angles[1] = from->angles[1];
@@ -1354,11 +1353,9 @@ void MSG_WriteDeltaEntity( msg_t *msg, struct entityState_s *from, struct entity
             to->modelindex = originalModelIdx1;
         }
 
-        if (originalModelIdx2 != -1) {
-            to->weapon = originalModelIdx2;
-        }
 
         from->weapon = translateSilverWeaponToGoldWeapon(from->weapon);
+        to->weapon = translateSilverWeaponToGoldWeapon(to->weapon);
         
     }
 }
@@ -1707,6 +1704,7 @@ void MSG_WriteDeltaPlayerstate( msg_t *msg, struct playerState_s *from, struct p
             to->externalEvent--;
         }
 
+        from->weapon = translateGoldWeaponToSilverWeapon(from->weapon);
         to->weapon = translateGoldWeaponToSilverWeapon(to->weapon);
     }
 
@@ -2002,7 +2000,7 @@ void MSG_WriteDeltaPlayerstate( msg_t *msg, struct playerState_s *from, struct p
         if ((to->externalEvent & ~EV_EVENT_BITS) >= EV_ITEM_PICKUP_QUIET) {
             to->externalEvent++;
         }
-
+        from->weapon = translateSilverWeaponToGoldWeapon(from->weapon);
         to->weapon = translateSilverWeaponToGoldWeapon(to->weapon);
     }
 

@@ -1577,6 +1577,20 @@ static void SV_UserMove( client_t *cl, msg_t *msg, qboolean delta ) {
         if ( cmds[i].serverTime <= cl->lastUsercmd.serverTime ) {
             continue;
         }
+
+        // expect that clients will send legacy weapon ints.
+        if (cl->legacyProtocol) {
+
+            if (cmds[i].weapon & WP_DELAYED_CHANGE_BIT) {
+                cmds[i].weapon = translateSilverWeaponToGoldWeapon(cmds[i].weapon & ~WP_DELAYED_CHANGE_BIT) | WP_DELAYED_CHANGE_BIT;
+            }
+            else {
+                cmds[i].weapon = translateSilverWeaponToGoldWeapon(cmds[i].weapon);
+            }
+
+            
+        }
+
         SV_ClientThink (cl, &cmds[ i ]);
     }
 }
