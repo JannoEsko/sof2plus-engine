@@ -34,7 +34,15 @@ static int translateGoldModelIdxToSilverModelIdx(int input) {
 }
 
 static int translateGoldWeaponToSilverWeapon(int input) {
+    return weaponTranslations[input].translatedWeapon;
+}
 
+static int translateGoldAmmoToSilverAmmo(int input) {
+    return ammoTranslations[input].translatedAmmo;
+}
+
+static int translateGoldModToSilverMod(int input) {
+    return meansOfDeathTranslations[input].translatedMod;
 }
 
 
@@ -891,6 +899,8 @@ void MSG_WriteDeltaEntity( msg_t *msg, struct entityState_s *from, struct entity
     float       fullFloat;
     int         *fromF, *toF;
 
+    int originalModelIdx1 = -1, originalModelIdx2 = -1;
+
     netField_t* entityStateFields_Local = legacyProtocol ? legacyEntityStateFields : entityStateFields;
 
     numFields = ARRAY_LEN( entityStateFields );
@@ -956,6 +966,16 @@ void MSG_WriteDeltaEntity( msg_t *msg, struct entityState_s *from, struct entity
         if ((to->event & ~EV_EVENT_BITS) > EV_ITEM_PICKUP_QUIET) {
             to->event--;
         }
+
+        if (to->modelindex > 0 && to->modelindex < sizeof(modelIndexTranslations)) {
+            originalModelIdx1 = to->modelindex;
+            to->modelindex = translateGoldModelIdxToSilverModelIdx(to->modelindex);
+        }
+
+        if (to->modelindex2 > 0 && to->modelindex2 < sizeof(modelIndexTranslations)) {
+            originalModelIdx2 = to->modelindex2;
+            to->modelindex2 = translateGoldModelIdxToSilverModelIdx(to->modelindex2);
+        }
     }
 
     for ( i = 0, field = entityStateFields_Local; i < lc ; i++, field++ ) {
@@ -1011,6 +1031,15 @@ void MSG_WriteDeltaEntity( msg_t *msg, struct entityState_s *from, struct entity
         if ((to->event & ~EV_EVENT_BITS) >= EV_ITEM_PICKUP_QUIET) {
             to->event++;
         }
+
+        if (originalModelIdx1 != -1) {
+            to->modelindex = originalModelIdx1;
+        }
+
+        if (originalModelIdx2 != -1) {
+            to->modelindex2 = originalModelIdx2;
+        }
+        
     }
 }
 
@@ -1408,25 +1437,53 @@ void MSG_WriteDeltaPlayerstate( msg_t *msg, struct playerState_s *from, struct p
     ammobits = 0;
     for (i=0 ; i<MAX_AMMO ; i++) {
         if (to->ammo[i] != from->ammo[i]) {
-            ammobits |= 1<<i;
+
+            if (legacyProtocol) {
+                ammobits |= 1 << translateGoldAmmoToSilverAmmo(i);
+            }
+            else {
+                ammobits |= 1 << i;
+            }
+
+            
         }
     }
     clipbits = 0;
     for(i = 0; i<MAX_WEAPONS; i++) {
         if(to->clip[ATTACK_NORMAL][i] != from->clip[ATTACK_NORMAL][i]) {
-            clipbits |= 1 << i;
+
+            if (legacyProtocol) {
+                clipbits |= 1 << translateGoldWeaponToSilverWeapon(i);
+            }
+            else {
+                clipbits |= 1 << i;
+            }
+
+            
         }
     }
     altclipbits = 0;
     for(i = 0; i<MAX_WEAPONS; i++) {
         if(to->clip[ATTACK_ALTERNATE][i] != from->clip[ATTACK_ALTERNATE][i]) {
-            altclipbits |= 1 << i;
+            if (legacyProtocol) {
+                altclipbits |= 1 << translateGoldWeaponToSilverWeapon(i);
+            }
+            else {
+                altclipbits |= 1 << i;
+            }
         }
     }
     firemodebits = 0;
     for(i = 0; i<MAX_WEAPONS; i++) {
         if(to->firemode[i] != from->firemode[i]) {
-            firemodebits |= 1 << i;
+
+            if (legacyProtocol) {
+                firemodebits |= 1 << translateGoldWeaponToSilverWeapon(i);
+            }
+            else {
+                firemodebits |= 1 << i;
+            }
+
         }
     }
 
