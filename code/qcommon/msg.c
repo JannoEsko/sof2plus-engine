@@ -30,18 +30,45 @@ static qboolean         msgInit = qfalse;
 int pcount[256];
 
 static int translateGoldModelIdxToSilverModelIdx(int input) {
+
+    if (input < 0 || input >= sizeof(modelIndexTranslations) / sizeof(modelIndexTranslations[0])) {
+        Com_DPrintf("[D] Cannot translate model index %d into a valid legacy model index.", input);
+
+        return input;
+    }
+
     return modelIndexTranslations[input].translatedIndex;
 }
 
 static int translateGoldWeaponToSilverWeapon(int input) {
+
+    if (input < 0 || input >= sizeof(weaponTranslations) / sizeof(weaponTranslations[0])) {
+        Com_DPrintf("[D] Cannot translate weapon index %d into a valid legacy weapon index.", input);
+
+        return input;
+    }
+
     return weaponTranslations[input].translatedWeapon;
 }
 
 static int translateGoldAmmoToSilverAmmo(int input) {
+
+    if (input < 0 || input >= sizeof(ammoTranslations) / sizeof(ammoTranslations[0])) {
+        Com_DPrintf("[D] Cannot translate ammo index %d into a valid legacy ammo index.", input);
+        return input;
+    }
+
     return ammoTranslations[input].translatedAmmo;
 }
 
 static int translateGoldModToSilverMod(int input) {
+
+    if (input < 0 || input >= sizeof(meansOfDeathTranslations) / sizeof(meansOfDeathTranslations[0])) {
+        Com_DPrintf("[D] Cannot translate MOD index %d into a valid legacy MOD index.", input);
+
+        return input;
+    }
+
     return meansOfDeathTranslations[input].translatedMod;
 }
 
