@@ -1452,7 +1452,15 @@ void MSG_WriteDeltaPlayerstate( msg_t *msg, struct playerState_s *from, struct p
     statsbits = 0;
     for (i=0 ; i<MAX_STATS ; i++) {
         if (to->stats[i] != from->stats[i]) {
-            statsbits |= 1<<i;
+
+            if (legacyProtocol && i == STAT_WEAPONS) {
+                statsbits |= 1 << translateGoldWeaponToSilverWeapon(i);
+            }
+            else {
+                statsbits |= 1 << i;
+            }
+
+            
         }
     }
     persistantbits = 0;
@@ -1524,9 +1532,19 @@ void MSG_WriteDeltaPlayerstate( msg_t *msg, struct playerState_s *from, struct p
     if ( statsbits ) {
         MSG_WriteBits( msg, 1, 1 ); // changed
         MSG_WriteBits( msg, statsbits, MAX_STATS );
-        for (i=0 ; i<MAX_STATS ; i++)
-            if (statsbits & (1<<i) )
-                MSG_WriteLong (msg, to->stats[i]);
+        for (i = 0; i < MAX_STATS; i++) {
+
+            if (legacyProtocol) {
+                if (statsbits & (1 << translateGoldWeaponToSilverWeapon(i)))
+                    MSG_WriteLong(msg, to->stats[i]);
+            }
+            else {
+                if (statsbits & (1 << i))
+                    MSG_WriteLong(msg, to->stats[i]);
+            }
+
+        }
+            
     } else {
         MSG_WriteBits( msg, 0, 1 ); // no change
     }
