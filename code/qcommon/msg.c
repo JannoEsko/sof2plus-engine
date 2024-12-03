@@ -68,15 +68,15 @@ weaponDiff_t weaponTranslations[] = {
     { WP_KNIFE, L_WP_KNIFE },
     { WP_M1911A1_PISTOL, L_WP_M1911A1_PISTOL },
     { WP_USSOCOM_PISTOL, L_WP_USSOCOM_PISTOL },
-    { WP_SILVER_TALON, L_WP_M1911A1_PISTOL },
+    { WP_SILVER_TALON, L_WP_NONE },
     { WP_M590_SHOTGUN, L_WP_M590_SHOTGUN },
     { WP_MICRO_UZI_SUBMACHINEGUN, L_WP_MICRO_UZI_SUBMACHINEGUN },
     { WP_M3A1_SUBMACHINEGUN, L_WP_M3A1_SUBMACHINEGUN },
-    { WP_MP5, L_WP_M4_ASSAULT_RIFLE },
+    { WP_MP5, L_WP_NONE },
     { WP_USAS_12_SHOTGUN, L_WP_USAS_12_SHOTGUN },
     { WP_M4_ASSAULT_RIFLE, L_WP_M4_ASSAULT_RIFLE },
     { WP_AK74_ASSAULT_RIFLE, L_WP_AK74_ASSAULT_RIFLE },
-    { WP_SIG551, L_WP_M4_ASSAULT_RIFLE },
+    { WP_SIG551, L_WP_NONE },
     { WP_MSG90A1, L_WP_MSG90A1 },
     { WP_M60_MACHINEGUN, L_WP_M60_MACHINEGUN },
     { WP_MM1_GRENADE_LAUNCHER, L_WP_MM1_GRENADE_LAUNCHER },
@@ -104,7 +104,7 @@ ammoDiff_t ammoTranslations[] = {
     { AMMO_M84, L_AMMO_M84 },
     { AMMO_SMOHG92, L_AMMO_SMOHG92 },
     { AMMO_ANM14, L_AMMO_ANM14 },
-    { AMMO_762_BELT, L_AMMO_NONE }, // JANFIXME what gun uses 762?
+    { AMMO_762_BELT, L_AMMO_762 },
     { AMMO_MP5_9, L_AMMO_NONE },
     { AMMO_MAX, L_AMMO_NONE },
     { AMMO_NONE, L_AMMO_NONE }
@@ -194,7 +194,6 @@ static int translateGoldWeaponToSilverWeapon(int input) {
         return input;
     }
 
-    //Com_DPrintf("GoldWpn: Translate %d => %d\n", input, weaponTranslations[input].translatedWeapon);
 
     return weaponTranslations[input].translatedWeapon;
 }
@@ -209,7 +208,7 @@ int translateSilverWeaponToGoldWeapon(int input) {
         }
     }
 
-    return L_WP_USSOCOM_PISTOL;
+    return input;
 }
 
 static int translateGoldAmmoToSilverAmmo(int input) {
@@ -1272,6 +1271,25 @@ void MSG_WriteDeltaEntity( msg_t *msg, struct entityState_s *from, struct entity
         // change the eType on temporary entities.
         // Rest of the events should be catered in the game module.
         
+        if (to->eType == ET_EVENTS + EV_ITEM_PICKUP || to->eType == ET_EVENTS + EV_ITEM_PICKUP_QUIET) {
+            qboolean autoSwitch = (to->eventParm & ITEM_AUTOSWITCHBIT) ? qtrue : qfalse;
+            to->eventParm = translateGoldWeaponToSilverWeapon(to->eventParm & ~ITEM_AUTOSWITCHBIT);
+
+            if (autoSwitch) {
+                to->eventParm |= ITEM_AUTOSWITCHBIT;
+            }
+
+        }
+
+        if (to->eType == ET_EVENTS + EV_BULLET_HIT_FLESH || to->eType == ET_EVENTS + EV_BULLET_HIT_WALL || to->eType == ET_EVENTS + EV_BULLET) {
+            // I honestly question the sanity of the developers on this. Weapon + attack type is inside entity time...???? :)))))))))))
+
+            //tent->s.time = weapon + ((attack&0xFF)<<8);
+            int originalWpn = to->time & 0xFF;
+            int silverWpn = translateGoldWeaponToSilverWeapon(originalWpn);
+            to->time = (to->time & ~0xFF) | (silverWpn & 0xFF);
+        }
+
         if (to->eType >= ET_EVENTS + EV_ITEM_PICKUP_QUIET - 2) { // -2 because ET_ ENUM is also smaller in 1.00.
             to->eType -= 3;
         }
@@ -1289,7 +1307,7 @@ void MSG_WriteDeltaEntity( msg_t *msg, struct entityState_s *from, struct entity
             Com_Error(ERR_FATAL, "WP delayed on delta entity\n");
         }
 
-        from->weapon = translateGoldWeaponToSilverWeapon(from->weapon);
+        //from->weapon = translateGoldWeaponToSilverWeapon(from->weapon);
         to->weapon = translateGoldWeaponToSilverWeapon(to->weapon);
 
         /*if (to->modelindex2 > 0 && to->modelindex2 < sizeof(modelIndexTranslations)) {
@@ -1305,6 +1323,10 @@ void MSG_WriteDeltaEntity( msg_t *msg, struct entityState_s *from, struct entity
         if ( *fromF == *toF ) {
             MSG_WriteBits( msg, 0, 1 ); // no change
             continue;
+        }
+
+        if (legacyProtocol) {
+            Com_DPrintf("[D ent] %s - %d => %d\n", field->name, *fromF, *toF);
         }
 
         MSG_WriteBits( msg, 1, 1 ); // changed
@@ -1357,7 +1379,7 @@ void MSG_WriteDeltaEntity( msg_t *msg, struct entityState_s *from, struct entity
         }
 
 
-        from->weapon = translateSilverWeaponToGoldWeapon(from->weapon);
+        //from->weapon = translateSilverWeaponToGoldWeapon(from->weapon);
         to->weapon = translateSilverWeaponToGoldWeapon(to->weapon);
         
     }
@@ -1707,7 +1729,7 @@ void MSG_WriteDeltaPlayerstate( msg_t *msg, struct playerState_s *from, struct p
             to->externalEvent--;
         }
 
-        from->weapon = translateGoldWeaponToSilverWeapon(from->weapon);
+        //from->weapon = translateGoldWeaponToSilverWeapon(from->weapon);
         if (to->weapon & WP_DELAYED_CHANGE_BIT) {
             Com_Error(ERR_FATAL, "WP delayed on delta playerstate!\n");
         }
@@ -1721,6 +1743,20 @@ void MSG_WriteDeltaPlayerstate( msg_t *msg, struct playerState_s *from, struct p
         if ( *fromF == *toF ) {
             MSG_WriteBits( msg, 0, 1 ); // no change
             continue;
+        }
+
+        if (legacyProtocol) {
+
+            if (Q_stricmp("commandTime", field->name) && Q_stricmp("weaponAnimTime", field->name) && Q_stricmp("weaponCallbackTime", field->name) && Q_stricmp("viewangles[0]", field->name) && Q_stricmp("viewangles[1]", field->name) && Q_stricmp("weaponAnimId", field->name)
+                && Q_stricmp("legsAnim", field->name) && Q_stricmp("origin[0]", field->name) && Q_stricmp("bobCycle", field->name) && Q_stricmp("origin[0]", field->name)
+                && Q_stricmp("origin[1]", field->name) && Q_stricmp("kickPitch", field->name) && Q_stricmp("inaccuracy", field->name) && Q_stricmp("inaccuracyTime", field->name)
+                && Q_stricmp("weaponTime", field->name) && Q_stricmp("torsoTimer", field->name) && Q_stricmp("velocity[1]", field->name) && Q_stricmp("movementDir", field->name)
+                && Q_stricmp("velocity[0]", field->name)
+                ) {
+                Com_DPrintf("[D PSF] %s - %d => %d\n", field->name, *fromF, *toF);
+            }
+
+            
         }
 
         MSG_WriteBits( msg, 1, 1 ); // changed
@@ -2006,7 +2042,7 @@ void MSG_WriteDeltaPlayerstate( msg_t *msg, struct playerState_s *from, struct p
         if ((to->externalEvent & ~EV_EVENT_BITS) >= EV_ITEM_PICKUP_QUIET) {
             to->externalEvent++;
         }
-        from->weapon = translateSilverWeaponToGoldWeapon(from->weapon);
+        //from->weapon = translateSilverWeaponToGoldWeapon(from->weapon);
         to->weapon = translateSilverWeaponToGoldWeapon(to->weapon);
     }
 
