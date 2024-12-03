@@ -187,7 +187,7 @@ static int translateGoldModelIdxToSilverModelIdx(int input) {
 }
 
 static int translateGoldWeaponToSilverWeapon(int input) {
-    return input;
+    //return input;
     if (input < 0 || input >= sizeof(weaponTranslations) / sizeof(weaponTranslations[0])) {
         //Com_DPrintf("[D] Cannot translate weapon index %d into a valid legacy weapon index.\n", input);
 
@@ -1285,7 +1285,10 @@ void MSG_WriteDeltaEntity( msg_t *msg, struct entityState_s *from, struct entity
             to->modelindex = translateGoldModelIdxToSilverModelIdx(to->modelindex);
         }
 
-        originalModelIdx2 = to->weapon;
+        if (to->weapon & WP_DELAYED_CHANGE_BIT) {
+            Com_Error(ERR_FATAL, "WP delayed on delta entity\n");
+        }
+
         from->weapon = translateGoldWeaponToSilverWeapon(from->weapon);
         to->weapon = translateGoldWeaponToSilverWeapon(to->weapon);
 
@@ -1705,6 +1708,9 @@ void MSG_WriteDeltaPlayerstate( msg_t *msg, struct playerState_s *from, struct p
         }
 
         from->weapon = translateGoldWeaponToSilverWeapon(from->weapon);
+        if (to->weapon & WP_DELAYED_CHANGE_BIT) {
+            Com_Error(ERR_FATAL, "WP delayed on delta playerstate!\n");
+        }
         to->weapon = translateGoldWeaponToSilverWeapon(to->weapon);
     }
 
