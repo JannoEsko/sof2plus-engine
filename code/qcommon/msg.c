@@ -1270,11 +1270,11 @@ void MSG_WriteDeltaEntity( msg_t *msg, struct entityState_s *from, struct entity
     if (legacyProtocol) {
         // change the eType on temporary entities.
         // Rest of the events should be catered in the game module.
-        
+
         if (to->eType == ET_EVENTS + EV_ITEM_PICKUP || to->eType == ET_EVENTS + EV_ITEM_PICKUP_QUIET) {
             qboolean autoSwitch = (to->eventParm & ITEM_AUTOSWITCHBIT) ? qtrue : qfalse;
             to->eventParm = translateGoldWeaponToSilverWeapon(to->eventParm & ~ITEM_AUTOSWITCHBIT);
-
+            
             if (autoSwitch) {
                 to->eventParm |= ITEM_AUTOSWITCHBIT;
             }
@@ -1723,7 +1723,11 @@ void MSG_WriteDeltaPlayerstate( msg_t *msg, struct playerState_s *from, struct p
 
         if (to->events[3] > EV_ITEM_PICKUP_QUIET) {
             to->events[3]--;
-        } 
+        }
+
+        if ((to->externalEvent & ~EV_EVENT_BITS) == EV_ITEM_PICKUP || (to->externalEvent & ~EV_EVENT_BITS) == EV_ITEM_PICKUP_QUIET) {
+            to->externalEventParm++;
+        }
 
         if ((to->externalEvent & ~EV_EVENT_BITS) > EV_ITEM_PICKUP_QUIET) {
             to->externalEvent--;
