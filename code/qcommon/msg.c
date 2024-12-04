@@ -1271,6 +1271,15 @@ void MSG_WriteDeltaEntity( msg_t *msg, struct entityState_s *from, struct entity
 
         }
 
+        if (to->eType == EV_OBITUARY && from->eType != to->eType) {
+            fromEventParm = from->eventParm;
+            toEventParm = to->eventParm;
+
+            if (toEventParm >= 0 && toEventParm < sizeof(meansOfDeathTranslations) / sizeof(meansOfDeathTranslations[0])) {
+                to->eventParm = meansOfDeathTranslations[to->eventParm].translatedMod;
+            }
+        }
+
         if ((to->eType == ET_EVENTS + EV_BULLET_HIT_FLESH || to->eType == ET_EVENTS + EV_BULLET_HIT_WALL || to->eType == ET_EVENTS + EV_BULLET || to->eType == ET_EVENTS + EV_EXPLOSION_HIT_FLESH) && from->time != to->time) {
             // I honestly question the sanity of the developers on this. Weapon + attack type is inside entity time...???? :)))))))))))
             toTime = to->time;
