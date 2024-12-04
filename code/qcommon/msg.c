@@ -1797,6 +1797,7 @@ void MSG_WriteDeltaPlayerstate( msg_t *msg, struct playerState_s *from, struct p
         fromExternalEvent = -1,
         fromExternalEventParm = -1,
         fromWpn = -1,
+        fromZoomFov = -1,
 
         toEvents0 = -1,
         toEvents1 = -1,
@@ -1804,7 +1805,8 @@ void MSG_WriteDeltaPlayerstate( msg_t *msg, struct playerState_s *from, struct p
         toEvents3 = -1,
         toExternalEvent = -1,
         toExternalEventParm = -1,
-        toWpn = -1
+        toWpn = -1,
+        toZoomFov = -1
         ;
 
     netField_t* playerStateFields_Local = legacyProtocol ? legacyPlayerStateFields : playerStateFields;
@@ -1893,6 +1895,45 @@ void MSG_WriteDeltaPlayerstate( msg_t *msg, struct playerState_s *from, struct p
 
             from->weapon = translateGoldWeaponToSilverWeapon(from->weapon); // this should be the cause of M4 issue. M4 is the same as sniper, so there's no delta if this is not translated.
             to->weapon = translateGoldWeaponToSilverWeapon(to->weapon);
+        }
+
+        if ((!(from->pm_flags & PMF_ZOOMED) && to->pm_flags & PMF_ZOOMED) || (from->zoomFov != to->zoomFov)) {
+            fromZoomFov = from->zoomFov;
+            toZoomFov = to->zoomFov;
+
+            if (!(from->pm_flags & PMF_ZOOMED) && to->pm_flags & PMF_ZOOMED) {
+                from->zoomFov = 0;
+                to->zoomFov = 20;
+            }
+            else {
+                switch (fromZoomFov) {
+                case 0:
+                    from->zoomFov = 20;
+                    break;
+                case 1:
+                    from->zoomFov = 10;
+                    break;
+                case 2:
+                    from->zoomFov = 5;
+                    break;
+
+                }
+
+
+                switch (toZoomFov) {
+                case 0:
+                    to->zoomFov = 20;
+                    break;
+                case 1:
+                    to->zoomFov = 10;
+                    break;
+                case 2:
+                    to->zoomFov = 5;
+                    break;
+
+                }
+
+            }
         }
 
         
@@ -2016,6 +2057,14 @@ void MSG_WriteDeltaPlayerstate( msg_t *msg, struct playerState_s *from, struct p
 
         if (toWpn != -1) {
             to->weapon = toWpn;
+        }
+
+        if (toZoomFov != -1) {
+            to->zoomFov = toZoomFov;
+        }
+
+        if (fromZoomFov != -1) {
+            from->zoomFov = fromZoomFov;
         }
     }
 
