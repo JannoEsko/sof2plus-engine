@@ -1634,13 +1634,18 @@ static qboolean NET_GetCvars( void ) {
     modified += net_socksEnabled->modified;
     net_socksEnabled->modified = qfalse;
 
-    if (net_multiprotocol->integer && net_socksEnabled->integer) {  // Dropping SOCKS and IPv6 support for multiprotocol. Haven't seen SOCKS in use and vanilla SoF2MP does not support IPv6. 
-                                                                    // FIXME when iosof2mp project will reach a stage that this becomes useful again.
-        Com_Printf("Disabling SOCKS and IPv6 due to having multiprotocol enabled.\n");
-        Cvar_SetValue("net_socksEnabled", 0);
+    if (net_multiprotocol->integer) {   // Dropping SOCKS and IPv6 support for multiprotocol. Haven't seen SOCKS in use and vanilla SoF2MP does not support IPv6. 
+                                        // FIXME when iosof2mp project will reach a stage that this becomes useful again.
+        if (net_socksEnabled->integer) {
+            Com_Printf("Disabling SOCKS due to having multiprotocol enabled.\n");
+            Cvar_SetValue("net_socksEnabled", 0);
+            modified++;
+        }
+
+        Com_Printf("Disabling IPv6 due to having multiprotocol enabled\n");
         Cvar_SetValue("net_enabled", 1);
 
-        modified += 2;
+        modified++;
     }
 
     net_socksServer = Cvar_Get( "net_socksServer", "", CVAR_LATCH | CVAR_ARCHIVE );
