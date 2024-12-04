@@ -135,18 +135,30 @@ ammoDiff_t ammoTranslations[] = {
     { AMMO_NONE, L_AMMO_NONE }
 };
 
+ammoDiff_t ammoTranslationsReversed[] = {
+    { L_AMMO_KNIFE, AMMO_KNIFE},
+    { L_AMMO_045, AMMO_045 },
+    { L_AMMO_556, AMMO_556 },
+    { L_AMMO_9, AMMO_9 },
+    { L_AMMO_12, AMMO_12 },
+    { L_AMMO_762, AMMO_762 },
+    { L_AMMO_40, AMMO_40 },
+    { L_AMMO_RPG7, AMMO_RPG7 },
+    { L_AMMO_M15, AMMO_M15 },
+    { L_AMMO_M84, AMMO_M84 },
+    { L_AMMO_SMOHG92, AMMO_SMOHG92 },
+    { L_AMMO_ANM14, AMMO_ANM14 },
+    { L_AMMO_762, AMMO_762_BELT },
+    { L_AMMO_NONE, AMMO_NONE }
+};
+
 int translateSilverAmmoToGoldAmmo(int input) {
 
-    for (int i = 0; i < sizeof(ammoTranslations) / sizeof(ammoTranslations[0]); i++) {
-        ammoDiff_t dif = ammoTranslations[i];
-
-        if (dif.translatedAmmo == input) {
-            return dif.ammo;
-        }
+    if (input < 0 || input >= sizeof(ammoTranslationsReversed) / sizeof(ammoTranslationsReversed[0])) {
+        return input;
     }
 
-
-    return L_AMMO_045;
+    return ammoTranslationsReversed[input].translatedAmmo;
 
 }
 
@@ -247,24 +259,19 @@ modelIndexDiff_t modelIndexTranslationsReversed[] = {
 
 
 static int translateGoldModelIdxToSilverModelIdx(int input) {
-    //return input;
-    if (input < 0 || input >= sizeof(modelIndexTranslations) / sizeof(modelIndexTranslations[0])) {
-        Com_DPrintf("[D] Cannot translate model index %d into a valid legacy model index.\n", input);
 
+    if (input < 0 || input >= sizeof(modelIndexTranslations) / sizeof(modelIndexTranslations[0])) {
         return input;
     }
-    Com_DPrintf("[DS] %d => %d\n", input, modelIndexTranslations[input].translatedIndex);
+
     return modelIndexTranslations[input].translatedIndex;
 }
 
 static int translateGoldWeaponToSilverWeapon(int input) {
-    //return input;
-    if (input < 0 || input >= sizeof(weaponTranslations) / sizeof(weaponTranslations[0])) {
-        //Com_DPrintf("[D] Cannot translate weapon index %d into a valid legacy weapon index.\n", input);
 
+    if (input < 0 || input >= sizeof(weaponTranslations) / sizeof(weaponTranslations[0])) {
         return input;
     }
-
 
     return weaponTranslations[input].translatedWeapon;
 }
