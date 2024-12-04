@@ -91,6 +91,31 @@ weaponDiff_t weaponTranslations[] = {
     //{ WP_MDN11_GRENADE, L_WP_MDN11_GRENADE }
 };
 
+weaponDiff_t weaponTranslationReversed[] = {
+    { L_WP_NONE, WP_NONE },
+    { L_WP_KNIFE, WP_KNIFE },
+    { L_WP_M1911A1_PISTOL, WP_M1911A1_PISTOL },
+    { L_WP_USSOCOM_PISTOL, WP_USSOCOM_PISTOL },
+    { L_WP_M590_SHOTGUN, WP_M590_SHOTGUN },
+    { L_WP_MICRO_UZI_SUBMACHINEGUN, WP_MICRO_UZI_SUBMACHINEGUN },
+    { L_WP_M3A1_SUBMACHINEGUN, WP_M3A1_SUBMACHINEGUN },
+    { L_WP_USAS_12_SHOTGUN, WP_USAS_12_SHOTGUN },
+    { L_WP_M4_ASSAULT_RIFLE, WP_M4_ASSAULT_RIFLE },
+    { L_WP_AK74_ASSAULT_RIFLE, WP_AK74_ASSAULT_RIFLE },
+    { L_WP_MSG90A1, WP_MSG90A1 },
+    { L_WP_M60_MACHINEGUN, WP_M60_MACHINEGUN },
+    { L_WP_MM1_GRENADE_LAUNCHER, WP_MM1_GRENADE_LAUNCHER },
+    { L_WP_RPG7_LAUNCHER, WP_RPG7_LAUNCHER },
+    { L_WP_M67_GRENADE, WP_NONE }, // JANFIXME - translations for additional nades from Client Additions
+    { L_WP_M84_GRENADE, WP_M84_GRENADE },
+    { L_WP_F1_GRENADE, WP_NONE },
+    { L_WP_L2A2_GRENADE, WP_NONE },
+    { L_WP_MDN11_GRENADE, WP_NONE },
+    { L_WP_SMOHG92_GRENADE, WP_SMOHG92_GRENADE },
+    { L_WP_ANM14_GRENADE, WP_ANM14_GRENADE },
+    { L_WP_M15_GRENADE, WP_M15_GRENADE }
+};
+
 ammoDiff_t ammoTranslations[] = {
     { AMMO_KNIFE, L_AMMO_KNIFE},
     { AMMO_045, L_AMMO_045 },
@@ -199,18 +224,14 @@ static int translateGoldWeaponToSilverWeapon(int input) {
 }
 
 int translateSilverWeaponToGoldWeapon(int input) {
-
-    for (int i = 0; i < sizeof(weaponTranslations) / sizeof(weaponTranslations[0]); i++) {
-        weaponDiff_t dif = weaponTranslations[i];
-
-        if (dif.translatedWeapon == input) {
-            return dif.weapon;
-        }
+    if (input < 0 || input >= sizeof(weaponTranslationReversed) / sizeof(weaponTranslationReversed[0])) {
+        return input;
     }
 
-    return input;
+    return weaponTranslationReversed[input].translatedWeapon;
 }
 
+/* // this function did not end up being used.
 static int translateGoldAmmoToSilverAmmo(int input) {
     //return input;
     if (input < 0 || input >= sizeof(ammoTranslations) / sizeof(ammoTranslations[0])) {
@@ -231,7 +252,7 @@ static int translateGoldModToSilverMod(int input) {
 
     return meansOfDeathTranslations[input].translatedMod;
 }
-
+*/
 static int translateGoldStatWpnsToSilver(int input) {
 
     // assume valid input.
@@ -248,101 +269,6 @@ static int translateGoldStatWpnsToSilver(int input) {
     return newStats;
 
 }
-
-
-
-// Gold-to-legacy weapon mapping
-int weaponGoldToLegacyMapping[] = {
-    L_WP_NONE,                // WP_NONE
-    L_WP_KNIFE,               // WP_KNIFE
-    L_WP_M1911A1_PISTOL,      // WP_M1911A1_PISTOL
-    L_WP_USSOCOM_PISTOL,      // WP_USSOCOM_PISTOL
-    L_WP_NONE,                // WP_SILVER_TALON (no equivalent)
-    L_WP_M590_SHOTGUN,        // WP_M590_SHOTGUN
-    L_WP_MICRO_UZI_SUBMACHINEGUN, // WP_MICRO_UZI_SUBMACHINEGUN
-    L_WP_M3A1_SUBMACHINEGUN,  // WP_M3A1_SUBMACHINEGUN
-    L_WP_NONE,                // WP_MP5 (no equivalent)
-    L_WP_USAS_12_SHOTGUN,     // WP_USAS_12_SHOTGUN
-    L_WP_M4_ASSAULT_RIFLE,    // WP_M4_ASSAULT_RIFLE
-    L_WP_AK74_ASSAULT_RIFLE,  // WP_AK74_ASSAULT_RIFLE
-    L_WP_NONE,                // WP_SIG551 (no equivalent)
-    L_WP_MSG90A1,             // WP_MSG90A1
-    L_WP_M60_MACHINEGUN,      // WP_M60_MACHINEGUN
-    L_WP_MM1_GRENADE_LAUNCHER,// WP_MM1_GRENADE_LAUNCHER
-    L_WP_RPG7_LAUNCHER,       // WP_RPG7_LAUNCHER
-    L_WP_M84_GRENADE,         // WP_M84_GRENADE
-    L_WP_SMOHG92_GRENADE,     // WP_SMOHG92_GRENADE
-    L_WP_ANM14_GRENADE,       // WP_ANM14_GRENADE
-    L_WP_M15_GRENADE          // WP_M15_GRENADE
-};
-
-// Gold-to-legacy ammo mapping
-int ammoGoldToLegacyMapping[] = {
-    L_AMMO_KNIFE,             // AMMO_KNIFE
-    L_AMMO_045,               // AMMO_045
-    L_AMMO_556,               // AMMO_556
-    L_AMMO_9,                 // AMMO_9
-    L_AMMO_12,                // AMMO_12
-    L_AMMO_762,               // AMMO_762
-    L_AMMO_40,                // AMMO_40
-    L_AMMO_RPG7,              // AMMO_RPG7
-    L_AMMO_M15,               // AMMO_M15
-    L_AMMO_NONE,              // No legacy equivalent for AMMO_M84
-    L_AMMO_SMOHG92,           // AMMO_SMOHG92
-    L_AMMO_ANM14              // AMMO_ANM14
-};
-
-// Translate clip values from gold to legacy
-int translateClipToLegacy(int weaponIndex, int clipValue) {
-    int legacyWeaponIndex = weaponGoldToLegacyMapping[weaponIndex];
-    if (legacyWeaponIndex == L_WP_NONE) return 0; // No equivalent
-    return clipValue; // Clip values are directly translatable
-}
-
-// Translate firemode values from gold to legacy
-int translateFiremodeToLegacy(int weaponIndex, int firemodeValue) {
-    int legacyWeaponIndex = weaponGoldToLegacyMapping[weaponIndex];
-    if (legacyWeaponIndex == L_WP_NONE) return 0; // No equivalent
-    return firemodeValue; // Firemode values are directly translatable
-}
-
-// Translate ammo values from gold to legacy
-int translateAmmoToLegacy(int ammoIndex, int ammoValue) {
-    int legacyAmmoIndex = ammoGoldToLegacyMapping[ammoIndex];
-    if (legacyAmmoIndex == L_AMMO_NONE) return 0; // No equivalent
-    return ammoValue; // Ammo values are directly translatable
-}
-
-// Translate STAT_WEAPONS bitmask from gold to legacy
-int translateStatWeaponsToLegacy(int goldWeaponsBitmask) {
-    int legacyWeaponsBitmask = 0;
-    for (int i = 0; i < WP_NUM_WEAPONS; i++) {
-        if (goldWeaponsBitmask & (1 << i)) {
-            int legacyWeaponIndex = weaponGoldToLegacyMapping[i];
-            if (legacyWeaponIndex != L_WP_NONE) {
-                legacyWeaponsBitmask |= (1 << legacyWeaponIndex);
-            }
-        }
-    }
-    return legacyWeaponsBitmask;
-}
-
-
-/*
-static int translateGoldClipToSilverClip(int* clip) {
-
-    int newClip[32] = 0;
-
-    for (int i = 0; i < sizeof(weaponTranslations) / sizeof(weaponTranslations[0]); i++) {
-        weaponDiff_t dif = weaponTranslations[i];
-
-        if ()
-    }
-
-    return newClip;
-
-}
-*/
 
 /*
 ==============================================================================
@@ -1237,35 +1163,6 @@ void MSG_WriteDeltaEntity( msg_t *msg, struct entityState_s *from, struct entity
         Com_Error (ERR_FATAL, "MSG_WriteDeltaEntity: Bad entity number: %i", to->number );
     }
 
-    lc = 0;
-    // build the change vector as bytes so it is endien independent
-    for ( i = 0, field = entityStateFields_Local; i < numFields ; i++, field++ ) {
-        fromF = (int *)( (byte *)from + field->offset );
-        toF = (int *)( (byte *)to + field->offset );
-        if ( *fromF != *toF ) {
-            lc = i+1;
-        }
-    }
-
-    if ( lc == 0 ) {
-        // nothing at all changed
-        if ( !force ) {
-            return;     // nothing at all
-        }
-        // write two bits for no change
-        MSG_WriteBits( msg, to->number, GENTITYNUM_BITS );
-        MSG_WriteBits( msg, 0, 1 );     // not removed
-        MSG_WriteBits( msg, 0, 1 );     // no delta
-        return;
-    }
-
-    MSG_WriteBits( msg, to->number, GENTITYNUM_BITS );
-    MSG_WriteBits( msg, 0, 1 );         // not removed
-    MSG_WriteBits( msg, 1, 1 );         // we have a delta
-
-    MSG_WriteByte( msg, lc );   // # of changes
-
-    oldsize += numFields;
 
     if (legacyProtocol) {
         // change the eType on temporary entities.
@@ -1274,7 +1171,7 @@ void MSG_WriteDeltaEntity( msg_t *msg, struct entityState_s *from, struct entity
         if (to->eType == ET_EVENTS + EV_ITEM_PICKUP || to->eType == ET_EVENTS + EV_ITEM_PICKUP_QUIET) {
             qboolean autoSwitch = (to->eventParm & ITEM_AUTOSWITCHBIT) ? qtrue : qfalse;
             to->eventParm = translateGoldWeaponToSilverWeapon(to->eventParm & ~ITEM_AUTOSWITCHBIT);
-            
+
             if (autoSwitch) {
                 to->eventParm |= ITEM_AUTOSWITCHBIT;
             }
@@ -1307,7 +1204,7 @@ void MSG_WriteDeltaEntity( msg_t *msg, struct entityState_s *from, struct entity
             Com_Error(ERR_FATAL, "WP delayed on delta entity\n");
         }
 
-        //from->weapon = translateGoldWeaponToSilverWeapon(from->weapon);
+        from->weapon = translateGoldWeaponToSilverWeapon(from->weapon);
         to->weapon = translateGoldWeaponToSilverWeapon(to->weapon);
 
         /*if (to->modelindex2 > 0 && to->modelindex2 < sizeof(modelIndexTranslations)) {
@@ -1315,6 +1212,36 @@ void MSG_WriteDeltaEntity( msg_t *msg, struct entityState_s *from, struct entity
             to->modelindex2 = translateGoldModelIdxToSilverModelIdx(to->modelindex2);
         }*/
     }
+
+    lc = 0;
+    // build the change vector as bytes so it is endien independent
+    for ( i = 0, field = entityStateFields_Local; i < numFields ; i++, field++ ) {
+        fromF = (int *)( (byte *)from + field->offset );
+        toF = (int *)( (byte *)to + field->offset );
+        if ( *fromF != *toF ) {
+            lc = i+1;
+        }
+    }
+
+    if ( lc == 0 ) {
+        // nothing at all changed
+        if ( !force ) {
+            return;     // nothing at all
+        }
+        // write two bits for no change
+        MSG_WriteBits( msg, to->number, GENTITYNUM_BITS );
+        MSG_WriteBits( msg, 0, 1 );     // not removed
+        MSG_WriteBits( msg, 0, 1 );     // no delta
+        return;
+    }
+
+    MSG_WriteBits( msg, to->number, GENTITYNUM_BITS );
+    MSG_WriteBits( msg, 0, 1 );         // not removed
+    MSG_WriteBits( msg, 1, 1 );         // we have a delta
+
+    MSG_WriteByte( msg, lc );   // # of changes
+
+    oldsize += numFields;
 
     for ( i = 0, field = entityStateFields_Local; i < lc ; i++, field++ ) {
         fromF = (int *)( (byte *)from + field->offset );
@@ -1379,7 +1306,7 @@ void MSG_WriteDeltaEntity( msg_t *msg, struct entityState_s *from, struct entity
         }
 
 
-        //from->weapon = translateSilverWeaponToGoldWeapon(from->weapon);
+        from->weapon = translateSilverWeaponToGoldWeapon(from->weapon);
         to->weapon = translateSilverWeaponToGoldWeapon(to->weapon);
         
     }
@@ -1691,18 +1618,6 @@ void MSG_WriteDeltaPlayerstate( msg_t *msg, struct playerState_s *from, struct p
 
     numFields = ARRAY_LEN( playerStateFields );
 
-    lc = 0;
-    for ( i = 0, field = playerStateFields_Local; i < numFields ; i++, field++ ) {
-        fromF = (int *)( (byte *)from + field->offset );
-        toF = (int *)( (byte *)to + field->offset );
-        if ( *fromF != *toF ) {
-            lc = i+1;
-        }
-    }
-
-    MSG_WriteByte( msg, lc );   // # of changes
-
-    oldsize += numFields - lc;
 
     if (legacyProtocol) {
 
@@ -1733,12 +1648,22 @@ void MSG_WriteDeltaPlayerstate( msg_t *msg, struct playerState_s *from, struct p
             to->externalEvent--;
         }
 
-        //from->weapon = translateGoldWeaponToSilverWeapon(from->weapon);
-        if (to->weapon & WP_DELAYED_CHANGE_BIT) {
-            Com_Error(ERR_FATAL, "WP delayed on delta playerstate!\n");
-        }
+        from->weapon = translateGoldWeaponToSilverWeapon(from->weapon); // this should be the cause of M4 issue. M4 is the same as sniper, so there's no delta if this is not translated.
         to->weapon = translateGoldWeaponToSilverWeapon(to->weapon);
     }
+
+    lc = 0;
+    for ( i = 0, field = playerStateFields_Local; i < numFields ; i++, field++ ) {
+        fromF = (int *)( (byte *)from + field->offset );
+        toF = (int *)( (byte *)to + field->offset );
+        if ( *fromF != *toF ) {
+            lc = i+1;
+        }
+    }
+
+    MSG_WriteByte( msg, lc );   // # of changes
+
+    oldsize += numFields - lc;
 
     for ( i = 0, field = playerStateFields_Local; i < lc ; i++, field++ ) {
         fromF = (int *)( (byte *)from + field->offset );
@@ -2046,7 +1971,7 @@ void MSG_WriteDeltaPlayerstate( msg_t *msg, struct playerState_s *from, struct p
         if ((to->externalEvent & ~EV_EVENT_BITS) >= EV_ITEM_PICKUP_QUIET) {
             to->externalEvent++;
         }
-        //from->weapon = translateSilverWeaponToGoldWeapon(from->weapon);
+        from->weapon = translateSilverWeaponToGoldWeapon(from->weapon);
         to->weapon = translateSilverWeaponToGoldWeapon(to->weapon);
     }
 
