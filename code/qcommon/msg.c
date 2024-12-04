@@ -1200,7 +1200,22 @@ void MSG_WriteDeltaEntity( msg_t *msg, struct entityState_s *from, struct entity
     float       fullFloat;
     int         *fromF, *toF;
 
-    int originalModelIdx1 = -1, originalModelIdx2 = -1;
+    int fromModelIdx = -1,
+        toModelIdx = -1,
+        fromEventParm = -1,
+        toEventParm = -1,
+        fromTime = -1,
+        toTime = -1,
+        fromEType = -1,
+        toEType = -1,
+        fromEvent = -1,
+        toEvent = -1,
+        fromWpn = -1,
+        toWpn = -1
+
+        ;
+
+
 
     netField_t* entityStateFields_Local = legacyProtocol ? legacyEntityStateFields : entityStateFields;
 
@@ -1231,7 +1246,22 @@ void MSG_WriteDeltaEntity( msg_t *msg, struct entityState_s *from, struct entity
         // change the eType on temporary entities.
         // Rest of the events should be catered in the game module.
 
-        if (to->eType == ET_EVENTS + EV_ITEM_PICKUP || to->eType == ET_EVENTS + EV_ITEM_PICKUP_QUIET) {
+        if ((from->eType == ET_EVENTS + EV_ITEM_PICKUP || from->eType == ET_EVENTS + EV_ITEM_PICKUP_QUIET) && from->eType != to->eType) {
+            
+            fromEventParm = from->eventParm;
+            
+            qboolean autoSwitch = (from->eventParm & ITEM_AUTOSWITCHBIT) ? qtrue : qfalse;
+            from->eventParm = translateGoldWeaponToSilverWeapon(from->eventParm & ~ITEM_AUTOSWITCHBIT);
+
+            if (autoSwitch) {
+                from->eventParm |= ITEM_AUTOSWITCHBIT;
+            }
+        }
+
+        if ((to->eType == ET_EVENTS + EV_ITEM_PICKUP || to->eType == ET_EVENTS + EV_ITEM_PICKUP_QUIET) && from->eType != to->eType) {
+            
+            toEventParm = to->eventParm;
+            
             qboolean autoSwitch = (to->eventParm & ITEM_AUTOSWITCHBIT) ? qtrue : qfalse;
             to->eventParm = translateGoldWeaponToSilverWeapon(to->eventParm & ~ITEM_AUTOSWITCHBIT);
 
@@ -1241,34 +1271,91 @@ void MSG_WriteDeltaEntity( msg_t *msg, struct entityState_s *from, struct entity
 
         }
 
-        if (to->eType == ET_EVENTS + EV_BULLET_HIT_FLESH || to->eType == ET_EVENTS + EV_BULLET_HIT_WALL || to->eType == ET_EVENTS + EV_BULLET) {
+        if ((to->eType == ET_EVENTS + EV_BULLET_HIT_FLESH || to->eType == ET_EVENTS + EV_BULLET_HIT_WALL || to->eType == ET_EVENTS + EV_BULLET || to->eType == ET_EVENTS + EV_EXPLOSION_HIT_FLESH) && from->time != to->time) {
             // I honestly question the sanity of the developers on this. Weapon + attack type is inside entity time...???? :)))))))))))
-
+            toTime = to->time;
             //tent->s.time = weapon + ((attack&0xFF)<<8);
-            int originalWpn = to->time & 0xFF;
-            int silverWpn = translateGoldWeaponToSilverWeapon(originalWpn);
-            to->time = (to->time & ~0xFF) | (silverWpn & 0xFF);
+            int originalWeapon = to->time & 0xFF;
+            int originalAttack = (to->time >> 8) & 0xFF;
+            int originalYaw = (to->time >> 16) & 0xFFFF;
+
+            int silverWpn = translateGoldWeaponToSilverWeapon(originalWeapon);
+
+            to->time = (silverWpn & 0xFF)
+                | ((originalAttack & 0xFF) << 8)
+                | ((originalYaw & 0xFFFF) << 16);
+            
         }
 
-        if (to->eType >= ET_EVENTS + EV_ITEM_PICKUP_QUIET - 2) { // -2 because ET_ ENUM is also smaller in 1.00.
+        if ((from->eType == ET_GAMETYPE_TRIGGER || from->eType == ET_WALL) && from->eType != to->eType) {
+            fromEType = from->eType;
+            from->eType = ET_GENERAL;
+        }
+
+        if ((to->eType == ET_GAMETYPE_TRIGGER || to->eType == ET_WALL) && from->eType != to->eType) {
+            toEType = to->eType;
+            to->eType = ET_GENERAL;
+        }
+
+        if (to->eType >= ET_EVENTS + EV_ITEM_PICKUP_QUIET - 2 && from->eType != to->eType) { // -2 because ET_ ENUM is also smaller in 1.00.
+            toEType = to->eType;
             to->eType -= 3;
         }
 
-        if ((to->event & ~EV_EVENT_BITS) > EV_ITEM_PICKUP_QUIET) {
+        if ((to->event & ~EV_EVENT_BITS) > EV_ITEM_PICKUP_QUIET && from->event != to->event) {
+            toEvent = to->event;
             to->event--;
         }
 
-        if (to->modelindex > 0 && to->modelindex < sizeof(modelIndexTranslations) / sizeof(modelIndexTranslations[0]) && to->eType == ET_ITEM) {
-            originalModelIdx1 = to->modelindex;
+        if (to->modelindex > 0 && to->modelindex < sizeof(modelIndexTranslations) / sizeof(modelIndexTranslations[0]) && to->eType == ET_ITEM && from->modelindex != to->modelindex) {
+            toModelIdx = to->modelindex;
             to->modelindex = translateGoldModelIdxToSilverModelIdx(to->modelindex);
         }
 
-        if (to->weapon & WP_DELAYED_CHANGE_BIT) {
-            Com_Error(ERR_FATAL, "WP delayed on delta entity\n");
+
+
+
+
+        if ((from->eType == ET_EVENTS + EV_BULLET_HIT_FLESH || from->eType == ET_EVENTS + EV_BULLET_HIT_WALL || from->eType == ET_EVENTS + EV_BULLET || from->eType == ET_EVENTS + EV_EXPLOSION_HIT_FLESH) && from->time != to->time) {
+            // I honestly question the sanity of the developers on this. Weapon + attack type is inside entity time...???? :)))))))))))
+            fromTime = from->time;
+            //tent->s.time = weapon + ((attack&0xFF)<<8);
+            int originalWeapon = from->time & 0xFF;
+            int originalAttack = (from->time >> 8) & 0xFF;
+            int originalYaw = (from->time >> 16) & 0xFFFF;
+
+            int silverWpn = translateGoldWeaponToSilverWeapon(originalWeapon);
+
+            from->time = (silverWpn & 0xFF)
+                | ((originalAttack & 0xFF) << 8)
+                | ((originalYaw & 0xFFFF) << 16);
+
         }
 
-        from->weapon = translateGoldWeaponToSilverWeapon(from->weapon);
-        to->weapon = translateGoldWeaponToSilverWeapon(to->weapon);
+        if (from->eType >= ET_EVENTS + EV_ITEM_PICKUP_QUIET - 2 && from->eType != to->eType) { // -2 because ET_ ENUM is also smaller in 1.00.
+            fromEType = from->eType;
+            from->eType -= 3;
+        }
+
+        if ((from->event & ~EV_EVENT_BITS) > EV_ITEM_PICKUP_QUIET && from->event != to->event) {
+            fromEvent = from->event;
+            from->event--;
+        }
+
+        if (from->modelindex > 0 && from->modelindex < sizeof(modelIndexTranslations) / sizeof(modelIndexTranslations[0]) && from->eType == ET_ITEM && from->modelindex != to->modelindex) {
+            fromModelIdx = from->modelindex;
+            from->modelindex = translateGoldModelIdxToSilverModelIdx(from->modelindex);
+        }
+
+        if (from->weapon != to->weapon) {
+            fromWpn = from->weapon;
+            toWpn = to->weapon;
+
+            from->weapon = translateGoldWeaponToSilverWeapon(from->weapon);
+            to->weapon = translateGoldWeaponToSilverWeapon(to->weapon);
+        }
+
+        
 
         /*if (to->modelindex2 > 0 && to->modelindex2 < sizeof(modelIndexTranslations)) {
             originalModelIdx2 = to->modelindex2;
@@ -1356,22 +1443,54 @@ void MSG_WriteDeltaEntity( msg_t *msg, struct entityState_s *from, struct entity
 
     if (legacyProtocol) {
 
-        if (to->eType >= ET_EVENTS + EV_ITEM_PICKUP_QUIET - 4) {
-            to->eType += 3;
+        if (fromEventParm != -1) {
+            from->eventParm = fromEventParm;
         }
 
-        if ((to->event & ~EV_EVENT_BITS) >= EV_ITEM_PICKUP_QUIET) {
-            to->event++;
+        if (toEventParm != -1) {
+            to->eventParm = toEventParm;
         }
 
-        if (originalModelIdx1 != -1) {
-            to->modelindex = originalModelIdx1;
+        if (fromTime != -1) {
+            from->time = fromTime;
         }
 
+        if (toTime != -1) {
+            to->time = toTime;
+        }
 
-        from->weapon = translateSilverWeaponToGoldWeapon(from->weapon);
-        to->weapon = translateSilverWeaponToGoldWeapon(to->weapon);
-        
+        if (fromEType != -1) {
+            from->eType = fromEType;
+        }
+
+        if (toEType != -1) {
+            to->eType = toEType;
+        }
+
+        if (fromEvent != -1) {
+            from->event = fromEvent;
+        }
+
+        if (toEvent != -1) {
+            to->event = toEvent;
+        }
+
+        if (fromModelIdx != -1) {
+            from->modelindex = fromModelIdx;
+        }
+
+        if (toModelIdx != -1) {
+            to->modelindex = toModelIdx;
+        }
+
+        if (fromWpn != -1) {
+            from->weapon = fromWpn;
+        }
+
+        if (toWpn != -1) {
+            to->weapon = toWpn;
+        }
+
     }
 }
 
@@ -1670,7 +1789,23 @@ void MSG_WriteDeltaPlayerstate( msg_t *msg, struct playerState_s *from, struct p
     float           fullFloat;
     int             trunc, lc;
 
-    int originalStats = -1;
+    int
+        fromEvents0 = -1,
+        fromEvents1 = -1,
+        fromEvents2 = -1,
+        fromEvents3 = -1,
+        fromExternalEvent = -1,
+        fromExternalEventParm = -1,
+        fromWpn = -1,
+
+        toEvents0 = -1,
+        toEvents1 = -1,
+        toEvents2 = -1,
+        toEvents3 = -1,
+        toExternalEvent = -1,
+        toExternalEventParm = -1,
+        toWpn = -1
+        ;
 
     netField_t* playerStateFields_Local = legacyProtocol ? legacyPlayerStateFields : playerStateFields;
 
@@ -1684,35 +1819,83 @@ void MSG_WriteDeltaPlayerstate( msg_t *msg, struct playerState_s *from, struct p
 
     if (legacyProtocol) {
 
-        if (to->events[0] > EV_ITEM_PICKUP_QUIET) {
+        if (from->events[0] > EV_ITEM_PICKUP_QUIET && from->events[0] != to->events[0]) {
+            fromEvents0 = from->events[0];
+            from->events[0]--;
+        }
+
+
+        if (from->events[1] > EV_ITEM_PICKUP_QUIET && from->events[1] != to->events[1]) {
+            fromEvents1 = from->events[1];
+            from->events[1]--;
+        }
+
+
+        if (from->events[2] > EV_ITEM_PICKUP_QUIET && from->events[2] != to->events[2]) {
+            fromEvents2 = from->events[2];
+            from->events[2]--;
+        }
+
+
+        if (from->events[3] > EV_ITEM_PICKUP_QUIET && from->events[3] != to->events[3]) {
+            fromEvents3 = from->events[3];
+            from->events[3]--;
+        }
+
+        if (((from->externalEvent & ~EV_EVENT_BITS) == EV_ITEM_PICKUP || (from->externalEvent & ~EV_EVENT_BITS) == EV_ITEM_PICKUP_QUIET) && from->externalEvent != to->externalEvent) {
+            fromExternalEventParm = from->externalEventParm;
+            from->externalEventParm = translateGoldModelIdxToSilverModelIdx(from->externalEventParm);
+        }
+
+        if ((from->externalEvent & ~EV_EVENT_BITS) > EV_ITEM_PICKUP_QUIET && from->externalEvent != to->externalEvent) {
+            fromExternalEvent = from->externalEvent;
+            from->externalEvent--;
+        }
+
+
+        if (to->events[0] > EV_ITEM_PICKUP_QUIET && from->events[0] != to->events[0]) {
+            toEvents0 = to->events[0];
             to->events[0]--;
         }
 
 
-        if (to->events[1] > EV_ITEM_PICKUP_QUIET) {
+        if (to->events[1] > EV_ITEM_PICKUP_QUIET && from->events[1] != to->events[1]) {
+            toEvents1 = to->events[1];
             to->events[1]--;
         }
 
 
-        if (to->events[2] > EV_ITEM_PICKUP_QUIET) {
+        if (to->events[2] > EV_ITEM_PICKUP_QUIET && from->events[2] != to->events[2]) {
+            toEvents2 = to->events[2];
             to->events[2]--;
         }
 
 
-        if (to->events[3] > EV_ITEM_PICKUP_QUIET) {
+        if (to->events[3] > EV_ITEM_PICKUP_QUIET && from->events[3] != to->events[3]) {
+            toEvents3 = to->events[3];
             to->events[3]--;
         }
 
-        if ((to->externalEvent & ~EV_EVENT_BITS) == EV_ITEM_PICKUP || (to->externalEvent & ~EV_EVENT_BITS) == EV_ITEM_PICKUP_QUIET) {
+        if (((to->externalEvent & ~EV_EVENT_BITS) == EV_ITEM_PICKUP || (to->externalEvent & ~EV_EVENT_BITS) == EV_ITEM_PICKUP_QUIET) && from->externalEvent != to->externalEvent) {
+            toExternalEventParm = to->externalEventParm;
             to->externalEventParm = translateGoldModelIdxToSilverModelIdx(to->externalEventParm);
         }
 
-        if ((to->externalEvent & ~EV_EVENT_BITS) > EV_ITEM_PICKUP_QUIET) {
+        if ((to->externalEvent & ~EV_EVENT_BITS) > EV_ITEM_PICKUP_QUIET && from->externalEvent != to->externalEvent) {
+            toExternalEvent = to->externalEvent;
             to->externalEvent--;
         }
 
-        from->weapon = translateGoldWeaponToSilverWeapon(from->weapon); // this should be the cause of M4 issue. M4 is the same as sniper, so there's no delta if this is not translated.
-        to->weapon = translateGoldWeaponToSilverWeapon(to->weapon);
+        if (from->weapon != to->weapon) {
+
+            fromWpn = from->weapon;
+            toWpn = to->weapon;
+
+            from->weapon = translateGoldWeaponToSilverWeapon(from->weapon); // this should be the cause of M4 issue. M4 is the same as sniper, so there's no delta if this is not translated.
+            to->weapon = translateGoldWeaponToSilverWeapon(to->weapon);
+        }
+
+        
     }
 
     lc = 0;
@@ -1774,12 +1957,72 @@ void MSG_WriteDeltaPlayerstate( msg_t *msg, struct playerState_s *from, struct p
         }
     }
 
+    // undo the change.
+
+    if (legacyProtocol) {
+
+        if (fromEvents0 != -1) {
+            from->events[0] = fromEvents0;
+        }
+
+        if (fromEvents1 != -1) {
+            from->events[1] = fromEvents1;
+        }
+
+        if (fromEvents2 != -1) {
+            from->events[2] = fromEvents2;
+        }
+
+        if (fromEvents3 != -1) {
+            from->events[3] = fromEvents3;
+        }
+
+        if (fromExternalEventParm != -1) {
+            from->externalEventParm = fromExternalEventParm;
+        }
+
+        if (fromExternalEvent != -1) {
+            from->externalEvent = fromExternalEvent;
+        }
+
+        if (fromWpn != -1) {
+            from->weapon = fromWpn;
+        }
+
+
+        if (toEvents0 != -1) {
+            to->events[0] = toEvents0;
+        }
+
+        if (toEvents1 != -1) {
+            to->events[1] = toEvents1;
+        }
+
+        if (toEvents2 != -1) {
+            to->events[2] = toEvents2;
+        }
+
+        if (toEvents3 != -1) {
+            to->events[3] = toEvents3;
+        }
+
+        if (toExternalEventParm != -1) {
+            to->externalEventParm = toExternalEventParm;
+        }
+
+        if (toExternalEvent != -1) {
+            to->externalEvent = toExternalEvent;
+        }
+
+        if (toWpn != -1) {
+            to->weapon = toWpn;
+        }
+    }
 
     //
     // send the arrays
     //
 
-    
     statsbits = 0;
     for (i=0 ; i<MAX_STATS ; i++) {
         if (to->stats[i] != from->stats[i]) {
@@ -2007,42 +2250,6 @@ void MSG_WriteDeltaPlayerstate( msg_t *msg, struct playerState_s *from, struct p
         MSG_WriteBits( msg, 0, 1 );   // no change
     }
     
-
-    // undo the change.
-
-    if (legacyProtocol) {
-
-        if (to->events[0] >= EV_ITEM_PICKUP_QUIET) {
-            to->events[0]++;
-        }
-
-
-        if (to->events[1] >= EV_ITEM_PICKUP_QUIET) {
-            to->events[1]++;
-        }
-
-
-        if (to->events[2] >= EV_ITEM_PICKUP_QUIET) {
-            to->events[2]++;
-        }
-
-
-        if (to->events[3] >= EV_ITEM_PICKUP_QUIET) {
-            to->events[3]++;
-        }
-
-        if ((to->externalEvent & ~EV_EVENT_BITS) >= EV_ITEM_PICKUP_QUIET) {
-            to->externalEvent++;
-        }
-        from->weapon = translateSilverWeaponToGoldWeapon(from->weapon);
-        to->weapon = translateSilverWeaponToGoldWeapon(to->weapon);
-
-        if ((to->externalEvent & ~EV_EVENT_BITS) == EV_ITEM_PICKUP || (to->externalEvent & ~EV_EVENT_BITS) == EV_ITEM_PICKUP_QUIET) {
-            to->externalEventParm = translateSilverModelIdxToGoldModelIdx(to->externalEventParm);
-        }
-
-    }
-
 
 }
 
