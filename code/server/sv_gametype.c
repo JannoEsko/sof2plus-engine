@@ -185,26 +185,13 @@ changes.
 ===============
 */
 
-void SV_GT_Shutdown(int restart)
+void SV_GT_Shutdown(void)
 {
     if(!gtvm){
         return;
     }
 
     VM_Call(gtvm, GAMETYPE_SHUTDOWN);
-
-    if (!restart) {
-        SV_GT_Free();
-    }
-}
-
-void SV_GT_Free() {
-    if (!gtvm) {
-        return;
-    }
-
-    // assume that GAMETYPE_SHUTDOWN has already been called.
-
     VM_Free(gtvm);
     gtvm = NULL;
 }

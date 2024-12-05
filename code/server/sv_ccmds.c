@@ -364,7 +364,7 @@ static void SV_MapRestart_f( void ) {
         Com_Printf( "variable change -- restarting.\n" );
         // restart the map the slow way
         Q_strncpyz( mapname, Cvar_VariableString( "mapname" ), sizeof( mapname ) );
-        SV_GT_Free();
+
         SV_SpawnServer( mapname, qfalse );
         return;
     }

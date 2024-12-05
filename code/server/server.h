@@ -388,8 +388,7 @@ void        SV_GT_Init          ( const char *gametype, qboolean restart );
 void        SV_GT_RunFrame      ( int time );
 void        SV_GT_Start         ( int time );
 int         SV_GT_SendEvent     ( int event, int time, int arg0, int arg1, int arg2, int arg3, int arg4 );
-void        SV_GT_Shutdown      ( int restart );
-void        SV_GT_Free(void);
+void        SV_GT_Shutdown      ( void );
 
 //
 // sv_bot.c
