@@ -306,6 +306,7 @@
     <ClCompile Include="..\..\code\null\null_snddma.c">
       <Filter>Source Files\null</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\code\server\sv_gametype.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\code\asm\qasm.h">

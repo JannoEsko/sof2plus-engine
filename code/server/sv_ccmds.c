@@ -1245,7 +1245,7 @@ static void SV_ConSay_f(void) {
     strcat(text, p);
 
     Com_Printf("%s\n", text);
-    SV_SendServerCommand(NULL, "chat \"%s\"", text);
+    SV_SendServerCommand(NULL, "chat -1 \"%s\"", text);
 }
 
 /*
@@ -1265,7 +1265,7 @@ static void SV_ConTell_f(void) {
     }
 
     if ( Cmd_Argc() < 3 ) {
-        Com_Printf ("Usage: tell <client number> <text>\n");
+        Com_Printf ("Usage: contell <client number> <text>\n");
         return;
     }
 
@@ -1285,7 +1285,7 @@ static void SV_ConTell_f(void) {
     strcat(text, p);
 
     Com_Printf("%s\n", text);
-    SV_SendServerCommand(cl, "chat \"%s\"", text);
+    SV_SendServerCommand(cl, "chat -1 \"%s\"", text);
 }
 
 
@@ -1311,7 +1311,7 @@ static void SV_ConSayto_f(void) {
     }
 
     if ( Cmd_Argc() < 3 ) {
-        Com_Printf ("Usage: sayto <player name> <text>\n");
+        Com_Printf ("Usage: consayto <player name> <text>\n");
         return;
     }
 
@@ -1351,7 +1351,7 @@ static void SV_ConSayto_f(void) {
     strcat(text, p);
 
     Com_Printf("%s\n", text);
-    SV_SendServerCommand(saytocl, "chat \"%s\"", text);
+    SV_SendServerCommand(saytocl, "chat -1 \"%s\"", text);
 }
 
 
@@ -1534,10 +1534,10 @@ void SV_AddOperatorCommands( void ) {
     Cmd_AddCommand ("mapcycle", SV_Mapcycle_f);
     Cmd_AddCommand ("killserver", SV_KillServer_f);
     if( com_dedicated->integer ) {
-        Cmd_AddCommand ("say", SV_ConSay_f);
-        Cmd_AddCommand ("tell", SV_ConTell_f);
-        Cmd_AddCommand ("sayto", SV_ConSayto_f);
-        Cmd_SetCommandCompletionFunc( "sayto", SV_CompletePlayerName );
+        Cmd_AddCommand ("consay", SV_ConSay_f);
+        Cmd_AddCommand ("contell", SV_ConTell_f);
+        Cmd_AddCommand ("consayto", SV_ConSayto_f);
+        Cmd_SetCommandCompletionFunc( "consayto", SV_CompletePlayerName );
     }
 
     Cmd_AddCommand("rehashbans", SV_RehashBans_f);

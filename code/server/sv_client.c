@@ -544,6 +544,8 @@ static void SV_SendClientGameState( client_t *client ) {
     msg_t       msg;
     byte        msgBuffer[MAX_MSGLEN];
 
+    char bigInfoString[BIG_INFO_STRING];
+
     Com_DPrintf ("SV_SendClientGameState() for %s\n", client->name);
     Com_DPrintf( "Going from CS_CONNECTED to CS_PRIMED for %s\n", client->name );
     client->state = CS_PRIMED;
@@ -582,6 +584,22 @@ static void SV_SendClientGameState( client_t *client ) {
             }
             else if (client->legacyProtocol && start >= CS_HUDICONS) {
                 continue;
+            }
+            else if (start == CS_SYSTEMINFO) {
+                Q_strncpyz(bigInfoString, sv.configstrings[start], sizeof(bigInfoString));
+                cvar_t* legacyClmod = Cvar_FindVar("sv_legacyClientMod");
+                cvar_t* clientMod = Cvar_FindVar("sv_clientMod");
+
+                if (client->legacyProtocol && legacyClmod && legacyClmod->string && strlen(legacyClmod->string) > 0 && Q_stricmp(legacyClmod->string, "none")) {
+                    Info_SetValueForKey_Big(bigInfoString, "fs_game", legacyClmod->string);
+                    //Z_Free(sv.configstrings[start]);
+                    //sv.configstrings[start] = CopyString(legacyClmod->string);
+                }
+                else if (!client->legacyProtocol && clientMod && clientMod->string && strlen(clientMod->string) > 0 && Q_stricmp(clientMod->string, "none")) {
+                    Info_SetValueForKey_Big(bigInfoString, "fs_game", clientMod->string);
+                }
+
+                MSG_WriteBigString(&msg, bigInfoString);
             }
             else {
                 MSG_WriteBigString(&msg, sv.configstrings[start]);
@@ -1397,6 +1415,20 @@ void SV_ExecuteClientCommand( client_t *cl, const char *s, qboolean clientOK ) {
         Com_DPrintf( "client text ignored for %s: %s\n", cl->name, Cmd_Argv(0) );
 }
 
+static qboolean SV_AllowSpamOnCommand(const char* command) {
+
+    if (
+        !Q_stricmp(command, "score") ||
+        !Q_stricmp(command, "uef") ||
+        !Q_stricmp(command, "verified")
+        ) {
+        return qtrue;
+    }
+
+
+    return qfalse;
+}
+
 /*
 ===============
 SV_ClientCommand
@@ -1406,6 +1438,7 @@ static qboolean SV_ClientCommand( client_t *cl, msg_t *msg ) {
     int     seq;
     const char  *s;
     qboolean clientOk = qtrue;
+    qboolean allowSpamOnCommand = qfalse;
 
     seq = MSG_ReadLong( msg );
     s = MSG_ReadString( msg );
@@ -1425,6 +1458,8 @@ static qboolean SV_ClientCommand( client_t *cl, msg_t *msg ) {
         return qfalse;
     }
 
+    allowSpamOnCommand = SV_AllowSpamOnCommand(s);
+
     // malicious users may try using too many string commands
     // to lag other players.  If we decide that we want to stall
     // the command, we will stop processing the rest of the packet,
@@ -1435,14 +1470,20 @@ static qboolean SV_ClientCommand( client_t *cl, msg_t *msg ) {
     if ( !com_cl_running->integer &&
         cl->state >= CS_ACTIVE &&
         sv_floodProtect->integer &&
-        svs.time < cl->nextReliableTime ) {
+        svs.time < cl->nextReliableTime &&
+        !allowSpamOnCommand ) {
         // ignore any other text messages from this client but let them keep playing
         // TTimo - moved the ignored verbose to the actual processing in SV_ExecuteClientCommand, only printing if the core doesn't intercept
         clientOk = qfalse;
     }
 
-    // don't allow another command for one second
-    cl->nextReliableTime = svs.time + 1000;
+    if (allowSpamOnCommand) {
+        cl->nextReliableTime = svs.time + 150;
+    }
+    else {
+        // don't allow another command for one second
+        cl->nextReliableTime = svs.time + 1000;
+    }
 
     SV_ExecuteClientCommand( cl, s, clientOk );
 

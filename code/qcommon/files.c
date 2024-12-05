@@ -3898,3 +3898,47 @@ const char *FS_GetCurrentGameDir(void)
 
     return com_basegame->string;
 }
+
+qboolean FS_FindPakByFile(const char* fileName, char** gameName, char** baseName, int* checksumOut) {
+    searchpath_t* search;
+    if (!fs_searchpaths) {
+        Com_Error(ERR_FATAL, "Filesystem call made without initialization");
+    }
+
+    if (!fileName) {
+        Com_Error(ERR_FATAL, "Filesystem call made without valid arguments.");
+    }
+
+    for (search = fs_searchpaths; search; search = search->next) {
+        long resp = FS_FOpenFileReadDir(fileName, search, NULL, qfalse, qfalse);
+        if (resp > 0 && search->pack) {
+            *gameName = search->pack->pakGamename;
+            *baseName = search->pack->pakBasename;
+            *checksumOut = search->pack->checksum;
+
+            return qtrue;
+        }
+    }
+    return qfalse;
+}
+
+qboolean FS_FindPakByPakName(const char* fileName, char** gameName, char** baseName, int* checksumOut) {
+    searchpath_t* search;
+    if (!fs_searchpaths) {
+        Com_Error(ERR_FATAL, "Filesystem call made without initialization");
+    }
+    if (!fileName) {
+        Com_Error(ERR_FATAL, "Filesystem call made without valid arguments.");
+    }
+    for (search = fs_searchpaths; search; search = search->next) {
+
+        if (search->pack && !Q_stricmp(fileName, search->pack->pakBasename)) {
+            *gameName = search->pack->pakGamename;
+            *baseName = search->pack->pakBasename;
+            *checksumOut = search->pack->checksum;
+
+            return qtrue;
+        }
+    }
+    return qfalse;
+}

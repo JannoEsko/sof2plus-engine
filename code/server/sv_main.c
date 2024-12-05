@@ -56,6 +56,10 @@ cvar_t  *sv_mapcycle;
 cvar_t  *sv_lanForceRate; // dedicated 1 (LAN) server forces local client rates to 99999 (bug #491)
 cvar_t  *sv_banFile;
 
+cvar_t* sv_clientMod;
+cvar_t* sv_legacyClientMod;
+cvar_t* sv_smartDownload;
+cvar_t* sv_smartAdditionalPaks;
 serverBan_t serverBans[SERVER_MAXBANS];
 int serverBansCount = 0;
 
@@ -773,6 +777,8 @@ static void SVC_RemoteCommand( netadr_t from, msg_t *msg, qboolean legacyProtoco
         Q_strcat( remaining, sizeof(remaining), cmd_aux);
 
         Cmd_ExecuteString (remaining);
+
+        SV_SendRconLog(NET_AdrToString(from), remaining);
 
     }
 

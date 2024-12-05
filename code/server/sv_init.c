@@ -66,16 +66,45 @@ static void SV_SendConfigstring(client_t *client, int index)
     } else {
         // standard cs, just send it
 
-        // legacy protocol - as the game version is a short string, it will never be truncated.
-        if (client->legacyProtocol && index == CS_GAME_VERSION) { 
+        char bigInfoString[BIG_INFO_STRING];
+        cvar_t* legacyClmod = Cvar_FindVar("sv_legacyClientMod");
+        cvar_t* clientMod = Cvar_FindVar("sv_clientMod");
+        if (index == CS_SYSTEMINFO) {
+
+            Q_strncpyz(bigInfoString, sv.configstrings[index], sizeof(bigInfoString));
+
+            if (client->legacyProtocol && legacyClmod && legacyClmod->string && strlen(legacyClmod->string) > 0 && Q_stricmp(legacyClmod->string, "none")) {
+                Info_SetValueForKey_Big(bigInfoString, "fs_game", legacyClmod->string);
+            }
+            else if (!client->legacyProtocol && clientMod && clientMod->string && strlen(clientMod->string) > 0 && Q_stricmp(clientMod->string, "none")) {
+                Info_SetValueForKey_Big(bigInfoString, "fs_game", clientMod->string);
+            }
+
             SV_SendServerCommand(client, "cs %i \"%s\"\n", index,
-                GAME_VERSION_LEGACY);
+                bigInfoString);
+
         }
         else {
-            SV_SendServerCommand(client, "cs %i \"%s\"\n", index,
-                sv.configstrings[index]);
+            // legacy protocol - as the game version is a short string, it will never be truncated.
+            if (client->legacyProtocol) {
+
+                if (index == CS_GAME_VERSION) {
+                    SV_SendServerCommand(client, "cs %i \"%s\"\n", index,
+                        GAME_VERSION_LEGACY);
+                }
+
+                else {
+                    SV_SendServerCommand(client, "cs %i \"%s\"\n", index,
+                        sv.configstrings[index]);
+                }
+
+
+            }
+            else {
+                SV_SendServerCommand(client, "cs %i \"%s\"\n", index,
+                    sv.configstrings[index]);
+            }
         }
-        
     }
 }
 
@@ -626,10 +655,73 @@ void SV_SpawnServer( char *server, qboolean killBots ) {
     }
     // the server sends these to the clients so they can figure
     // out which pk3s should be auto-downloaded
-    p = FS_ReferencedPakChecksums();
-    Cvar_Set( "sv_referencedPaks", p );
-    p = FS_ReferencedPakNames();
-    Cvar_Set( "sv_referencedPakNames", p );
+
+    sv_clientMod = Cvar_Get("sv_clientMod", "", CVAR_ARCHIVE | CVAR_LATCH);
+    sv_legacyClientMod = Cvar_Get("sv_legacyClientMod", "", CVAR_ARCHIVE | CVAR_LATCH);
+
+    sv_smartDownload = Cvar_Get("sv_smartDownload", "1", CVAR_ARCHIVE | CVAR_LATCH);
+    sv_smartAdditionalPaks = Cvar_Get("sv_smartAdditionalPaks", "", CVAR_ARCHIVE | CVAR_LATCH);
+
+    if (sv_smartDownload->integer) {
+        // we only ask for the pk3 file which contains the current map.
+        char* gamename;
+        char* basename;
+        int checksum = 0;
+        char refPaks[BIG_INFO_STRING], refChecksums[BIG_INFO_STRING];
+        char* fsGame = Cvar_VariableString("fs_game");
+        qboolean res = FS_FindPakByFile(va("maps/%s.bsp", server), &gamename, &basename, &checksum);
+
+        if (res) {
+
+            // spoof the pk3 path name. Make sure to account for it when client is about to request a file.
+            if (sv_clientMod->string && strlen(sv_clientMod->string) > 0 && gamename && Q_stricmp(gamename, sv_clientMod->string) && !Q_stricmp(gamename, fsGame)) {
+                gamename = sv_clientMod->string;
+            }
+
+            Q_strncpyz(refPaks, va("%s/%s", gamename, basename), sizeof(refPaks));
+            Q_strncpyz(refChecksums, va("%d", checksum), sizeof(refChecksums));
+
+            // add info from additionalRefPaks.
+            // additional info gets added only if we're using smartdl and we found a pk3 with the map.
+            // otherwise we'll fall back to the standard refpaks which will contain whatever's needed.
+
+            if (strlen(sv_smartAdditionalPaks->string)) {
+                char* token = strtok(sv_smartAdditionalPaks->string, " ");
+
+                while (token != NULL) {
+                    res = FS_FindPakByPakName(token, &gamename, &basename, &checksum);
+
+                    if (res) {
+
+                        if (Q_stricmp(gamename, sv_clientMod->string) && !Q_stricmp(gamename, fsGame)) {
+                            gamename = sv_clientMod->string;
+                        }
+                        Q_strcat(refPaks, sizeof(refPaks), va(" %s/%s", gamename, basename));
+                        Q_strcat(refChecksums, sizeof(refChecksums), va(" %d", checksum));
+                    }
+
+                    token = strtok(NULL, " ");
+                }
+            }
+
+            Cvar_Set("sv_referencedPakNames", refPaks);
+            Cvar_Set("sv_referencedPaks", refChecksums);
+
+        }
+        else {
+            p = FS_ReferencedPakChecksums();
+            Cvar_Set("sv_referencedPaks", p);
+            p = FS_ReferencedPakNames();
+            Cvar_Set("sv_referencedPakNames", p);
+        }
+    }
+    else {
+        p = FS_ReferencedPakChecksums();
+        Cvar_Set("sv_referencedPaks", p);
+        p = FS_ReferencedPakNames();
+        Cvar_Set("sv_referencedPakNames", p);
+    }
+
 
     // save systeminfo and serverinfo strings
     Q_strncpyz( systemInfo, Cvar_InfoString_Big( CVAR_SYSTEMINFO ), sizeof( systemInfo ) );
