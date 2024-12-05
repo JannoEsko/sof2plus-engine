@@ -967,6 +967,9 @@ intptr_t SV_GameSystemCalls( intptr_t *args ) {
         }
         return svs.clients[args[1]].legacyProtocol;
 
+    case G_TRANSLATE_SILVER_WPN_TO_GOLD:
+        return translateSilverWeaponToGoldWeapon(args[1]);
+
     //=======================================================
     default:
         Com_Error( ERR_DROP, "Bad game system trap: %ld", (long int) args[0] );

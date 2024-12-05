@@ -435,7 +435,8 @@ typedef enum {
     G_GT_SENDEVENT,
     G_GT_SHUTDOWN,
     // custom 
-    G_CLIENT_ISLEGACYPROTOCOL = 1001
+    G_CLIENT_ISLEGACYPROTOCOL = 1001,
+    G_TRANSLATE_SILVER_WPN_TO_GOLD
 
 } gameImport_t;
 
