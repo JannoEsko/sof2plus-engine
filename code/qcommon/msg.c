@@ -294,28 +294,6 @@ int translateSilverModelIdxToGoldModelIdx(int input) {
 
 }
 
-/* // this function did not end up being used.
-static int translateGoldAmmoToSilverAmmo(int input) {
-    //return input;
-    if (input < 0 || input >= sizeof(ammoTranslations) / sizeof(ammoTranslations[0])) {
-        Com_DPrintf("[D] Cannot translate ammo index %d into a valid legacy ammo index.\n", input);
-        return input;
-    }
-
-    return ammoTranslations[input].translatedAmmo;
-}
-
-static int translateGoldModToSilverMod(int input) {
-    return input;
-    if (input < 0 || input >= sizeof(meansOfDeathTranslations) / sizeof(meansOfDeathTranslations[0])) {
-        Com_DPrintf("[D] Cannot translate MOD index %d into a valid legacy MOD index.\n", input);
-
-        return input;
-    }
-
-    return meansOfDeathTranslations[input].translatedMod;
-}
-*/
 static int translateGoldStatWpnsToSilver(int input) {
 
     // assume valid input.
@@ -1411,10 +1389,6 @@ void MSG_WriteDeltaEntity( msg_t *msg, struct entityState_s *from, struct entity
             continue;
         }
 
-        if (legacyProtocol) {
-            Com_DPrintf("[D ent] %s - %d => %d\n", field->name, *fromF, *toF);
-        }
-
         MSG_WriteBits( msg, 1, 1 ); // changed
 
         if ( field->bits == 0 ) {
@@ -1968,20 +1942,6 @@ void MSG_WriteDeltaPlayerstate( msg_t *msg, struct playerState_s *from, struct p
         if ( *fromF == *toF ) {
             MSG_WriteBits( msg, 0, 1 ); // no change
             continue;
-        }
-
-        if (legacyProtocol) {
-
-            if (Q_stricmp("commandTime", field->name) && Q_stricmp("weaponAnimTime", field->name) && Q_stricmp("weaponCallbackTime", field->name) && Q_stricmp("viewangles[0]", field->name) && Q_stricmp("viewangles[1]", field->name) && Q_stricmp("weaponAnimId", field->name)
-                && Q_stricmp("legsAnim", field->name) && Q_stricmp("origin[0]", field->name) && Q_stricmp("bobCycle", field->name) && Q_stricmp("origin[0]", field->name)
-                && Q_stricmp("origin[1]", field->name) && Q_stricmp("kickPitch", field->name) && Q_stricmp("inaccuracy", field->name) && Q_stricmp("inaccuracyTime", field->name)
-                && Q_stricmp("weaponTime", field->name) && Q_stricmp("torsoTimer", field->name) && Q_stricmp("velocity[1]", field->name) && Q_stricmp("movementDir", field->name)
-                && Q_stricmp("velocity[0]", field->name)
-                ) {
-                Com_DPrintf("[D PSF] %s - %d => %d\n", field->name, *fromF, *toF);
-            }
-
-            
         }
 
         MSG_WriteBits( msg, 1, 1 ); // changed
