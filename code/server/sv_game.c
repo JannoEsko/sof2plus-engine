@@ -308,7 +308,7 @@ static void SV_SetActiveSubBSP(int modelIndex)
     sv.subBSPModelIndex = modelIndex;
 
     // Set the entity parse point to the beginning of the active BSP.
-    sv.entityParsePoint = CM_EntityString(sv.subBSPIndex);
+    sv.subBSPParsePoint = CM_EntityString(sv.subBSPIndex);
 }
 
 //==============================================
@@ -449,17 +449,31 @@ intptr_t SV_GameSystemCalls( intptr_t *args ) {
         SV_GetUsercmd( args[1], VMA(2) );
         return 0;
     case G_GET_ENTITY_TOKEN:
-        {
-            const char  *s;
+    {
+        const char* s;
+        qboolean inSubBSP = (qboolean)args[3];
 
-            s = COM_Parse( &sv.entityParsePoint );
-            Q_strncpyz( VMA(1), s, args[2] );
-            if ( !sv.entityParsePoint && !s[0] ) {
+        if (inSubBSP) {
+            s = COM_Parse(&sv.subBSPParsePoint);
+            Q_strncpyz(VMA(1), s, args[2]);
+            if (!sv.subBSPParsePoint && !s[0]) {
                 return qfalse;
-            } else {
+            }
+            else {
                 return qtrue;
             }
         }
+        else {
+            s = COM_Parse(&sv.entityParsePoint);
+            Q_strncpyz(VMA(1), s, args[2]);
+            if (!sv.entityParsePoint && !s[0]) {
+                return qfalse;
+            }
+            else {
+                return qtrue;
+            }
+        }
+    }
 
     case G_DEBUG_POLYGON_CREATE:
         return BotImport_DebugPolygonCreate( args[1], args[2], VMA(3) );

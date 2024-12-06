@@ -587,7 +587,7 @@ or qtrue upon success.
 ==================
 */
 
-static qboolean CM_LoadBSPFile(clipMap_t *cm, const char *name, int *checksum)
+static qboolean CM_LoadBSPFile(clipMap_t *cm, const char *name, int *checksum, const char *mapName, qboolean isMap)
 {
     union {
         int             *i;
@@ -636,7 +636,41 @@ static qboolean CM_LoadBSPFile(clipMap_t *cm, const char *name, int *checksum)
     CMod_LoadBrushes(cm, &header.lumps[LUMP_BRUSHES]);
     CMod_LoadSubmodels(cm, &header.lumps[LUMP_MODELS]);
     CMod_LoadNodes(cm, &header.lumps[LUMP_NODES]);
-    CMod_LoadEntityString(cm, &header.lumps[LUMP_ENTITIES]);
+
+    qboolean entitiesLoaded = qfalse;
+
+    if (isMap) {
+        qboolean isAlt = Cvar_VariableIntegerValue("sv_altmap");
+        fileHandle_t entFile;
+        long entLen = 0;
+        // build string path.
+        char* fsGame = Cvar_VariableString("fs_game");
+        char* actualGametype = Cvar_VariableString("g_gametype"); // FIXMEJAN - account for differences between g_gametype (public version) and the to-be-built internal g_gametype value.
+
+        if (fsGame) {
+            char entPath[MAX_QPATH];
+            Q_strncpyz(entPath, va("ents/%s%s/%s.ent", isAlt ? "alt/" : "", actualGametype, mapName), sizeof(entPath));
+
+            // try to open...
+            entLen = FS_FOpenFileRead(entPath, &entFile, qfalse);
+
+            if (entFile) {
+
+                cm->entityString = Hunk_Alloc(entLen, h_high);
+                cm->numEntityChars = entLen;
+
+                FS_Read(cm->entityString, entLen, entFile);
+                FS_FCloseFile(entFile);
+
+                entitiesLoaded = qtrue;
+            }
+        }
+    }
+
+    if (!entitiesLoaded) {
+        CMod_LoadEntityString(cm, &header.lumps[LUMP_ENTITIES]);
+    }
+
     CMod_LoadVisibility(cm, &header.lumps[LUMP_VISIBILITY]);
     CMod_LoadPatches(cm, &header.lumps[LUMP_SURFACES], &header.lumps[LUMP_DRAWVERTS]);
 
@@ -657,7 +691,7 @@ Loads in the map and all submodels
 ==================
 */
 
-void CM_LoadMap(const char *name, int *checksum)
+void CM_LoadMap(const char *name, int *checksum, const char* mapName)
 {
     static unsigned last_checksum;
 
@@ -680,7 +714,7 @@ void CM_LoadMap(const char *name, int *checksum)
     }
 
     // Load in the file contents.
-    if(!CM_LoadBSPFile(cmg, name, &last_checksum)){
+    if(!CM_LoadBSPFile(cmg, name, &last_checksum, mapName, qtrue)){
         Com_Error(ERR_DROP, "Couldn't load %s", name);
     }
     *checksum = last_checksum;
@@ -742,9 +776,11 @@ int CM_LoadSubBSP(const char *name)
     cm = &cmBSPs[i];
 
     // Load in the file contents.
-    if(!CM_LoadBSPFile(cm, name, NULL)){
+    if(!CM_LoadBSPFile(cm, name, NULL, NULL, qfalse)){
         Com_Error(ERR_DROP, "CM_LoadSubBSP: Couldn't load: %s", name);
     }
+
+    Q_strncpyz(cm->name, name, sizeof(cm->name));
 
     CM_FloodAreaConnections(cm);
 

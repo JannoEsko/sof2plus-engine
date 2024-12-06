@@ -610,7 +610,7 @@ static void SV_SendClientGameState( client_t *client ) {
 
     char bigInfoString[BIG_INFO_STRING];
 
-    Com_DPrintf ("SV_SendClientGameState() for %s\n", client->name);
+    Com_DPrintf ("SV_SendClientGameState() for %s\nClient isLegacy: %d\n", client->name, client->legacyProtocol);
     Com_DPrintf( "Going from CS_CONNECTED to CS_PRIMED for %s\n", client->name );
     client->state = CS_PRIMED;
     client->pureAuthentic = 0;
@@ -632,22 +632,24 @@ static void SV_SendClientGameState( client_t *client ) {
     // with a gamestate and it sets the clc.serverCommandSequence at
     // the client side
     SV_UpdateServerCommandsToClient( client, &msg );
-
+    
     // send the gamestate
     MSG_WriteByte( &msg, svc_gamestate );
     MSG_WriteLong( &msg, client->reliableSequence );
-
+    
     // write the configstrings
     for ( start = 0 ; start < MAX_CONFIGSTRINGS ; start++ ) {
         if (sv.configstrings[start][0]) {
+
+            if (client->legacyProtocol && start >= CS_HUDICONS) {
+                continue;
+            }
+
             MSG_WriteByte( &msg, svc_configstring );
             MSG_WriteShort( &msg, start );
 
             if (client->legacyProtocol && start == CS_GAME_VERSION) {
                 MSG_WriteBigString(&msg, GAME_VERSION_LEGACY);
-            }
-            else if (client->legacyProtocol && start >= CS_HUDICONS) {
-                continue;
             }
             else if (start == CS_SYSTEMINFO) {
                 char refPaks[BIG_INFO_VALUE], refChecksums[BIG_INFO_VALUE], filteredPaks[BIG_INFO_VALUE], filteredChecksums[BIG_INFO_VALUE];

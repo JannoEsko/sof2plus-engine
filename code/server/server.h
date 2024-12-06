@@ -70,6 +70,7 @@ typedef struct {
     svEntity_t      svEntities[MAX_GENTITIES];
 
     char            *entityParsePoint;  // used during game VM init
+    char            *subBSPParsePoint;
 
     // the game virtual machine will update these on init and changes
     sharedEntity_t  *gentities;
@@ -276,6 +277,7 @@ extern  cvar_t* sv_legacyClientMod;
 extern  cvar_t* sv_clientMod;
 extern  cvar_t* sv_smartDownload;
 extern  cvar_t* sv_smartAdditionalPaks;
+extern  cvar_t* sv_altmap;
 
 extern  serverBan_t serverBans[SERVER_MAXBANS];
 extern  int serverBansCount;

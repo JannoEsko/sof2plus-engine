@@ -153,7 +153,7 @@ Restart the server on a different map
 static void SV_Map_f( void ) {
     char        *cmd;
     char        *map;
-    qboolean    killBots, cheat;
+    qboolean    killBots, cheat, altmap = qfalse;
     char        expanded[MAX_QPATH];
     char        mapname[MAX_QPATH];
 
@@ -174,12 +174,19 @@ static void SV_Map_f( void ) {
     Cvar_Get ("g_gametype", "dm", CVAR_SERVERINFO | CVAR_USERINFO | CVAR_LATCH );
 
     cmd = Cmd_Argv(0);
-    if(!Q_stricmpn(cmd, "devmap", 6) || !Q_stricmp(cmd, "spdevmap")) {
+    if (!Q_stricmpn(cmd, "devmap", 6) || !Q_stricmp(cmd, "spdevmap")) {
         cheat = qtrue;
         killBots = qtrue;
+        altmap = qfalse;
+    } else if (!Q_stricmp(cmd, "altmap")) {
+        cheat = qfalse;
+        killBots = qfalse;
+        altmap = qtrue;
+        Cvar_Set("sv_altmap", "1");
     } else {
         cheat = qfalse;
         killBots = qfalse;
+        altmap = qfalse;
     }
 
     // save the map name here cause on a map restart we reload the q3config.cfg
@@ -1530,6 +1537,8 @@ void SV_AddOperatorCommands( void ) {
     Cmd_SetCommandCompletionFunc( "spmap", SV_CompleteMapName );
     Cmd_AddCommand ("spdevmap", SV_Map_f);
     Cmd_SetCommandCompletionFunc( "spdevmap", SV_CompleteMapName );
+    Cmd_AddCommand("altmap", SV_Map_f);
+    Cmd_SetCommandCompletionFunc("altmap", SV_CompleteMapName);
 #endif
     Cmd_AddCommand ("mapcycle", SV_Mapcycle_f);
     Cmd_AddCommand ("killserver", SV_KillServer_f);

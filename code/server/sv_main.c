@@ -60,6 +60,7 @@ cvar_t* sv_clientMod;
 cvar_t* sv_legacyClientMod;
 cvar_t* sv_smartDownload;
 cvar_t* sv_smartAdditionalPaks;
+cvar_t* sv_altmap;
 serverBan_t serverBans[SERVER_MAXBANS];
 int serverBansCount = 0;
 

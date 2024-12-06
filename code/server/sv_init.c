@@ -560,7 +560,7 @@ void SV_SpawnServer( char *server, qboolean killBots ) {
     sv.checksumFeed = ( ((unsigned int)rand() << 16) ^ (unsigned int)rand() ) ^ Com_Milliseconds();
     FS_Restart( sv.checksumFeed );
 
-    CM_LoadMap( va("maps/%s.bsp", server), &checksum );
+    CM_LoadMap( va("maps/%s.bsp", server), &checksum, server );
 
     SV_SendMapChange();
 
@@ -830,6 +830,8 @@ void SV_Init (void)
     sv_mapcycle = Cvar_Get ("sv_mapcycle", "none", CVAR_ARCHIVE);
     sv_lanForceRate = Cvar_Get ("sv_lanForceRate", "1", CVAR_ARCHIVE );
     sv_banFile = Cvar_Get("sv_banFile", "serverbans.dat", CVAR_ARCHIVE);
+
+    sv_altmap = Cvar_Get("sv_altmap", "0", CVAR_ROM);
 
     // initialize bot cvars so they are listed and can be set before loading the botlib
     SV_BotInitCvars();
