@@ -70,14 +70,35 @@ static void SV_SendConfigstring(client_t *client, int index)
         cvar_t* legacyClmod = Cvar_FindVar("sv_legacyClientMod");
         cvar_t* clientMod = Cvar_FindVar("sv_clientMod");
         if (index == CS_SYSTEMINFO) {
-
+            char refPaks[BIG_INFO_VALUE], refChecksums[BIG_INFO_VALUE], filteredPaks[BIG_INFO_VALUE], filteredChecksums[BIG_INFO_VALUE];
             Q_strncpyz(bigInfoString, sv.configstrings[index], sizeof(bigInfoString));
 
             if (client->legacyProtocol && legacyClmod && legacyClmod->string && strlen(legacyClmod->string) > 0 && Q_stricmp(legacyClmod->string, "none")) {
                 Info_SetValueForKey_Big(bigInfoString, "fs_game", legacyClmod->string);
+
+
+                if (clientMod && clientMod->string && strlen(clientMod->string) > 0 && Q_stricmp(clientMod->string, "none") && Q_stricmp(clientMod->string, legacyClmod->string)) {
+                    Q_strncpyz(refPaks, Info_ValueForKey(bigInfoString, "sv_referencedPakNames"), sizeof(refPaks));
+                    Q_strncpyz(refChecksums, Info_ValueForKey(bigInfoString, "sv_referencedPaks"), sizeof(refChecksums));
+
+                    SV_FilterPaksAndChecksums(refPaks, refChecksums, clientMod->string, filteredPaks, sizeof(filteredPaks), filteredChecksums, sizeof(filteredChecksums));
+
+                    Info_SetValueForKey_Big(bigInfoString, "sv_referencedPakNames", filteredPaks);
+                    Info_SetValueForKey_Big(bigInfoString, "sv_referencedPaks", filteredChecksums);
+                }
             }
             else if (!client->legacyProtocol && clientMod && clientMod->string && strlen(clientMod->string) > 0 && Q_stricmp(clientMod->string, "none")) {
                 Info_SetValueForKey_Big(bigInfoString, "fs_game", clientMod->string);
+
+                if (legacyClmod && legacyClmod->string && strlen(legacyClmod->string) > 0 && Q_stricmp(legacyClmod->string, "none") && Q_stricmp(legacyClmod->string, clientMod->string)) {
+                    Q_strncpyz(refPaks, Info_ValueForKey(bigInfoString, "sv_referencedPakNames"), sizeof(refPaks));
+                    Q_strncpyz(refChecksums, Info_ValueForKey(bigInfoString, "sv_referencedPaks"), sizeof(refChecksums));
+
+                    SV_FilterPaksAndChecksums(refPaks, refChecksums, legacyClmod->string, filteredPaks, sizeof(filteredPaks), filteredChecksums, sizeof(filteredChecksums));
+
+                    Info_SetValueForKey_Big(bigInfoString, "sv_referencedPakNames", filteredPaks);
+                    Info_SetValueForKey_Big(bigInfoString, "sv_referencedPaks", filteredChecksums);
+                }
             }
 
             SV_SendServerCommand(client, "cs %i \"%s\"\n", index,
@@ -674,8 +695,8 @@ void SV_SpawnServer( char *server, qboolean killBots ) {
         if (res) {
 
             // spoof the pk3 path name. Make sure to account for it when client is about to request a file.
-            if (sv_clientMod->string && strlen(sv_clientMod->string) > 0 && gamename && Q_stricmp(gamename, sv_clientMod->string) && !Q_stricmp(gamename, fsGame)) {
-                gamename = sv_clientMod->string;
+            if (!Q_stricmp(gamename, fsGame)) {
+                gamename = "base";
             }
 
             Q_strncpyz(refPaks, va("%s/%s", gamename, basename), sizeof(refPaks));

@@ -527,6 +527,70 @@ void SV_DropClient( client_t *drop, const char *reason ) {
     }
 }
 
+void SV_FilterPaksAndChecksums(const char* filePaks, const char* checksums, const char* clientMod,
+    char* filteredPaks, size_t filteredPaksSize,
+    char* filteredChecksums, size_t filteredChecksumsSize) {
+
+    if (!filePaks || !checksums || !clientMod || !filteredPaks || !filteredChecksums) {
+        return;
+    }
+
+    const char* currentFile = filePaks;
+    const char* currentChecksum = checksums;
+
+    filteredPaks[0] = '\0';
+    filteredChecksums[0] = '\0';
+
+    while (currentFile && *currentFile && currentChecksum && *currentChecksum) {
+
+        const char* fileEnd = strchr(currentFile, ' ');
+        size_t fileLength = fileEnd ? (size_t)(fileEnd - currentFile) : strlen(currentFile);
+
+        char filePath[MAX_QPATH];
+        if (fileLength >= sizeof(filePath)) {
+            fileLength = sizeof(filePath) - 1;
+        }
+        strncpy(filePath, currentFile, fileLength);
+        filePath[fileLength] = '\0';
+
+        const char* checksumEnd = strchr(currentChecksum, ' ');
+        size_t checksumLength = checksumEnd ? (size_t)(checksumEnd - currentChecksum) : strlen(currentChecksum);
+
+        char checksum[64];
+        if (checksumLength >= sizeof(checksum)) {
+            checksumLength = sizeof(checksum) - 1;
+        }
+        strncpy(checksum, currentChecksum, checksumLength);
+        checksum[checksumLength] = '\0';
+
+        // Check if the file belongs to the clientMod folder
+        const char* slash = strchr(filePath, '/');
+        qboolean matchesClientMod = slash && strncmp(filePath, clientMod, slash - filePath) == 0 ? qtrue : qfalse;
+
+        if (!matchesClientMod) {
+            // Append file path to filteredPaks
+            if (strlen(filteredPaks) + fileLength + 1 < filteredPaksSize) {
+                if (strlen(filteredPaks) > 0) {
+                    strncat(filteredPaks, " ", filteredPaksSize - strlen(filteredPaks) - 1);
+                }
+                strncat(filteredPaks, filePath, filteredPaksSize - strlen(filteredPaks) - 1);
+            }
+
+            // Append checksum to filteredChecksums
+            if (strlen(filteredChecksums) + checksumLength + 1 < filteredChecksumsSize) {
+                if (strlen(filteredChecksums) > 0) {
+                    strncat(filteredChecksums, " ", filteredChecksumsSize - strlen(filteredChecksums) - 1);
+                }
+                strncat(filteredChecksums, checksum, filteredChecksumsSize - strlen(filteredChecksums) - 1);
+            }
+        }
+
+        // Move to the next file and checksum
+        currentFile = fileEnd ? fileEnd + 1 : NULL;
+        currentChecksum = checksumEnd ? checksumEnd + 1 : NULL;
+    }
+}
+
 /*
 ================
 SV_SendClientGameState
@@ -586,17 +650,44 @@ static void SV_SendClientGameState( client_t *client ) {
                 continue;
             }
             else if (start == CS_SYSTEMINFO) {
+                char refPaks[BIG_INFO_VALUE], refChecksums[BIG_INFO_VALUE], filteredPaks[BIG_INFO_VALUE], filteredChecksums[BIG_INFO_VALUE];
+
                 Q_strncpyz(bigInfoString, sv.configstrings[start], sizeof(bigInfoString));
                 cvar_t* legacyClmod = Cvar_FindVar("sv_legacyClientMod");
                 cvar_t* clientMod = Cvar_FindVar("sv_clientMod");
 
                 if (client->legacyProtocol && legacyClmod && legacyClmod->string && strlen(legacyClmod->string) > 0 && Q_stricmp(legacyClmod->string, "none")) {
+                    
+                    
                     Info_SetValueForKey_Big(bigInfoString, "fs_game", legacyClmod->string);
+                    
+                    if (clientMod && clientMod->string && strlen(clientMod->string) > 0 && Q_stricmp(clientMod->string, "none") && Q_stricmp(clientMod->string, legacyClmod->string)) {
+                        Q_strncpyz(refPaks, Info_ValueForKey(bigInfoString, "sv_referencedPakNames"), sizeof(refPaks));
+                        Q_strncpyz(refChecksums, Info_ValueForKey(bigInfoString, "sv_referencedPaks"), sizeof(refChecksums));
+
+                        SV_FilterPaksAndChecksums(refPaks, refChecksums, clientMod->string, filteredPaks, sizeof(filteredPaks), filteredChecksums, sizeof(filteredChecksums));
+
+                        Info_SetValueForKey_Big(bigInfoString, "sv_referencedPakNames", filteredPaks);
+                        Info_SetValueForKey_Big(bigInfoString, "sv_referencedPaks", filteredChecksums);
+                    }
+
+                    
+
                     //Z_Free(sv.configstrings[start]);
                     //sv.configstrings[start] = CopyString(legacyClmod->string);
                 }
                 else if (!client->legacyProtocol && clientMod && clientMod->string && strlen(clientMod->string) > 0 && Q_stricmp(clientMod->string, "none")) {
                     Info_SetValueForKey_Big(bigInfoString, "fs_game", clientMod->string);
+
+                    if (legacyClmod && legacyClmod->string && strlen(legacyClmod->string) > 0 && Q_stricmp(legacyClmod->string, "none") && Q_stricmp(legacyClmod->string, clientMod->string)) {
+                        Q_strncpyz(refPaks, Info_ValueForKey(bigInfoString, "sv_referencedPakNames"), sizeof(refPaks));
+                        Q_strncpyz(refChecksums, Info_ValueForKey(bigInfoString, "sv_referencedPaks"), sizeof(refChecksums));
+
+                        SV_FilterPaksAndChecksums(refPaks, refChecksums, legacyClmod->string, filteredPaks, sizeof(filteredPaks), filteredChecksums, sizeof(filteredChecksums));
+
+                        Info_SetValueForKey_Big(bigInfoString, "sv_referencedPakNames", filteredPaks);
+                        Info_SetValueForKey_Big(bigInfoString, "sv_referencedPaks", filteredChecksums);
+                    }
                 }
 
                 MSG_WriteBigString(&msg, bigInfoString);
@@ -828,8 +919,11 @@ int SV_WriteDownloadToClient(client_t *cl, msg_t *msg)
     int curindex;
     int unreferenced = 1;
     char errorMessage[1024];
-    char pakbuf[MAX_QPATH], *pakptr;
+    char pakbuf[MAX_QPATH], *pakptr, *folderPtr;
+    char spoofBuf[MAX_QPATH];
     int numRefPaks;
+
+    qboolean fileWasSpoofed = qfalse;
 
     if (!*cl->downloadName)
         return 0;   // Nothing being downloaded
@@ -837,9 +931,55 @@ int SV_WriteDownloadToClient(client_t *cl, msg_t *msg)
     if(!cl->download)
     {
         qboolean idPack = qfalse;
+        char* gameName;
+        char* baseName;
+        int checksum = 0;
+        int copySize = 0;
+        char requestedFolder[MAX_QPATH];
+        char requestedPak[MAX_QPATH];
 
-        // Chop off filename extension.
+        Com_Memset(requestedFolder, 0, sizeof(requestedFolder));
+        Com_Memset(requestedPak, 0, sizeof(requestedPak));
+
+        // Unlike the original solution, where we had 1 clientmod, we now need to account for 2 actually.
+        // Thanks to this, a decision was made that we, instead of spoofing it to clientmod, spoof the package name to base.
+        // If the package is in base but it was not supposed to be there on serverside, we need to undo the spoof.
+
         Com_sprintf(pakbuf, sizeof(pakbuf), "%s", cl->downloadName);
+        folderPtr = strchr(pakbuf, '/');
+        if (folderPtr) {
+            copySize = folderPtr - pakbuf;
+
+            if (copySize + 1 >= sizeof(requestedFolder)) {
+                copySize = sizeof(requestedFolder) - 1;
+            }
+
+        
+            Q_strncpyz(requestedFolder, pakbuf, copySize + 1);
+        }
+
+        pakptr = strrchr(pakbuf, '/');
+        if (pakptr && strlen(pakptr) > 1) {
+            pakptr++;
+
+            char* ext = strrchr(pakptr, '.');
+            if (ext && !Q_stricmp(ext, ".pk3")) { 
+                *ext = '\0';
+            }
+
+            Q_strncpyz(requestedPak, pakptr, sizeof(requestedPak));
+        }
+
+        if (FS_FindPakByPakName(requestedPak, &gameName, &baseName, &checksum)) {
+            if (Q_stricmp(requestedFolder, gameName)) {
+                Com_DPrintf("[D SmartDL] Spoof %s => %s\n", requestedFolder, gameName);
+                fileWasSpoofed = qtrue;
+                Q_strncpyz(spoofBuf, va("%s/%s.pk3", gameName, baseName), sizeof(spoofBuf));
+                Q_strncpyz(pakbuf, spoofBuf, sizeof(pakbuf));
+            }
+        }
+        // Chop off filename extension.
+        
         pakptr = strrchr(pakbuf, '.');
 
         if(pakptr)
@@ -878,7 +1018,7 @@ int SV_WriteDownloadToClient(client_t *cl, msg_t *msg)
         if ( !(sv_allowDownload->integer & DLF_ENABLE) ||
             (sv_allowDownload->integer & DLF_NO_UDP) ||
             idPack || unreferenced ||
-            ( cl->downloadSize = FS_SV_FOpenFileRead( cl->downloadName, &cl->download ) ) < 0 ) {
+            ( cl->downloadSize = FS_SV_FOpenFileRead( fileWasSpoofed ? spoofBuf : cl->downloadName, &cl->download ) ) < 0 ) {
             // cannot auto-download file
             if(unreferenced)
             {

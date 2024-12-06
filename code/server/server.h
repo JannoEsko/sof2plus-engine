@@ -349,6 +349,9 @@ void SV_SendClientMapChange( client_t *client );
 void SV_ClientEnterWorld( client_t *client, usercmd_t *cmd );
 void SV_FreeClient(client_t *client);
 void SV_DropClient( client_t *drop, const char *reason );
+void SV_FilterPaksAndChecksums(const char* filePaks, const char* checksums, const char* clientMod,
+    char* filteredPaks, size_t filteredPaksSize,
+    char* filteredChecksums, size_t filteredChecksumsSize);
 
 void SV_ExecuteClientCommand( client_t *cl, const char *s, qboolean clientOK );
 void SV_ClientThink (client_t *cl, usercmd_t *cmd);
