@@ -1885,7 +1885,7 @@ void MSG_WriteDeltaPlayerstate( msg_t *msg, struct playerState_s *from, struct p
 
         if (to->events[2] == EV_WEAPON_CALLBACK) {
             toEventParm2 = to->eventParms[2];
-            int wpn = to->eventParms[0] & 0xFF;
+            int wpn = to->eventParms[2] & 0xFF;
             wpn = translateGoldWeaponToSilverWeapon(wpn);
             to->eventParms[2] = (to->eventParms[2] & ~0xFF) | (wpn & 0xFF);
         }
