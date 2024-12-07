@@ -307,6 +307,12 @@
       <Filter>Source Files\null</Filter>
     </ClCompile>
     <ClCompile Include="..\..\code\server\sv_gametype.c" />
+    <ClCompile Include="..\..\code\qcommon\cm_shader.c">
+      <Filter>Source Files\qcommon</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\qcommon\cm_terrain.c">
+      <Filter>Source Files\qcommon</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\code\asm\qasm.h">

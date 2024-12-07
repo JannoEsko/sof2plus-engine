@@ -83,7 +83,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
     <GenerateManifest>false</GenerateManifest>
-    <OutDir>..\..\build\debug-msvc14-x86_64\</OutDir>
+    <OutDir>..\..\..\..\..\..\..\Games\sof2plus</OutDir>
     <IntDir>..\..\build\debug-msvc14-x86_64\ded\</IntDir>
     <TargetName>sof2plus.x86_64</TargetName>
   </PropertyGroup>
@@ -313,6 +313,8 @@
     <ClCompile Include="..\..\code\qcommon\cm_load.c" />
     <ClCompile Include="..\..\code\qcommon\cm_patch.c" />
     <ClCompile Include="..\..\code\qcommon\cm_polylib.c" />
+    <ClCompile Include="..\..\code\qcommon\cm_shader.c" />
+    <ClCompile Include="..\..\code\qcommon\cm_terrain.c" />
     <ClCompile Include="..\..\code\qcommon\cm_test.c" />
     <ClCompile Include="..\..\code\qcommon\cm_trace.c" />
     <ClCompile Include="..\..\code\qcommon\common.c" />
