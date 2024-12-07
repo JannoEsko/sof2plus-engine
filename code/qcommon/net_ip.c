@@ -1642,10 +1642,11 @@ static qboolean NET_GetCvars( void ) {
             modified++;
         }
 
-        Com_Printf("Disabling IPv6 due to having multiprotocol enabled\n");
-        Cvar_SetValue("net_enabled", 1);
-
-        modified++;
+        if (net_enabled->integer != 1) {
+            Com_Printf("Disabling IPv6 due to having multiprotocol enabled\n");
+            Cvar_SetValue("net_enabled", 1);
+            modified++;
+        }
     }
 
     net_socksServer = Cvar_Get( "net_socksServer", "", CVAR_LATCH | CVAR_ARCHIVE );
