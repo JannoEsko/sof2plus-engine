@@ -1242,8 +1242,18 @@ char *Cvar_InfoString(int bit)
 
     for(var = cvar_vars; var; var = var->next)
     {
-        if(var->name && (var->flags & bit))
-            Info_SetValueForKey (info, var->name, var->string);
+        if (var->name && (var->flags & bit)) {
+
+            if (bit == CVAR_SERVERINFO && !Q_stricmp(var->name, "g_gametype")) {
+                Info_SetValueForKey(info, var->name, Cvar_VariableString("g_publicGametype"));
+            }
+            else {
+                Info_SetValueForKey(info, var->name, var->string);
+            }
+
+            
+        }
+            
     }
 
     return info;

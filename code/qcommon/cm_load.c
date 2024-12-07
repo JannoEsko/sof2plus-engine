@@ -645,7 +645,7 @@ static qboolean CM_LoadBSPFile(clipMap_t *cm, const char *name, int *checksum, c
         long entLen = 0;
         // build string path.
         char* fsGame = Cvar_VariableString("fs_game");
-        char* actualGametype = Cvar_VariableString("g_gametype"); // FIXMEJAN - account for differences between g_gametype (public version) and the to-be-built internal g_gametype value.
+        char* actualGametype = Cvar_VariableString("g_gametype");
 
         if (fsGame) {
             char entPath[MAX_QPATH];

@@ -50,6 +50,7 @@ cvar_t  *sv_dlRate;
 cvar_t  *sv_minPing;
 cvar_t  *sv_maxPing;
 cvar_t  *sv_gametype;
+cvar_t  *sv_publicGametype;
 cvar_t  *sv_pure;
 cvar_t  *sv_floodProtect;
 cvar_t  *sv_mapcycle;
@@ -680,7 +681,7 @@ void SVC_Info( netadr_t from, qboolean legacyProtocol ) {
     Info_SetValueForKey( infostring, "clients", va("%i", count) );
     Info_SetValueForKey( infostring, "sv_maxclients",
         va("%i", sv_maxclients->integer - sv_privateClients->integer ) );
-    Info_SetValueForKey( infostring, "gametype", sv_gametype->string );
+    Info_SetValueForKey( infostring, "gametype", sv_publicGametype->string );
     Info_SetValueForKey( infostring, "pure", va("%i", sv_pure->integer ) );
     Info_SetValueForKey( infostring, "needpass", va("%d", Cvar_VariableIntegerValue("g_needpass") ) );
 
