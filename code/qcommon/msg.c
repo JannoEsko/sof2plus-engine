@@ -1249,6 +1249,34 @@ void MSG_WriteDeltaEntity( msg_t *msg, struct entityState_s *from, struct entity
 
         }
 
+        if (from->eType != to->eType && (from->eType == ET_EVENTS + EV_WEAPON_CALLBACK || to->eType == ET_EVENTS + EV_WEAPON_CALLBACK)) {
+
+            fromEventParm = from->eventParm;
+            toEventParm = to->eventParm;
+
+            int wpn = -1;
+
+            if (from->eType == ET_EVENTS + EV_WEAPON_CALLBACK) {
+                int wpn = from->eventParm & 0xFF;
+                wpn = translateGoldWeaponToSilverWeapon(wpn);
+
+                if (wpn == 0) wpn++; // Don't send an animation without any weapon.
+
+                from->eventParm = (from->eventParm & ~0xFF) | (wpn & 0xFF);
+            }
+
+            if (to->eType == ET_EVENTS + EV_WEAPON_CALLBACK) {
+                int wpn = to->eventParm & 0xFF;
+                wpn = translateGoldWeaponToSilverWeapon(wpn);
+
+                if (wpn == 0) wpn++; // Don't send an animation without any weapon.
+
+                to->eventParm = (to->eventParm & ~0xFF) | (wpn & 0xFF);
+            }
+
+        }
+
+
         if (to->eType == EV_OBITUARY && from->eType != to->eType) {
             fromEventParm = from->eventParm;
             toEventParm = to->eventParm;
@@ -1781,6 +1809,10 @@ void MSG_WriteDeltaPlayerstate( msg_t *msg, struct playerState_s *from, struct p
         fromExternalEventParm = -1,
         fromWpn = -1,
         fromZoomFov = -1,
+        fromEventParm0 = -1,
+        fromEventParm1 = -1,
+        fromEventParm2 = -1,
+        fromEventParm3 = -1,
 
         toEvents0 = -1,
         toEvents1 = -1,
@@ -1789,7 +1821,11 @@ void MSG_WriteDeltaPlayerstate( msg_t *msg, struct playerState_s *from, struct p
         toExternalEvent = -1,
         toExternalEventParm = -1,
         toWpn = -1,
-        toZoomFov = -1
+        toZoomFov = -1,
+        toEventParm0 = -1,
+        toEventParm1 = -1,
+        toEventParm2 = -1,
+        toEventParm3 = -1
         ;
 
     netField_t* playerStateFields_Local = legacyProtocol ? legacyPlayerStateFields : playerStateFields;
@@ -1801,28 +1837,87 @@ void MSG_WriteDeltaPlayerstate( msg_t *msg, struct playerState_s *from, struct p
 
     numFields = ARRAY_LEN( playerStateFields );
 
-
     if (legacyProtocol) {
+        
+        if (from->events[0] == EV_WEAPON_CALLBACK) {
+            fromEventParm0 = from->eventParms[0];
+            int wpn = from->eventParms[0] & 0xFF;
+            wpn = translateGoldWeaponToSilverWeapon(wpn);
+            from->eventParms[0] = (from->eventParms[0] & ~0xFF) | (wpn & 0xFF);
+        }
 
-        if (from->events[0] > EV_ITEM_PICKUP_QUIET && from->events[0] != to->events[0]) {
+        if (from->events[1] == EV_WEAPON_CALLBACK) {
+            fromEventParm1 = from->eventParms[1];
+            int wpn = from->eventParms[1] & 0xFF;
+            wpn = translateGoldWeaponToSilverWeapon(wpn);
+            from->eventParms[1] = (from->eventParms[1] & ~0xFF) | (wpn & 0xFF);
+        }
+
+        if (from->events[2] == EV_WEAPON_CALLBACK) {
+            fromEventParm2 = from->eventParms[2];
+            int wpn = from->eventParms[2] & 0xFF;
+            wpn = translateGoldWeaponToSilverWeapon(wpn);
+            from->eventParms[2] = (from->eventParms[2] & ~0xFF) | (wpn & 0xFF);
+        }
+
+        if (from->events[3] == EV_WEAPON_CALLBACK) {
+            fromEventParm3 = from->eventParms[3];
+            int wpn = from->eventParms[3] & 0xFF;
+            wpn = translateGoldWeaponToSilverWeapon(wpn);
+            from->eventParms[3] = (from->eventParms[3] & ~0xFF) | (wpn & 0xFF);
+        }
+
+        if (to->events[0] == EV_WEAPON_CALLBACK) {
+            toEventParm0 = to->eventParms[0];
+            int wpn = to->eventParms[0] & 0xFF;
+            wpn = translateGoldWeaponToSilverWeapon(wpn);
+            to->eventParms[0] = (to->eventParms[0] & ~0xFF) | (wpn & 0xFF);
+        }
+
+
+        if (to->events[1] == EV_WEAPON_CALLBACK) {
+            toEventParm1 = to->eventParms[1];
+            int wpn = to->eventParms[1] & 0xFF;
+            wpn = translateGoldWeaponToSilverWeapon(wpn);
+            to->eventParms[1] = (to->eventParms[1] & ~0xFF) | (wpn & 0xFF);
+        }
+
+
+        if (to->events[2] == EV_WEAPON_CALLBACK) {
+            toEventParm2 = to->eventParms[2];
+            int wpn = to->eventParms[0] & 0xFF;
+            wpn = translateGoldWeaponToSilverWeapon(wpn);
+            to->eventParms[2] = (to->eventParms[2] & ~0xFF) | (wpn & 0xFF);
+        }
+
+
+        if (to->events[3] == EV_WEAPON_CALLBACK) {
+            toEventParm3 = to->eventParms[3];
+            int wpn = to->eventParms[3] & 0xFF;
+            wpn = translateGoldWeaponToSilverWeapon(wpn);
+            to->eventParms[3] = (to->eventParms[3] & ~0xFF) | (wpn & 0xFF);
+        }
+
+
+        if (from->events[0] > EV_ITEM_PICKUP_QUIET && (from->events[0] != to->events[0] || from->eventParms[0] != to->eventParms[0])) {
             fromEvents0 = from->events[0];
             from->events[0]--;
         }
 
 
-        if (from->events[1] > EV_ITEM_PICKUP_QUIET && from->events[1] != to->events[1]) {
+        if (from->events[1] > EV_ITEM_PICKUP_QUIET && (from->events[1] != to->events[1] || from->eventParms[1] != to->eventParms[1])) {
             fromEvents1 = from->events[1];
             from->events[1]--;
         }
 
 
-        if (from->events[2] > EV_ITEM_PICKUP_QUIET && from->events[2] != to->events[2]) {
+        if (from->events[2] > EV_ITEM_PICKUP_QUIET && (from->events[2] != to->events[2] || from->eventParms[2] != to->eventParms[2])) {
             fromEvents2 = from->events[2];
             from->events[2]--;
         }
 
 
-        if (from->events[3] > EV_ITEM_PICKUP_QUIET && from->events[3] != to->events[3]) {
+        if (from->events[3] > EV_ITEM_PICKUP_QUIET && (from->events[3] != to->events[3] || from->eventParms[3] != to->eventParms[3])) {
             fromEvents3 = from->events[3];
             from->events[3]--;
         }
@@ -1838,25 +1933,25 @@ void MSG_WriteDeltaPlayerstate( msg_t *msg, struct playerState_s *from, struct p
         }
 
 
-        if (to->events[0] > EV_ITEM_PICKUP_QUIET && from->events[0] != to->events[0]) {
+        if (to->events[0] > EV_ITEM_PICKUP_QUIET && (from->events[0] != to->events[0] || from->eventParms[0] != to->eventParms[0])) {
             toEvents0 = to->events[0];
             to->events[0]--;
         }
 
 
-        if (to->events[1] > EV_ITEM_PICKUP_QUIET && from->events[1] != to->events[1]) {
+        if (to->events[1] > EV_ITEM_PICKUP_QUIET && (from->events[1] != to->events[1] || from->eventParms[1] != to->eventParms[1])) {
             toEvents1 = to->events[1];
             to->events[1]--;
         }
 
 
-        if (to->events[2] > EV_ITEM_PICKUP_QUIET && from->events[2] != to->events[2]) {
+        if (to->events[2] > EV_ITEM_PICKUP_QUIET && (from->events[2] != to->events[2] || from->eventParms[2] != to->eventParms[2])) {
             toEvents2 = to->events[2];
             to->events[2]--;
         }
 
 
-        if (to->events[3] > EV_ITEM_PICKUP_QUIET && from->events[3] != to->events[3]) {
+        if (to->events[3] > EV_ITEM_PICKUP_QUIET && (from->events[3] != to->events[3] || from->eventParms[3] != to->eventParms[3])) {
             toEvents3 = to->events[3];
             to->events[3]--;
         }
@@ -2035,6 +2130,42 @@ void MSG_WriteDeltaPlayerstate( msg_t *msg, struct playerState_s *from, struct p
         if (fromZoomFov != -1) {
             from->zoomFov = fromZoomFov;
         }
+
+        if (fromEventParm0 != -1) {
+            from->eventParms[0] = fromEventParm0;
+        }
+
+
+        if (fromEventParm1 != -1) {
+            from->eventParms[1] = fromEventParm1;
+        }
+
+
+        if (fromEventParm2 != -1) {
+            from->eventParms[2] = fromEventParm2;
+        }
+
+
+        if (fromEventParm3 != -1) {
+            from->eventParms[3] = fromEventParm3;
+        }
+
+        if (toEventParm0 != -1) {
+            to->eventParms[0] = toEventParm0;
+        }
+
+        if (toEventParm1 != -1) {
+            to->eventParms[1] = toEventParm1;
+        }
+
+        if (toEventParm2 != -1) {
+            to->eventParms[2] = toEventParm2;
+        }
+
+        if (toEventParm3 != -1) {
+            to->eventParms[3] = toEventParm3;
+        }
+
     }
 
     //
