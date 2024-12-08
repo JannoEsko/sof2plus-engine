@@ -105,6 +105,16 @@ static void SV_SendConfigstring(client_t *client, int index)
                 bigInfoString);
 
         }
+        else if (client->legacyProtocol && index == CS_SERVERINFO) {
+            //legacy_availableWpns
+
+            Q_strncpyz(bigInfoString, sv.configstrings[index], sizeof(bigInfoString));
+
+            char* legacyWpns = Cvar_VariableString("legacy_availableWpns");
+            Info_SetValueForKey_Big(bigInfoString, "g_availableWeapons", legacyWpns);
+            SV_SendServerCommand(client, "cs %i \"%s\"\n", index,
+                bigInfoString);
+        }
         else {
             // legacy protocol - as the game version is a short string, it will never be truncated.
             if (client->legacyProtocol) {

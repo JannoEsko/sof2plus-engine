@@ -694,6 +694,13 @@ static void SV_SendClientGameState( client_t *client ) {
 
                 MSG_WriteBigString(&msg, bigInfoString);
             }
+            else if (client->legacyProtocol && start == CS_SERVERINFO) {
+                Q_strncpyz(bigInfoString, sv.configstrings[start], sizeof(bigInfoString));
+
+                char* legacyWpns = Cvar_VariableString("legacy_availableWpns");
+                Info_SetValueForKey_Big(bigInfoString, "g_availableWeapons", legacyWpns);
+                MSG_WriteBigString(&msg, bigInfoString);
+            }
             else {
                 MSG_WriteBigString(&msg, sv.configstrings[start]);
             }
