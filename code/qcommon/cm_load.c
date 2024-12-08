@@ -641,6 +641,7 @@ static qboolean CM_LoadBSPFile(clipMap_t *cm, const char *name, int *checksum, c
 
     if (isMap) {
         qboolean isAlt = Cvar_VariableIntegerValue("sv_altmap");
+        Cvar_Set("sv_altmap", "0");
         fileHandle_t entFile;
         long entLen = 0;
         // build string path.
