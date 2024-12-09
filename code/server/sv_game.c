@@ -984,6 +984,9 @@ intptr_t SV_GameSystemCalls( intptr_t *args ) {
     case G_TRANSLATE_SILVER_WPN_TO_GOLD:
         return translateSilverWeaponToGoldWeapon(args[1]);
 
+    case G_TRANSLATE_GOLD_WPN_TO_SILVER:
+        return translateGoldWeaponToSilverWeapon(args[1]);
+
     //=======================================================
     default:
         Com_Error( ERR_DROP, "Bad game system trap: %ld", (long int) args[0] );

@@ -267,7 +267,7 @@ static int translateGoldModelIdxToSilverModelIdx(int input) {
     return modelIndexTranslations[input].translatedIndex;
 }
 
-static int translateGoldWeaponToSilverWeapon(int input) {
+int translateGoldWeaponToSilverWeapon(int input) {
 
     if (input < 0 || input >= sizeof(weaponTranslations) / sizeof(weaponTranslations[0])) {
         return input;

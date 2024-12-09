@@ -110,6 +110,7 @@ void MSG_ReadDeltaPlayerstate( msg_t *msg, struct playerState_s *from, struct pl
 void MSG_ReportChangeVectors_f( void );
 
 int translateSilverWeaponToGoldWeapon(int input);
+int translateGoldWeaponToSilverWeapon(int input);
 
 //============================================================================
 
