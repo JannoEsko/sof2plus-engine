@@ -1543,7 +1543,7 @@ void NET_OpenIP( void ) {
             for (i = 0; i < 10; i++) {
                 legacy_ip_socket = NET_IPSocket(net_ip->string, legacy_port + i, &err);
                 if (legacy_ip_socket != INVALID_SOCKET) {
-                    Cvar_SetValue("net_port", legacy_port + i);
+                    Cvar_SetValue("legacy_net_port", legacy_port + i);
 
                     if (net_socksEnabled->integer) // this is actually redundant as with multiprotocol set, this will not be reached. 
                                                    // but I'm keeping it here in case someone ever wants to have SOCKS setup with multiprotocol.  
