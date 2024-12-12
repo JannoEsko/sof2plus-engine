@@ -337,20 +337,7 @@ intptr_t SV_GameSystemCalls( intptr_t *args ) {
     case G_MILLISECONDS:
         return Sys_Milliseconds();
     case G_CVAR_REGISTER:
-        Cvar_Register( VMA(1), VMA(2), VMA(3), args[4] );
-
-        if (args[4] & CVAR_LOCK_RANGE) {
-            
-            float minValue = *(float*)VMA(5);
-            float maxValue = *(float*)VMA(6);
-            cvar_t* cv = Cvar_FindVar(VMA(2));
-
-            if (cv) {
-                Cvar_CheckRange(cv, minValue, maxValue, qfalse);
-            }
-            
-        }
-
+        Cvar_Register( VMA(1), VMA(2), VMA(3), args[4], VMF(5), VMF(6));
         return 0;
     case G_CVAR_UPDATE:
         Cvar_Update( VMA(1) );

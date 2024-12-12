@@ -50,7 +50,7 @@ intptr_t SV_GametypeSystemCalls(intptr_t *args)
         case GT_MILLISECONDS:
             return Sys_Milliseconds();
         case GT_CVAR_REGISTER:
-            Cvar_Register(VMA(1), VMA(2), VMA(3), args[4]);
+            Cvar_Register(VMA(1), VMA(2), VMA(3), args[4], VMF(5), VMF(6));
             return 0;
         case GT_CVAR_UPDATE:
             Cvar_Update(VMA(1));

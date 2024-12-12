@@ -491,6 +491,10 @@ void Cvar_Print( cvar_t *v ) {
         Com_Printf( "latched: \"%s\"\n", v->latchedString );
     }
 
+    if (v->flags & CVAR_LOCK_RANGE) {
+        Com_Printf("valid range between %.02f and %.02f\n", v->min, v->max);
+    }
+
     if ( v->description ) {
         Com_Printf( "%s\n", v->description );
     }
@@ -1332,7 +1336,7 @@ Cvar_Register
 basically a slightly modified Cvar_Get for the interpreted modules
 =====================
 */
-void Cvar_Register(vmCvar_t *vmCvar, const char *varName, const char *defaultValue, int flags)
+void Cvar_Register(vmCvar_t *vmCvar, const char *varName, const char *defaultValue, int flags, float minValue, float maxValue)
 {
     cvar_t  *cv;
 
@@ -1380,6 +1384,10 @@ void Cvar_Register(vmCvar_t *vmCvar, const char *varName, const char *defaultVal
 
     if (!vmCvar)
         return;
+
+    if (flags & CVAR_LOCK_RANGE) {
+        Cvar_CheckRange(cv, minValue, maxValue, qfalse);
+    }
 
     vmCvar->handle = cv - cvar_indexes;
     vmCvar->modificationCount = -1;
