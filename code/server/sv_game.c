@@ -115,6 +115,10 @@ void SV_SetBrushModel( sharedEntity_t *ent, const char *name ) {
         Com_Error( ERR_DROP, "SV_SetBrushModel: NULL" );
     }
 
+    if (!Q_stricmp(name, "none")) {
+        return;
+    }
+
     // Regular map model.
     if(name[0] == '*'){
         clipHandle_t    h;
