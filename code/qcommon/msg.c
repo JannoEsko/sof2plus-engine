@@ -145,10 +145,14 @@ ammoDiff_t ammoTranslationsReversed[] = {
     { L_AMMO_40, AMMO_40 },
     { L_AMMO_RPG7, AMMO_RPG7 },
     { L_AMMO_M15, AMMO_M15 },
+    { L_AMMO_M67, AMMO_NONE },
     { L_AMMO_M84, AMMO_M84 },
+    { L_AMMO_F1, AMMO_NONE },
+    { L_AMMO_L2A2, AMMO_NONE },
+    { L_AMMO_MDN11, AMMO_NONE },
     { L_AMMO_SMOHG92, AMMO_SMOHG92 },
     { L_AMMO_ANM14, AMMO_ANM14 },
-    { L_AMMO_762, AMMO_762_BELT },
+    //{ L_AMMO_762, AMMO_762_BELT },
     { L_AMMO_NONE, AMMO_NONE }
 };
 
