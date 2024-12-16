@@ -784,6 +784,7 @@ default values.
 #define CVAR_VM_CREATED     0x1000  // cvar was created exclusively in one of the VMs.
 #define CVAR_PROTECTED      0x2000  // prevent modifying this var from VMs or the server
 #define CVAR_LOCK_RANGE     0x4000  // This seemed to be present in SoF2, reintroduce to SoF2Plus.
+#define CVAR_INTERNAL       0x8000  // From SoF2 - do not display this CVAR through console activities.
 // These flags are only returned by the Cvar_Flags() function
 #define CVAR_MODIFIED       0x40000000  // Cvar was modified
 #define CVAR_NONEXISTENT    0x80000000  // Cvar doesn't exist.

@@ -315,6 +315,70 @@ static void SV_SetActiveSubBSP(int modelIndex)
     sv.subBSPParsePoint = CM_EntityString(sv.subBSPIndex);
 }
 
+/*
+==================
+SV_ValidateMapName
+
+Validates whether the given mapname
+is a known map to the server.
+Returns 0 on no matches,
+Returns 1 on EXACT match,
+Returns 2 on multiple matches.
+==================
+*/
+static int SV_ValidateMapName(const char* mapName, char* output, int outputSize) {
+
+    int nfiles;
+    char** bspNames = FS_ListFilteredFiles("maps", "bsp", va("maps/%s", mapName), &nfiles, qtrue); // Filter accepts maps/%s as a filter,
+    char tmpFilename[MAX_STRING_CHARS];
+    qboolean exactMatch = qfalse;
+
+    // Clear the output buffer first.
+    Com_Memset(output, 0, outputSize);
+
+    // We need to figure out whether the list contains an exact match as well.
+    // If not, shoot back the names we got.
+
+    for (int i = 0; i < nfiles; i++) {
+        FS_ConvertPath(bspNames[i]);
+        
+        const char* slash = strchr(bspNames[i], '/');
+        if (slash && !Q_strncmp(bspNames[i], "maps/", 5)) {
+            Q_strncpyz(tmpFilename, slash + 1, sizeof(tmpFilename));
+        }
+        else {
+            continue; // We're querying for maps but it is not a map? Shouldn't happen.
+        }
+
+        COM_StripExtension(tmpFilename, tmpFilename, sizeof(tmpFilename));
+
+        if (!Q_stricmp(mapName, tmpFilename)) {
+            exactMatch = qtrue;
+        }
+
+        int spaceRemaining = outputSize - strlen(output) - 1; // Account for null terminator
+        int nameLength = strlen(tmpFilename);
+
+        if (nameLength + 1 <= spaceRemaining) {
+            Q_strcat(output, outputSize, tmpFilename);
+            Q_strcat(output, outputSize, "\n");
+        }
+
+    }
+
+    FS_FreeFileList(bspNames);
+
+    if (exactMatch == 1) {
+        return 1; // Exact match.
+    }
+    else if (nfiles > 0) {
+        return 2;
+    }
+    else {
+        return 0;
+    }
+}
+
 //==============================================
 
 static int  FloatAsInt( float f ) {
@@ -990,6 +1054,9 @@ intptr_t SV_GameSystemCalls( intptr_t *args ) {
 
     case G_TRANSLATE_GOLD_WPN_TO_SILVER:
         return translateGoldWeaponToSilverWeapon(args[1]);
+
+    case G_VALIDATE_MAP_NAME:
+        return SV_ValidateMapName(VMA(1), VMA(2), args[3]);
 
     //=======================================================
     default:

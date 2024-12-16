@@ -595,6 +595,7 @@ typedef enum
 {
     GAME_OVER_TIMELIMIT,
     GAME_OVER_SCORELIMIT,
+    LEEG,
 
 } game_over_t;
 

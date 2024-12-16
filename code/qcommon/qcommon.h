@@ -700,6 +700,8 @@ const char *FS_GetCurrentGameDir(void);
 qboolean FS_Which(const char *filename, void *searchPath);
 qboolean FS_FindPakByFile(const char* fileName, char** gameName, char** baseName, int* checksumOut);
 qboolean FS_FindPakByPakName(const char* fileName, char** gameName, char** baseName, int* checksumOut);
+char** FS_ListFilteredFiles(const char* path, const char* extension, char* filter, int* numfiles, qboolean allowNonPureFilesOnDisk);
+void FS_ConvertPath(char* s);
 
 /*
 ==============================================================

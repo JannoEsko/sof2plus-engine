@@ -473,6 +473,11 @@ Prints the value, default, and latched string of the given variable
 ============
 */
 void Cvar_Print( cvar_t *v ) {
+
+    if (v->flags & CVAR_INTERNAL) {
+        return;
+    }
+
     Com_Printf ("\"%s\" is:\"%s" S_COLOR_WHITE "\"",
             v->name, v->string );
 
