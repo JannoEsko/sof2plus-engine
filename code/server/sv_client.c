@@ -1568,8 +1568,9 @@ static qboolean SV_AllowSpamOnCommand(const char* command) {
 
     if (
         !Q_stricmp(command, "score") ||
-        !Q_stricmp(command, "uef") ||
-        !Q_stricmp(command, "verified")
+        Q_stristr(command, "uef") ||
+        Q_stristr(command, "verified") || 
+        Q_stristr(command, "checkguid")
         ) {
         return qtrue;
     }
