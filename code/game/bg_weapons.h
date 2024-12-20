@@ -41,6 +41,13 @@ typedef enum
     MOD_ANM14_GRENADE,
     MOD_M15_GRENADE,
 
+    // Additional grenades for 1fx. Client Additions.
+    MOD_M67_GRENADE,
+    MOD_F1_GRENADE,
+    MOD_L2A2_GRENADE,
+    MOD_MDN11_GRENADE,
+
+    // Those MODs are the same as v1.00.
     MOD_WATER,
     MOD_CRUSH,
     MOD_TELEFRAG,
@@ -49,7 +56,15 @@ typedef enum
     MOD_TEAMCHANGE,
     MOD_TARGET_LASER,
     MOD_TRIGGER_HURT,
-    MOD_TRIGGER_HURT_NOSUICIDE
+    MOD_TRIGGER_HURT_NOSUICIDE,
+    //Ryan april 6 2003
+    MOD_CAR,
+    MOD_POP,
+    MOD_REFRESH,
+    //Ryan
+    //RxCxW - #MOD
+    MOD_DUGUP,
+    MOD_BURN,
 
 } meansOfDeath_t;
 
