@@ -85,10 +85,10 @@ weaponDiff_t weaponTranslations[] = {
     { WP_SMOHG92_GRENADE, L_WP_SMOHG92_GRENADE },
     { WP_ANM14_GRENADE, L_WP_ANM14_GRENADE },
     { WP_M15_GRENADE, L_WP_M15_GRENADE },
-    //{ WP_M67_GRENADE, L_WP_M67_GRENADE },
-    //{ WP_F1_GRENADE, L_WP_F1_GRENADE },
-    //{ WP_L2A2_GRENADE, L_WP_L2A2_GRENADE },
-    //{ WP_MDN11_GRENADE, L_WP_MDN11_GRENADE }
+    { WP_M67_GRENADE, L_WP_M67_GRENADE },
+    { WP_F1_GRENADE, L_WP_F1_GRENADE },
+    { WP_L2A2_GRENADE, L_WP_L2A2_GRENADE },
+    { WP_MDN11_GRENADE, L_WP_MDN11_GRENADE }
 };
 
 weaponDiff_t weaponTranslationReversed[] = {
@@ -106,11 +106,11 @@ weaponDiff_t weaponTranslationReversed[] = {
     { L_WP_M60_MACHINEGUN, WP_M60_MACHINEGUN },
     { L_WP_MM1_GRENADE_LAUNCHER, WP_MM1_GRENADE_LAUNCHER },
     { L_WP_RPG7_LAUNCHER, WP_RPG7_LAUNCHER },
-    { L_WP_M67_GRENADE, WP_NONE }, // JANFIXME - translations for additional nades from Client Additions
+    { L_WP_M67_GRENADE, WP_M67_GRENADE },
     { L_WP_M84_GRENADE, WP_M84_GRENADE },
-    { L_WP_F1_GRENADE, WP_NONE },
-    { L_WP_L2A2_GRENADE, WP_NONE },
-    { L_WP_MDN11_GRENADE, WP_NONE },
+    { L_WP_F1_GRENADE, WP_F1_GRENADE },
+    { L_WP_L2A2_GRENADE, WP_L2A2_GRENADE },
+    { L_WP_MDN11_GRENADE, WP_MDN11_GRENADE },
     { L_WP_SMOHG92_GRENADE, WP_SMOHG92_GRENADE },
     { L_WP_ANM14_GRENADE, WP_ANM14_GRENADE },
     { L_WP_M15_GRENADE, WP_M15_GRENADE }
@@ -156,13 +156,60 @@ ammoDiff_t ammoTranslationsReversed[] = {
     { L_AMMO_NONE, AMMO_NONE }
 };
 
+ammoDiff_t ammoTranslationsClAdd[] = {
+    { CLADD_AMMO_KNIFE, L_AMMO_KNIFE},
+    { CLADD_AMMO_045, L_AMMO_045 },
+    { CLADD_AMMO_556, L_AMMO_556 },
+    { CLADD_AMMO_9, L_AMMO_9 },
+    { CLADD_AMMO_12, L_AMMO_12 },
+    { CLADD_AMMO_762, L_AMMO_762 },
+    { CLADD_AMMO_40, L_AMMO_40 },
+    { CLADD_AMMO_RPG7, L_AMMO_RPG7 },
+    { CLADD_AMMO_M15, L_AMMO_M15 },
+    { CLADD_AMMO_M84, L_AMMO_M84 },
+    { CLADD_AMMO_SMOHG92, L_AMMO_SMOHG92 },
+    { CLADD_AMMO_ANM14, L_AMMO_ANM14 },
+    { CLADD_AMMO_F1, L_AMMO_F1 },
+    { CLADD_AMMO_MDN11, L_AMMO_MDN11 },
+    { CLADD_AMMO_M67, L_AMMO_M67 },
+    { CLADD_AMMO_L2A2, L_AMMO_L2A2 }
+};
+
+ammoDiff_t ammoTranslationsReversedClAdd[] = {
+    { L_AMMO_KNIFE, CLADD_AMMO_KNIFE},
+    { L_AMMO_045, CLADD_AMMO_045 },
+    { L_AMMO_556, CLADD_AMMO_556 },
+    { L_AMMO_9, CLADD_AMMO_9 },
+    { L_AMMO_12, CLADD_AMMO_12 },
+    { L_AMMO_762, CLADD_AMMO_762 },
+    { L_AMMO_40, CLADD_AMMO_40 },
+    { L_AMMO_RPG7, CLADD_AMMO_RPG7 },
+    { L_AMMO_M15, CLADD_AMMO_M15 },
+    { L_AMMO_M67, CLADD_AMMO_M67 },
+    { L_AMMO_M84, CLADD_AMMO_M84 },
+    { L_AMMO_F1, CLADD_AMMO_F1 },
+    { L_AMMO_L2A2, CLADD_AMMO_L2A2 },
+    { L_AMMO_MDN11, CLADD_AMMO_MDN11 },
+    { L_AMMO_SMOHG92, CLADD_AMMO_SMOHG92 },
+    { L_AMMO_ANM14, CLADD_AMMO_ANM14 },
+    //{ L_AMMO_762, AMMO_762_BELT },
+    //{ L_AMMO_NONE, CLADD_AMMO_NONE }
+};
+
 int translateSilverAmmoToGoldAmmo(int input) {
 
-    if (input < 0 || input >= sizeof(ammoTranslationsReversed) / sizeof(ammoTranslationsReversed[0])) {
+    ammoDiff_t* useAmmoDif = ammoTranslationsReversed;
+    int sizeofDif = sizeof(ammoTranslationsReversed) / sizeof(ammoTranslationsReversed[0]);
+    if (sv_useLegacyNades->integer) {
+        useAmmoDif = ammoTranslationsReversedClAdd;
+        sizeofDif = sizeof(ammoTranslationsReversedClAdd) / sizeof(ammoTranslationsReversedClAdd[0]);
+    }
+
+    if (input < 0 || input >= sizeofDif) {
         return input;
     }
 
-    return ammoTranslationsReversed[input].translatedAmmo;
+    return useAmmoDif[input].translatedAmmo;
 
 }
 
@@ -209,10 +256,10 @@ modelIndexDiff_t modelIndexTranslations[] = {
     {MODELINDEX_ARMOR, L_MODELINDEX_ARMOR},
     {MODELINDEX_NIGHTVISION, L_MODELINDEX_NIGHTVISION},
     {MODELINDEX_THERMAL, L_MODELINDEX_THERMAL},
-    //{MODELINDEX_WEAPON_M67, L_MODELINDEX_WEAPON_M67},
-    //{MODELINDEX_WEAPON_F1, L_MODELINDEX_WEAPON_F1},
-    //{MODELINDEX_WEAPON_L2A2, L_MODELINDEX_WEAPON_L2A2},
-    //{MODELINDEX_WEAPON_MDN11, L_MODELINDEX_WEAPON_MDN11}
+    {MODELINDEX_WEAPON_M67, L_MODELINDEX_WEAPON_M67},
+    {MODELINDEX_WEAPON_F1, L_MODELINDEX_WEAPON_F1},
+    {MODELINDEX_WEAPON_L2A2, L_MODELINDEX_WEAPON_L2A2},
+    {MODELINDEX_WEAPON_MDN11, L_MODELINDEX_WEAPON_MDN11}
 };
 
 modelIndexDiff_t modelIndexTranslationsReversed[] = {
@@ -235,11 +282,11 @@ modelIndexDiff_t modelIndexTranslationsReversed[] = {
     { L_MODELINDEX_WEAPON_M60, MODELINDEX_WEAPON_M60 },
     { L_MODELINDEX_WEAPON_RPG7, MODELINDEX_WEAPON_RPG7 },
     { L_MODELINDEX_WEAPON_MM1, MODELINDEX_WEAPON_MM1 },
-    //{ L_MODELINDEX_WEAPON_M67, MODELINDEX_WEAPON_M67 },
+    { L_MODELINDEX_WEAPON_M67, MODELINDEX_WEAPON_M67 },
     { L_MODELINDEX_WEAPON_M84, MODELINDEX_WEAPON_M84 },
-    //{ L_MODELINDEX_WEAPON_F1, MODELINDEX_WEAPON_F1 },
-    //{ L_MODELINDEX_WEAPON_L2A2, MODELINDEX_WEAPON_L2A2 },
-    //{ L_MODELINDEX_WEAPON_MDN11, MODELINDEX_WEAPON_MDN11 },
+    { L_MODELINDEX_WEAPON_F1, MODELINDEX_WEAPON_F1 },
+    { L_MODELINDEX_WEAPON_L2A2, MODELINDEX_WEAPON_L2A2 },
+    { L_MODELINDEX_WEAPON_MDN11, MODELINDEX_WEAPON_MDN11 },
     { L_MODELINDEX_WEAPON_SMOHG92, MODELINDEX_WEAPON_SMOHG92 },
     { L_MODELINDEX_WEAPON_ANM14, MODELINDEX_WEAPON_ANM14 },
     { L_MODELINDEX_WEAPON_M15, MODELINDEX_WEAPON_M15 },

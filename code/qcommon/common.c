@@ -94,6 +94,7 @@ cvar_t  *com_homepath;
 cvar_t  *com_busyWait;
 
 cvar_t* net_multiprotocol;
+cvar_t* sv_useLegacyNades;
 #ifndef DEDICATED
 cvar_t  *con_autochat;
 #endif
@@ -2694,6 +2695,7 @@ void Com_Init( char *commandLine ) {
     com_gamename = Cvar_Get("com_gamename", GAMENAME_FOR_MASTER, CVAR_SERVERINFO | CVAR_INIT);
     com_protocol = Cvar_Get("protocol", va("%i", PROTOCOL_VERSION), CVAR_SERVERINFO | CVAR_INIT);
     com_legacyProtocol = Cvar_Get("legacyprotocol", va("%i", PROTOCOL_LEGACY_VERSION), CVAR_SERVERINFO | CVAR_INIT);
+    sv_useLegacyNades = Cvar_Get("sv_useLegacyNades", "0", CVAR_ARCHIVE | CVAR_LATCH);
     /*
 #ifdef LEGACY_PROTOCOL
     com_legacyprotocol = Cvar_Get("com_legacyprotocol", va("%i", PROTOCOL_LEGACY_VERSION), CVAR_INIT);
