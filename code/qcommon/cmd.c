@@ -477,7 +477,7 @@ void Cmd_Args_Sanitize(void)
         if(strlen(c) > MAX_CVAR_VALUE_STRING - 1)
             c[MAX_CVAR_VALUE_STRING - 1] = '\0';
 
-        while ((c = strpbrk(c, "\n\r;"))) {
+        while ((c = strpbrk(c, "\n\r"))) {  // ; was removed from the sanitization. We need to prevent abuse on e.g. callvotes in the game module due to this.
             *c = ' ';
             ++c;
         }
