@@ -47,6 +47,12 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "../qcommon/q_shared.h"
 #include "../qcommon/qcommon.h"
 
+#ifdef _DEBUG
+#ifdef __linux__
+#include <backtrace.h>
+#endif
+#endif
+
 static char binaryPath[ MAX_OSPATH ] = { 0 };
 static char installPath[ MAX_OSPATH ] = { 0 };
 
@@ -642,6 +648,31 @@ void Sys_ParseArgs( int argc, char **argv )
 #   endif
 #endif
 
+#ifdef _DEBUG
+#ifdef __linux__
+
+static struct backtrace_state* bt_state = NULL;
+
+static void custom_backtrace_error_callback(void* data, const char* msg, int errnum) {
+    Com_Printf("Backtrace error %d: %s\n", errnum, msg);
+}
+
+static int custom_backtrace_full_callback(void* data, uintptr_t pc, const char* filename, int lineno, const char* function) {
+    fileHandle_t logFile = *(fileHandle_t*)data;
+    static int traceRow = 1;
+
+    char fileNameWithLine[256];
+    Q_strncpyz(fileNameWithLine, va("%s:%d", filename ? filename : "Unknown", filename ? lineno : 0), sizeof(fileNameWithLine));
+
+    FS_Printf(logFile, "  Frame %3d at [0x%016lx] => %-100.100s [%s]\n", traceRow, (unsigned long)pc, fileNameWithLine, function ? function : "Unknown");
+    traceRow++;
+    return 0; // Continue capturing
+}
+
+#endif
+#endif
+
+
 /*
 =================
 Sys_SigHandler
@@ -658,6 +689,40 @@ void Sys_SigHandler( int signal )
     }
     else
     {
+
+#ifdef _DEBUG
+#ifdef __linux__
+
+        // Initialize `libbacktrace` if not already done
+        if (!bt_state) {
+            bt_state = backtrace_create_state(NULL, 1, custom_backtrace_error_callback, NULL);
+        }
+
+        char filename[MAX_QPATH];
+        time_t rawtime = time(NULL);
+        struct tm* timeinfo = localtime(&rawtime);
+        snprintf(filename, sizeof(filename), "crashdumps/crash-%04d%02d%02d-%02d%02d%02d.log",
+            timeinfo->tm_year + 1900, timeinfo->tm_mon + 1, timeinfo->tm_mday,
+            timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec);
+
+
+        fileHandle_t logFile = FS_FOpenFileWrite(filename);
+        if (logFile) {
+
+            FS_Printf(logFile, "Crash detected, signal: %d\nPlease raise an issue at https://github.com/JannoEsko/1fxplus.git and attach this log file to the issue.\n\nBacktrace\n-----------------------------------------------------------\n", signal);
+
+            // Generate and write the backtrace
+            backtrace_full(bt_state, 0, custom_backtrace_full_callback, custom_backtrace_error_callback, &logFile);
+
+            FS_FCloseFile(logFile);
+            Com_Printf("^3LOGGING CRASH INTO FILE SUCCEEDED!\n");
+        }
+        else {
+            Com_Printf("^1LOGGING CRASH INTO FILE FAILED!\n");
+        }
+
+#endif
+#endif
         signalcaught = qtrue;
         VM_Forced_Unload_Start();
 #ifndef DEDICATED
