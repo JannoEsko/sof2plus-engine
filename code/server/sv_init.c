@@ -702,15 +702,25 @@ void SV_SpawnServer( char *server, qboolean killBots ) {
         char* fsGame = Cvar_VariableString("fs_game");
         qboolean res = FS_FindPakByFile(va("maps/%s.bsp", server), &gamename, &basename, &checksum);
 
+        Com_Memset(refPaks, 0, sizeof(refPaks));
+        Com_Memset(refChecksums, 0, sizeof(refChecksums));
+
         if (res) {
 
-            // spoof the pk3 path name. Make sure to account for it when client is about to request a file.
-            if (!Q_stricmp(gamename, fsGame)) {
-                gamename = "base";
-            }
+            // We ensure that we do not reference one of the updatexxx paks.
+            // It's up to the server owner to rather use map PK3's in these cases.
+            // We do not want silver clients to download updatexxx files.
 
-            Q_strncpyz(refPaks, va("%s/%s", gamename, basename), sizeof(refPaks));
-            Q_strncpyz(refChecksums, va("%d", checksum), sizeof(refChecksums));
+            if (Q_stricmp(basename, "update101") && Q_stricmp(basename, "update102") && Q_stricmp(basename, "update103")) {
+                // spoof the pk3 path name. Make sure to account for it when client is about to request a file.
+                if (!Q_stricmp(gamename, fsGame)) {
+                    gamename = "base";
+                }
+
+                Q_strncpyz(refPaks, va("%s/%s", gamename, basename), sizeof(refPaks));
+                Q_strncpyz(refChecksums, va("%d", checksum), sizeof(refChecksums));
+
+            }
 
             // add info from additionalRefPaks.
             // additional info gets added only if we're using smartdl and we found a pk3 with the map.
@@ -727,8 +737,9 @@ void SV_SpawnServer( char *server, qboolean killBots ) {
                         if (Q_stricmp(gamename, sv_clientMod->string) && !Q_stricmp(gamename, fsGame)) {
                             gamename = sv_clientMod->string;
                         }
-                        Q_strcat(refPaks, sizeof(refPaks), va(" %s/%s", gamename, basename));
-                        Q_strcat(refChecksums, sizeof(refChecksums), va(" %d", checksum));
+
+                        Q_strcat(refPaks, sizeof(refPaks), va("%s%s/%s", strlen(refPaks) > 0 ? " " : "", gamename, basename));
+                        Q_strcat(refChecksums, sizeof(refChecksums), va("%s%d", strlen(refPaks) > 0 ? " " : "", checksum));
                     }
 
                     token = strtok(NULL, " ");

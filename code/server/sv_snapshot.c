@@ -330,7 +330,7 @@ static void SV_AddEntitiesVisibleFromPoint( vec3_t origin, clientSnapshot_t *fra
         }
 
         if (ent->s.number != e) {
-            Com_DPrintf ("FIXING ENT->S.NUMBER!!!\n");
+            Com_DPrintf ("FIXING ENT->S.NUMBER %d => %d!!!\n", ent->s.number, e);
             ent->s.number = e;
         }
 
