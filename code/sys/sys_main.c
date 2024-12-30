@@ -50,6 +50,8 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #ifdef _DEBUG
 #ifdef __linux__
 #include <backtrace.h>
+#elif defined _WIN32
+#include <dbghelp.h>
 #endif
 #endif
 
@@ -669,6 +671,55 @@ static int custom_backtrace_full_callback(void* data, uintptr_t pc, const char* 
     return 0; // Continue capturing
 }
 
+#elif defined _WIN32
+#define MAX_BACKTRACE_DEPTH 64
+// Initialize the symbol handler
+static void InitSymbolHandler() {
+    static BOOL initialized = FALSE;
+    if (!initialized) {
+        HANDLE process = GetCurrentProcess();
+        SymInitialize(process, NULL, TRUE);
+        initialized = TRUE;
+    }
+}
+
+// Write backtrace to the log file
+static void WriteBacktrace(fileHandle_t logFile) {
+    void* stack[MAX_BACKTRACE_DEPTH];
+    HANDLE process = GetCurrentProcess();
+    USHORT frames = CaptureStackBackTrace(0, MAX_BACKTRACE_DEPTH, stack, NULL);
+
+    SYMBOL_INFO* symbol = (SYMBOL_INFO*)malloc(sizeof(SYMBOL_INFO) + 256 * sizeof(char));
+    symbol->MaxNameLen = 255;
+    symbol->SizeOfStruct = sizeof(SYMBOL_INFO);
+
+    IMAGEHLP_LINE64 line;
+    DWORD displacement;
+
+    FS_Printf(logFile, "Backtrace\n-----------------------------------------------------------\n");
+
+    for (USHORT i = 0; i < frames; i++) {
+        if (SymFromAddr(process, (DWORD64)(stack[i]), 0, symbol)) {
+            FS_Printf(logFile, "  Frame %3d at [0x%016llx] => %-100.100s [%s]\n",
+                i + 1, (unsigned long long)symbol->Address,
+                symbol->Name,
+                symbol->Name);
+        }
+        else {
+            FS_Printf(logFile, "  Frame %3d at [0x%016llx] => [Unknown function]\n",
+                i + 1, (unsigned long long)stack[i]);
+        }
+
+        // Resolve file and line information
+        line.SizeOfStruct = sizeof(IMAGEHLP_LINE64);
+        if (SymGetLineFromAddr64(process, (DWORD64)(stack[i]), &displacement, &line)) {
+            FS_Printf(logFile, "      at %s:%d\n", line.FileName, line.LineNumber);
+        }
+    }
+
+    free(symbol);
+}
+
 #endif
 #endif
 
@@ -721,6 +772,26 @@ void Sys_SigHandler( int signal )
             Com_Printf("^1LOGGING CRASH INTO FILE FAILED!\n");
         }
 
+#elif defined _WIN32
+        InitSymbolHandler();
+
+        char filename[MAX_QPATH];
+        time_t rawtime = time(NULL);
+        struct tm* timeinfo = localtime(&rawtime);
+        snprintf(filename, sizeof(filename), "crashdumps/crash-%04d%02d%02d-%02d%02d%02d.log",
+            timeinfo->tm_year + 1900, timeinfo->tm_mon + 1, timeinfo->tm_mday,
+            timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec);
+
+        fileHandle_t logFile = FS_FOpenFileWrite(filename);
+        if (logFile) {
+            FS_Printf(logFile, "Crash detected, signal: %d\nPlease raise an issue at https://github.com/JannoEsko/1fxplus.git and attach this log file to the issue.\n\n", signal);
+            WriteBacktrace(logFile);
+            FS_FCloseFile(logFile);
+            Com_Printf("^3LOGGING CRASH INTO FILE SUCCEEDED!\n");
+        }
+        else {
+            Com_Printf("^1LOGGING CRASH INTO FILE FAILED!\n");
+        }
 #endif
 #endif
         signalcaught = qtrue;
