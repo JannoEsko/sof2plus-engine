@@ -1058,6 +1058,13 @@ intptr_t SV_GameSystemCalls( intptr_t *args ) {
     case G_VALIDATE_MAP_NAME:
         return SV_ValidateMapName(VMA(1), VMA(2), args[3]);
 
+    case G_GET_MAPCYCLE_LIST:
+        return SV_MapcycleList(VMA(1), args[2]);
+
+    case G_SKIP_TO_MAP:
+        SV_SkipToMap(args[1]);
+        return 0;
+
     //=======================================================
     default:
         Com_Error( ERR_DROP, "Bad game system trap: %ld", (long int) args[0] );

@@ -215,10 +215,9 @@ Switch the server to the next map
 in the specified map cycle file.
 ==================
 */
-
+static char     lastMapGroup[1024] = { 0 };
 static void SV_Mapcycle_f(void)
 {
-    static char     lastMapGroup[1024]  = {0};
     TGenericParser2 GP2;
     TGPGroup        mapcycleGroup;
     TGPGroup        cvarGroup;
@@ -249,6 +248,7 @@ static void SV_Mapcycle_f(void)
             GP_Delete(&GP2);
         }else if(subGroups == NULL){
             Com_Printf(S_COLOR_RED "ERROR: map cycle file \"%s\" is invalid: no map groups are found!\n", sv_mapcycle->string);
+            GP_Delete(&GP2);
         }else{
             fileValid = qtrue;
         }
@@ -319,6 +319,122 @@ static void SV_Mapcycle_f(void)
     Cbuf_AddText(value);
 
     GP_Delete(&GP2);
+}
+
+int SV_MapcycleList(char* output, int sizeofOutput) {
+
+    TGenericParser2 GP2;
+    TGPGroup        mapcycleGroup;
+    TGPGroup        cvarGroup;
+    TGPValue        cvarPairs;
+    TGPGroup        subGroups;
+    TGPGroup        nextMap;
+    qboolean        fileValid;
+    char            key[64];
+    char            value[64];
+
+    Com_Memset(output, 0, sizeofOutput);
+
+    fileValid = qfalse;
+    GP2 = GP_ParseFile(sv_mapcycle->string);
+    if (!GP2) {
+        return 0;
+    }
+    else {
+        // Check if the "mapcycle" subgroup is present.
+        mapcycleGroup = GPG_FindSubGroup(GP_GetBaseParseGroup(GP2), "mapcycle");
+        subGroups = GPG_GetSubGroups(mapcycleGroup);
+
+        if (mapcycleGroup == NULL) {
+            
+            GP_Delete(&GP2);
+            return 0;
+        }
+        else if (subGroups != NULL) {
+            fileValid = qtrue;
+        }
+    }
+
+    if (!fileValid) {
+        GP_Delete(&GP2);
+        return 0;
+    }
+
+    nextMap = subGroups;
+
+    while (nextMap != NULL) {
+        // We care about the command, map name, gametype. Nothing more.
+        char curMapGroup[MAX_QPATH], mapCommand[MAX_QPATH], mapType[MAX_QPATH], mapName[MAX_QPATH], mapGametype[MAX_QPATH];
+        GPG_GetName(nextMap, curMapGroup, sizeof(curMapGroup));
+        qboolean isCurrentMap = qfalse, foundGt = qfalse;
+
+        if (!Q_stricmp(curMapGroup, lastMapGroup)) {
+            isCurrentMap = qtrue;
+        }
+
+        GPG_FindPairValue(nextMap, "command", "", mapCommand, sizeof(mapCommand));
+
+        char* mapPointer = strchr(mapCommand, ' ');
+
+        if (mapPointer) {
+            Q_strncpyz(mapType, mapCommand, mapPointer - mapCommand + 1);
+        }
+        else {
+            // shouldn't happen ever.
+            Q_strncpyz(mapType, "map", sizeof(mapType));
+        }
+
+        qboolean isDevmap = qfalse, isAltmap = qfalse, isMap = qtrue;
+
+        if (!Q_stricmp(mapCommand, "altmap")) {
+            isAltmap = qtrue;
+            isMap = qfalse;
+        }
+        else if (!Q_stricmp(mapCommand, "devmap")) {
+            isDevmap = qtrue;
+            isMap = qfalse;
+        }
+
+        mapPointer++;
+        Q_strncpyz(mapName, mapPointer, sizeof(mapName));
+
+        cvarGroup = GPG_FindSubGroup(nextMap, "cvars");
+        cvarPairs = GPG_GetPairs(cvarGroup);
+
+        while (cvarPairs != NULL) {
+            GPV_GetName(cvarPairs, key, sizeof(key));
+            GPV_GetTopValue(cvarPairs, value, sizeof(value));
+            if (!Q_stricmp(key, "g_gametype")) {
+                Q_strncpyz(mapGametype, value, sizeof(mapGametype));
+                foundGt = qtrue;
+                break;
+            }
+            cvarPairs = GPV_GetNext(cvarPairs);
+        }
+
+        if (!foundGt) {
+            Q_strncpyz(mapGametype, Cvar_VariableString("g_gametype"), sizeof(mapGametype));
+        }
+
+        Q_strcat(output, sizeofOutput, va("%s %-6.6s%-20.20s%-9.9s%-4.4s%-4.4s%-4.4s\n", isCurrentMap ? "*" : " ",curMapGroup, mapName, mapGametype, isMap ? "X" : "", isAltmap ? "X" : "", isDevmap ? "X" : ""));
+
+        nextMap = GPG_GetNext(GPG_FindSubGroup(mapcycleGroup, curMapGroup));
+    }
+    GP_Delete(&GP2);
+
+    return 1;
+}
+
+void SV_SkipToMap(int mapId) {
+    mapId = Com_Clamp(0, 99, --mapId);
+    if (mapId == 0) {
+        Com_Memset(lastMapGroup, 0, sizeof(lastMapGroup));
+    }
+    else {
+        Q_strncpyz(lastMapGroup, va("map%d", mapId), sizeof(lastMapGroup));
+    }
+    
+    SV_Mapcycle_f();
 }
 
 /*

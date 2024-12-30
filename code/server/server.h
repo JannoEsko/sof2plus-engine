@@ -368,6 +368,8 @@ int SV_SendQueuedMessages(void);
 // sv_ccmds.c
 //
 void SV_Heartbeat_f( void );
+int SV_MapcycleList(char* output, int sizeofOutput);
+void SV_SkipToMap(int mapId);
 
 //
 // sv_snapshot.c
