@@ -426,8 +426,8 @@ int SV_MapcycleList(char* output, int sizeofOutput) {
 }
 
 void SV_SkipToMap(int mapId) {
-    mapId = Com_Clamp(0, 99, --mapId);
-    if (mapId == 0) {
+    mapId = Com_Clamp(-1, 99, --mapId);
+    if (mapId == -1) {
         Com_Memset(lastMapGroup, 0, sizeof(lastMapGroup));
     }
     else {
