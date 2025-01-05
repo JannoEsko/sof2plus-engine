@@ -25,9 +25,9 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "cm_polylib.h"
 #include "cm_terrain.h"
 
-#define MAX_SUBMODELS           256
-#define BOX_MODEL_HANDLE        255
-#define CAPSULE_MODEL_HANDLE    254
+#define MAX_SUBMODELS           512
+#define BOX_MODEL_HANDLE        511
+#define CAPSULE_MODEL_HANDLE    510
 
 #define SHADERNUM_BITS          14
 #define MAX_SHADERS             (1<<SHADERNUM_BITS)
