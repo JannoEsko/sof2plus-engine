@@ -749,8 +749,8 @@ void Sys_SendPacket( int length, const void *data, netadr_t to, qboolean legacyP
         (ip_socket == INVALID_SOCKET && to.type == NA_BROADCAST) ||
         (ip6_socket == INVALID_SOCKET && to.type == NA_IP6) ||
         (ip6_socket == INVALID_SOCKET && to.type == NA_MULTICAST6) || 
-        (legacy_ip_socket == INVALID_SOCKET && to.type == NA_IP) ||
-        (legacy_ip_socket == INVALID_SOCKET && to.type == NA_BROADCAST)
+        (legacyProtocol && legacy_ip_socket == INVALID_SOCKET && to.type == NA_IP) ||
+        (legacyProtocol && legacy_ip_socket == INVALID_SOCKET && to.type == NA_BROADCAST)
         )
         return;
 
