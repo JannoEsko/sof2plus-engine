@@ -1,14 +1,41 @@
 ## SoF2Plus Multiprotocol
 
-This project aims to provide multiprotocol support to SoF2Plus engine.
+This project enables running multiprotocol servers in SoF2 between SoF2 Silver and SoF2 Gold.
 
-Support will base on retail versions of the game - namely SoF2 Silver (1.00, protocol 2002; legacy protocol) and SoF2 Gold (1.03, protocol 2004).
-Engine differentiates between both protocol players by having 2 simultaneous sockets open - one hosting the game on 2002 protocol, another on 2004 protocol. 
+It does so by translating certain fields in both entitystates and playerstates before transmission to SOF2 1.00 counterparts.
+Triggering multiprotocol can be done with a cvar: ```net_multiprotocol 1``` 
 
-Game module will have minimal changes to support multiprotocol, as most of the changes will be done on the message transfer side itself. So most changes revolve around msg.c file, where the 2004 protocol is mapped to 2002 protocol for legacy clients and the ucmd back from the client will be translated back to the 2004 protocol.
-Thanks to supporting both games, some features which came with protocol 2004 will have to be dropped - that includes +use functionality (used in DEM gametype) and new guns (Silver Talon, MP5).
-This is done to avoid downloading additional cgame modules for the clients, ensuring that playing the game requires no changes on the client side.
+When ```net_multiprotocol``` is not set, the engine acts like a regular SoF2 1.03 engine.
 
-Currently, legacy clients seem to be able to parse most of the information relayed onto them, main challenge is getting the weapon information corrected - at the moment when the weapon fields are different between the 2 protocols (which happens after M1911A1), then there seem to be issues on the legacy side on handling these guns (both ammo wise and also usage wise).
+Currently the engine is in a stable state. There are a few quirks still around, none which affect actual gameplay and only impact 1.00 players. Known quirks are that occasionally, a water effect is played to the silver clients and from time to time, while switching weapon mid spray, the next gun will seem to shoot a bullet (even if it's a nade). 
+This is a prediction error, no bullet is actually shot and also the other clients seem not to hear it, therefore it is treated as a low prio issue.
 
-After finalizing the engine side, full focus will be put onto the game side, as SoF2Plus engine is not compatible at all with QVM's and the syscalls are also different between the original engine vs this.
+Rest of the game is completely playable for both protocols.
+
+Engine also comes with a quite good in-game autodownloader speed (the one which is activated by ```cl_allowdownload 1 / sv_allowdownload 1```. By setting the cvar ```sv_dlRate 0```, the clients can get up to 1MB/s speeds directly in game.
+You can also combine it with a functionality called Smart Download, toggled by ```sv_smartDownload```. When Smart Download is turned on, the client will only be served the .pk3 where the current map is in. So, when running custommaps (a good tip is to have maps in separate pk3's), the client can utilize the server download speed to download a single pk3 - the one currently being played.
+
+As ```sv_smartDownload``` does remove all packages from ```sv_referencedPaks``` except for the current map, there is a possibility to enforce additional packages to be sent to the client with a cvar ```sv_smartAdditionalPaks```. That is a string, space delimited without extension and it will only be served to Gold clients (as SoF2 Silver notoriously didn't have cl_allowDownload enabled by default). But also referencing paks for Silver clients would require some minor adjustments, but it wasn't in the scope of this project.
+
+When building a "debug" release:
+* Linux: the engine does depend on libbacktrace (which should be available as a standard package in new GCC's).
+* Windows: the engine should be linked with WinDbg. Makefile has not been adjusted on Windows as the build process for Windows was done over Visual Studio.
+
+Debug release brings crash stack trace logging. It will be automatically logged into your fs_game/crashdumps folder. If the game module is built also with debug symbols, you will end up with a clear stack trace from the engine start up until the actual crash logging function call.
+
+
+If you wish to make your own server mod compatible with Multiprotocol, there are some parts which need to be considered:
+
+* The engine has a built-in spoof for public gametypes (so that the client is not required to have a library for the gametype you're trying to play if it's a custom one). Setting it is mandatory on every mod. Cvar is ```g_publicGametype```and it can only be set programmatically by using ```trap_Cvar_Set```. Ensure that is set up in G_InitGame module (if you don't have any custom gametypes or don't need spoofing, just use ```trap_Cvar_Set("g_publicGametype", g_gametype.string);```
+
+* You need to ensure that ```sv_pure``` is set to 0 - it simply doesn't make sense having it turned on in a multiprotocol state.
+
+* Your mod has to disable the weapons which do not exist in Silver: 
+
+```
+trap_Cvar_Set("disable_pickup_weapon_silvertalon", "1");
+trap_Cvar_Set("disable_pickup_weapon_MP5", "1");
+trap_Cvar_Set("disable_pickup_weapon_SIG551", "1");
+```
+
+
