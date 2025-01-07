@@ -612,10 +612,9 @@ static void SVC_Status( netadr_t from, qboolean legacyProtocol ) {
             }
             else {
                 Com_sprintf(player, sizeof(player), "%i %i %i \"%s\"\n",
-                    i, ps->persistant[PERS_SCORE], cl->ping, cl->name);
+                    ps->persistant[PERS_SCORE], cl->ping, ps->persistant[PERS_TEAM], cl->name);
             }
 
-            
             playerLength = strlen(player);
             if (statusLength + playerLength >= sizeof(status) ) {
                 break;      // can't hold any more
