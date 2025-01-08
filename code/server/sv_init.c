@@ -805,6 +805,7 @@ void SV_Init (void)
     Cvar_Get ("timelimit", "0", CVAR_SERVERINFO);
     sv_gametype = Cvar_Get ("g_gametype", "dm", CVAR_SERVERINFO | CVAR_LATCH);
     sv_publicGametype = Cvar_Get("g_publicGametype", "dm", CVAR_ROM); // can only be set by the engine / mod, not by the user.
+    sv_spoofGametype = Cvar_Get("g_spoofGametype", "0", CVAR_ARCHIVE | CVAR_LATCH);
     Cvar_Get ("sv_keywords", "", CVAR_SERVERINFO);
     sv_mapname = Cvar_Get ("mapname", "nomap", CVAR_SERVERINFO | CVAR_ROM);
     sv_privateClients = Cvar_Get ("sv_privateClients", "0", CVAR_SERVERINFO);

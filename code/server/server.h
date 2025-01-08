@@ -268,6 +268,7 @@ extern  cvar_t  *sv_minPing;
 extern  cvar_t  *sv_maxPing;
 extern  cvar_t  *sv_gametype;
 extern  cvar_t  *sv_publicGametype;
+extern  cvar_t  *sv_spoofGametype;
 extern  cvar_t  *sv_pure;
 extern  cvar_t  *sv_floodProtect;
 extern  cvar_t  *sv_mapcycle;

@@ -1253,7 +1253,7 @@ char *Cvar_InfoString(int bit)
     {
         if (var->name && (var->flags & bit)) {
 
-            if (bit == CVAR_SERVERINFO && !Q_stricmp(var->name, "g_gametype")) {
+            if (bit == CVAR_SERVERINFO && !Q_stricmp(var->name, "g_gametype") && Cvar_VariableIntegerValue("g_spoofGametype")) {
                 Info_SetValueForKey(info, var->name, Cvar_VariableString("g_publicGametype"));
             }
             else {
