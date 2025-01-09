@@ -985,6 +985,8 @@ int SV_WriteDownloadToClient(client_t *cl, msg_t *msg)
                 fileWasSpoofed = qtrue;
                 Q_strncpyz(spoofBuf, va("%s/%s.pk3", gameName, baseName), sizeof(spoofBuf));
                 Q_strncpyz(pakbuf, spoofBuf, sizeof(pakbuf));
+            } else {
+                Q_strncpyz(pakbuf, va("%s/%s.pk3", gameName, baseName), sizeof(pakbuf));
             }
         }
         // Chop off filename extension.
