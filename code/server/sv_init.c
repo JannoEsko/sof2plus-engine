@@ -711,7 +711,7 @@ void SV_SpawnServer( char *server, qboolean killBots ) {
             // It's up to the server owner to rather use map PK3's in these cases.
             // We do not want silver clients to download updatexxx files.
 
-            if (Q_stricmp(basename, "update101") && Q_stricmp(basename, "update102") && Q_stricmp(basename, "update103")) {
+            if (Q_stricmp(basename, "update101") && Q_stricmp(basename, "update102") && Q_stricmp(basename, "update103") && Q_stricmp(basename, "updateXXX")) {
                 // spoof the pk3 path name. Make sure to account for it when client is about to request a file.
                 if (!Q_stricmp(gamename, fsGame)) {
                     gamename = "base";
