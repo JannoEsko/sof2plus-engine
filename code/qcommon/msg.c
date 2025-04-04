@@ -318,6 +318,101 @@ modelIndexDiff_t modelIndexTranslationsReversed[] = {
 };
 
 
+entTypeDiff_t entTypeTranslations[] = {
+    {ET_GENERAL, LEGACY_ET_GENERAL},
+    {ET_PLAYER, LEGACY_ET_PLAYER},
+    {ET_ITEM, LEGACY_ET_ITEM},
+    {ET_MISSILE, LEGACY_ET_MISSILE},
+    {ET_MOVER, LEGACY_ET_MOVER},
+    {ET_BEAM, LEGACY_ET_BEAM},
+    {ET_PORTAL, LEGACY_ET_PORTAL},
+    {ET_SPEAKER, LEGACY_ET_SPEAKER},
+    {ET_PUSH_TRIGGER, LEGACY_ET_PUSH_TRIGGER},
+    {ET_TELEPORT_TRIGGER, LEGACY_ET_TELEPORT_TRIGGER},
+    {ET_INVISIBLE, LEGACY_ET_INVISIBLE},
+    {ET_GRAPPLE, LEGACY_ET_GRAPPLE},
+    {ET_BODY, LEGACY_ET_BODY},
+    {ET_DAMAGEAREA, LEGACY_ET_DAMAGEAREA},
+    {ET_TERRAIN, LEGACY_ET_TERRAIN},
+    {ET_DEBUG_CYLINDER, LEGACY_ET_DEBUG_CYLINDER},
+    {ET_GAMETYPE_TRIGGER, LEGACY_ET_GENERAL}, // No GT trigger entity type-
+    {ET_WALL, LEGACY_ET_MOVER}, // Legacy uses mover instead of WALL
+
+    {ET_EVENTS + EV_NONE, LEGACY_ET_EVENTS + LEGACY_EV_NONE},
+    {ET_EVENTS + EV_FOOTSTEP, LEGACY_ET_EVENTS + LEGACY_EV_FOOTSTEP},
+    {ET_EVENTS + EV_FOOTWADE, LEGACY_ET_EVENTS + LEGACY_EV_FOOTWADE},
+    {ET_EVENTS + EV_SWIM, LEGACY_ET_EVENTS + LEGACY_EV_SWIM},
+    {ET_EVENTS + EV_STEP_4, LEGACY_ET_EVENTS + LEGACY_EV_STEP_4},
+    {ET_EVENTS + EV_STEP_8, LEGACY_ET_EVENTS + LEGACY_EV_STEP_8},
+    {ET_EVENTS + EV_STEP_12, LEGACY_ET_EVENTS + LEGACY_EV_STEP_12},
+    {ET_EVENTS + EV_STEP_16, LEGACY_ET_EVENTS + LEGACY_EV_STEP_16},
+    {ET_EVENTS + EV_FALL_SHORT, LEGACY_ET_EVENTS + LEGACY_EV_FALL_SHORT},
+    {ET_EVENTS + EV_FALL_MEDIUM, LEGACY_ET_EVENTS + LEGACY_EV_FALL_MEDIUM},
+    {ET_EVENTS + EV_FALL_FAR, LEGACY_ET_EVENTS + LEGACY_EV_FALL_FAR},
+    {ET_EVENTS + EV_JUMP, LEGACY_ET_EVENTS + LEGACY_EV_JUMP},
+    {ET_EVENTS + EV_WATER_FOOTSTEP, LEGACY_ET_EVENTS + LEGACY_EV_WATER_FOOTSTEP},
+    {ET_EVENTS + EV_WATER_TOUCH, LEGACY_ET_EVENTS + LEGACY_EV_WATER_TOUCH},
+    {ET_EVENTS + EV_WATER_LAND, LEGACY_ET_EVENTS + LEGACY_EV_WATER_LAND},
+    {ET_EVENTS + EV_WATER_CLEAR, LEGACY_ET_EVENTS + LEGACY_EV_WATER_CLEAR},
+    {ET_EVENTS + EV_ITEM_PICKUP, LEGACY_ET_EVENTS + LEGACY_EV_ITEM_PICKUP},
+    {ET_EVENTS + EV_ITEM_PICKUP_QUIET, LEGACY_ET_EVENTS + LEGACY_EV_ITEM_PICKUP}, // No quiet pickups in legacy
+    {ET_EVENTS + EV_NOAMMO, LEGACY_ET_EVENTS + LEGACY_EV_NOAMMO},
+    {ET_EVENTS + EV_CHANGE_WEAPON, LEGACY_ET_EVENTS + LEGACY_EV_CHANGE_WEAPON},
+    {ET_EVENTS + EV_CHANGE_WEAPON_CANCELLED, LEGACY_ET_EVENTS + LEGACY_EV_CHANGE_WEAPON_CANCELLED},
+    {ET_EVENTS + EV_READY_WEAPON, LEGACY_ET_EVENTS + LEGACY_EV_READY_WEAPON},
+    {ET_EVENTS + EV_FIRE_WEAPON, LEGACY_ET_EVENTS + LEGACY_EV_FIRE_WEAPON},
+    {ET_EVENTS + EV_ALT_FIRE, LEGACY_ET_EVENTS + LEGACY_EV_ALT_FIRE},
+    {ET_EVENTS + EV_USE, LEGACY_ET_EVENTS + LEGACY_EV_USE},
+    {ET_EVENTS + EV_ITEM_RESPAWN, LEGACY_ET_EVENTS + LEGACY_EV_ITEM_RESPAWN},
+    {ET_EVENTS + EV_ITEM_POP, LEGACY_ET_EVENTS + LEGACY_EV_ITEM_POP},
+    {ET_EVENTS + EV_PLAYER_TELEPORT_IN, LEGACY_ET_EVENTS + LEGACY_EV_PLAYER_TELEPORT_IN},
+    {ET_EVENTS + EV_PLAYER_TELEPORT_OUT, LEGACY_ET_EVENTS + LEGACY_EV_PLAYER_TELEPORT_OUT},
+    {ET_EVENTS + EV_GRENADE_BOUNCE, LEGACY_ET_EVENTS + LEGACY_EV_GRENADE_BOUNCE},
+    {ET_EVENTS + EV_PLAY_EFFECT, LEGACY_ET_EVENTS + LEGACY_EV_PLAY_EFFECT},
+    {ET_EVENTS + EV_GENERAL_SOUND, LEGACY_ET_EVENTS + LEGACY_EV_GENERAL_SOUND},
+    {ET_EVENTS + EV_GLOBAL_SOUND, LEGACY_ET_EVENTS + LEGACY_EV_GLOBAL_SOUND},
+    {ET_EVENTS + EV_ENTITY_SOUND, LEGACY_ET_EVENTS + LEGACY_EV_ENTITY_SOUND},
+    {ET_EVENTS + EV_GLASS_SHATTER, LEGACY_ET_EVENTS + LEGACY_EV_GLASS_SHATTER},
+    {ET_EVENTS + EV_MISSILE_HIT, LEGACY_ET_EVENTS + LEGACY_EV_MISSILE_HIT},
+    {ET_EVENTS + EV_MISSILE_MISS, LEGACY_ET_EVENTS + LEGACY_EV_MISSILE_MISS},
+    {ET_EVENTS + EV_BULLET_HIT_WALL, LEGACY_ET_EVENTS + LEGACY_EV_BULLET_HIT_WALL},
+    {ET_EVENTS + EV_BULLET_HIT_FLESH, LEGACY_ET_EVENTS + LEGACY_EV_BULLET_HIT_FLESH},
+    {ET_EVENTS + EV_BULLET, LEGACY_ET_EVENTS + LEGACY_EV_BULLET},
+    {ET_EVENTS + EV_EXPLOSION_HIT_FLESH, LEGACY_ET_EVENTS + LEGACY_EV_EXPLOSION_HIT_FLESH},
+    {ET_EVENTS + EV_PAIN, LEGACY_ET_EVENTS + LEGACY_EV_PAIN},
+    {ET_EVENTS + EV_PAIN_WATER, LEGACY_ET_EVENTS + LEGACY_EV_PAIN_WATER},
+    {ET_EVENTS + EV_OBITUARY, LEGACY_ET_EVENTS + LEGACY_EV_OBITUARY},
+    {ET_EVENTS + EV_DESTROY_GHOUL2_INSTANCE, LEGACY_ET_EVENTS + LEGACY_EV_DESTROY_GHOUL2_INSTANCE},
+    {ET_EVENTS + EV_WEAPON_CHARGE, LEGACY_ET_EVENTS + LEGACY_EV_WEAPON_CHARGE},
+    {ET_EVENTS + EV_WEAPON_CHARGE_ALT, LEGACY_ET_EVENTS + LEGACY_EV_WEAPON_CHARGE_ALT},
+    {ET_EVENTS + EV_DEBUG_LINE, LEGACY_ET_EVENTS + LEGACY_EV_DEBUG_LINE},
+    {ET_EVENTS + EV_TESTLINE, LEGACY_ET_EVENTS + LEGACY_EV_TESTLINE},
+    {ET_EVENTS + EV_STOPLOOPINGSOUND, LEGACY_ET_EVENTS + LEGACY_EV_STOPLOOPINGSOUND},
+    {ET_EVENTS + EV_BODY_QUEUE_COPY, LEGACY_ET_EVENTS + LEGACY_EV_BODY_QUEUE_COPY},
+    {ET_EVENTS + EV_BOTWAYPOINT, LEGACY_ET_EVENTS + LEGACY_EV_BOTWAYPOINT},
+    {ET_EVENTS + EV_PROC_GORE, LEGACY_ET_EVENTS + LEGACY_EV_PROC_GORE},
+    {ET_EVENTS + EV_GAMETYPE_RESTART, LEGACY_ET_EVENTS + LEGACY_EV_GAMETYPE_RESTART},
+    {ET_EVENTS + EV_GAME_OVER, LEGACY_ET_EVENTS + LEGACY_EV_GAME_OVER},
+    {ET_EVENTS + EV_GOGGLES, LEGACY_ET_EVENTS + LEGACY_EV_GOGGLES},
+    {ET_EVENTS + EV_WEAPON_CALLBACK, LEGACY_ET_EVENTS + LEGACY_EV_WEAPON_CALLBACK}
+
+};
+
+
+int translateGoldEntityTypeToSilverEntityType(int input) {
+
+    int sizeofEntType = sizeof(entTypeTranslations) / sizeof(entTypeTranslations[0]);
+
+    if (input < 0 || input >= sizeofEntType) {
+        return input;
+    }
+
+    return entTypeTranslations[input].translatedEntityType;
+
+}
+
+
+
 static int translateGoldModelIdxToSilverModelIdx(int input) {
 
     if (input < 0 || input >= sizeof(modelIndexTranslations) / sizeof(modelIndexTranslations[0])) {
@@ -1370,20 +1465,6 @@ void MSG_WriteDeltaEntity( msg_t *msg, struct entityState_s *from, struct entity
             
         }
 
-        if ((from->eType == ET_GAMETYPE_TRIGGER || from->eType == ET_WALL) && from->eType != to->eType) {
-            fromEType = from->eType;
-            from->eType = ET_GENERAL;
-        }
-
-        if ((to->eType == ET_GAMETYPE_TRIGGER || to->eType == ET_WALL) && from->eType != to->eType) {
-            toEType = to->eType;
-            to->eType = ET_GENERAL;
-        }
-
-        if (to->eType >= ET_EVENTS + EV_ITEM_PICKUP_QUIET - 2 && from->eType != to->eType) { // -2 because ET_ ENUM is also smaller in 1.00.
-            toEType = to->eType;
-            to->eType -= 3;
-        }
 
         if ((to->event & ~EV_EVENT_BITS) > EV_ITEM_PICKUP_QUIET && from->event != to->event) {
             toEvent = to->event;
@@ -1415,10 +1496,6 @@ void MSG_WriteDeltaEntity( msg_t *msg, struct entityState_s *from, struct entity
 
         }
 
-        if (from->eType >= ET_EVENTS + EV_ITEM_PICKUP_QUIET - 2 && from->eType != to->eType) { // -2 because ET_ ENUM is also smaller in 1.00.
-            fromEType = from->eType;
-            from->eType -= 3;
-        }
 
         if ((from->event & ~EV_EVENT_BITS) > EV_ITEM_PICKUP_QUIET && from->event != to->event) {
             fromEvent = from->event;
@@ -1436,6 +1513,14 @@ void MSG_WriteDeltaEntity( msg_t *msg, struct entityState_s *from, struct entity
 
             from->weapon = translateGoldWeaponToSilverWeapon(from->weapon);
             to->weapon = translateGoldWeaponToSilverWeapon(to->weapon);
+        }
+
+        if (from->eType != to->eType) {
+            fromEType = from->eType;
+            toEType = to->eType;
+
+            from->eType = translateGoldEntityTypeToSilverEntityType(fromEType);
+            to->eType = translateGoldEntityTypeToSilverEntityType(toEType);
         }
 
         

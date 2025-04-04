@@ -586,6 +586,92 @@ typedef enum
 
 typedef enum
 {
+    LEGACY_EV_NONE,
+
+    LEGACY_EV_FOOTSTEP,
+    LEGACY_EV_FOOTWADE,
+    LEGACY_EV_SWIM,
+
+    LEGACY_EV_STEP_4,
+    LEGACY_EV_STEP_8,
+    LEGACY_EV_STEP_12,
+    LEGACY_EV_STEP_16,
+
+    LEGACY_EV_FALL_SHORT,
+    LEGACY_EV_FALL_MEDIUM,
+    LEGACY_EV_FALL_FAR,
+
+    LEGACY_EV_JUMP,
+    LEGACY_EV_WATER_FOOTSTEP,
+    LEGACY_EV_WATER_TOUCH, // foot touches
+    LEGACY_EV_WATER_LAND,  // landed in water
+    LEGACY_EV_WATER_CLEAR,
+
+    LEGACY_EV_ITEM_PICKUP,         // normal item pickups are predictable
+
+    LEGACY_EV_NOAMMO,
+    LEGACY_EV_CHANGE_WEAPON,
+    LEGACY_EV_CHANGE_WEAPON_CANCELLED,
+    LEGACY_EV_READY_WEAPON,
+    LEGACY_EV_FIRE_WEAPON,
+    LEGACY_EV_ALT_FIRE,
+
+    LEGACY_EV_USE,         // +Use key
+
+    LEGACY_EV_ITEM_RESPAWN,
+    LEGACY_EV_ITEM_POP,
+    LEGACY_EV_PLAYER_TELEPORT_IN,
+    LEGACY_EV_PLAYER_TELEPORT_OUT,
+
+    LEGACY_EV_GRENADE_BOUNCE,      // eventParm will be the soundindex
+
+    LEGACY_EV_PLAY_EFFECT,
+
+    LEGACY_EV_GENERAL_SOUND,
+    LEGACY_EV_GLOBAL_SOUND,        // no attenuation
+    LEGACY_EV_ENTITY_SOUND,
+
+    LEGACY_EV_GLASS_SHATTER,
+
+    LEGACY_EV_MISSILE_HIT,
+    LEGACY_EV_MISSILE_MISS,
+
+    LEGACY_EV_BULLET_HIT_WALL,
+    LEGACY_EV_BULLET_HIT_FLESH,
+    LEGACY_EV_BULLET,              // otherEntity is the shooter
+
+    LEGACY_EV_EXPLOSION_HIT_FLESH,
+
+    LEGACY_EV_PAIN,
+    LEGACY_EV_PAIN_WATER,
+    LEGACY_EV_OBITUARY,
+
+    LEGACY_EV_DESTROY_GHOUL2_INSTANCE,
+
+    LEGACY_EV_WEAPON_CHARGE,
+    LEGACY_EV_WEAPON_CHARGE_ALT,
+
+    LEGACY_EV_DEBUG_LINE,
+    LEGACY_EV_TESTLINE,
+    LEGACY_EV_STOPLOOPINGSOUND,
+
+    LEGACY_EV_BODY_QUEUE_COPY,
+    LEGACY_EV_BOTWAYPOINT,
+
+    // Procedural gore event.
+    LEGACY_EV_PROC_GORE,
+
+    LEGACY_EV_GAMETYPE_RESTART,            // gametype restarting
+    LEGACY_EV_GAME_OVER,                   // game is over
+
+    LEGACY_EV_GOGGLES,                     // goggles turning on/off
+
+    LEGACY_EV_WEAPON_CALLBACK,
+
+} legacyEntity_event_t;           // There is a maximum of 256 events (8 bits transmission, 2 high bits for uniqueness)
+
+typedef enum
+{
     VEV_TALKSTART,
     VEV_TALKSTOP,
 
@@ -720,6 +806,36 @@ typedef enum
                             // by setting eType to ET_EVENTS + eventNum
                             // this avoids having to set eFlags and eventNum
 } entityType_t;
+
+typedef enum
+{
+    LEGACY_ET_GENERAL,
+    LEGACY_ET_PLAYER,
+    LEGACY_ET_ITEM,
+    LEGACY_ET_MISSILE,
+    LEGACY_ET_MOVER,
+    LEGACY_ET_BEAM,
+    LEGACY_ET_PORTAL,
+    LEGACY_ET_SPEAKER,
+    LEGACY_ET_PUSH_TRIGGER,
+    LEGACY_ET_TELEPORT_TRIGGER,
+    LEGACY_ET_INVISIBLE,
+    LEGACY_ET_GRAPPLE,             // grapple hooked on wall
+    LEGACY_ET_BODY,
+    LEGACY_ET_DAMAGEAREA,
+    LEGACY_ET_TERRAIN,
+
+    LEGACY_ET_DEBUG_CYLINDER,
+
+    LEGACY_ET_EVENTS               // any of the EV_* events can be added freestanding
+                            // by setting eType to ET_EVENTS + eventNum
+                            // this avoids having to set eFlags and eventNum
+} legacyEntityType_t;
+
+typedef struct entTypeDiff_s {
+    int entityType;
+    int translatedEntityType;
+} entTypeDiff_t;
 
 
 void        BG_AddLadder                ( vec3_t absmin, vec3_t absmax, vec3_t fwd );
