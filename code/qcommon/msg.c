@@ -1938,7 +1938,7 @@ netField_t  playerStateFields[] =
     {PSF(respawnTimer), 32},
 };
 
-/*char* entity_event_names[] = {
+char* entity_event_names[] = {
     "EV_NONE",
 
     "EV_FOOTSTEP",
@@ -2020,7 +2020,7 @@ netField_t  playerStateFields[] =
     "EV_GOGGLES",
 
     "EV_WEAPON_CALLBACK",
-};*/
+};
 
 /*
 =============
@@ -2102,124 +2102,129 @@ void MSG_WriteDeltaPlayerstate( msg_t *msg, struct playerState_s *from, struct p
 
         */
 
-        if (from->events[0] == EV_WEAPON_CALLBACK && from->events[0] != to->events[0]) {
-            fromEventParm0 = from->eventParms[0];
-            int wpn = from->eventParms[0] & 0xFF;
-            wpn = translateGoldWeaponToSilverWeapon(wpn);
-            from->eventParms[0] = (from->eventParms[0] & ~0xFF) | (wpn & 0xFF);
-            toEventParm0 = to->eventParms[0];
-            wpn = to->eventParms[0] & 0xFF;
-            wpn = translateGoldWeaponToSilverWeapon(wpn);
-            to->eventParms[0] = (to->eventParms[0] & ~0xFF) | (wpn & 0xFF);
-        }
+        if (from->events[0] >= EV_ITEM_PICKUP_QUIET) {
 
-        if (from->events[1] == EV_WEAPON_CALLBACK && from->events[1] != to->events[1]) {
-            fromEventParm1 = from->eventParms[1];
-            int wpn = from->eventParms[1] & 0xFF;
-            wpn = translateGoldWeaponToSilverWeapon(wpn);
-            from->eventParms[1] = (from->eventParms[1] & ~0xFF) | (wpn & 0xFF);
-            toEventParm1 = to->eventParms[1];
-            wpn = to->eventParms[1] & 0xFF;
-            wpn = translateGoldWeaponToSilverWeapon(wpn);
-            to->eventParms[1] = (to->eventParms[1] & ~0xFF) | (wpn & 0xFF);
-        }
-
-        if (from->events[2] == EV_WEAPON_CALLBACK && from->events[2] != to->events[2]) {
-            fromEventParm2 = from->eventParms[2];
-            int wpn = from->eventParms[2] & 0xFF;
-            wpn = translateGoldWeaponToSilverWeapon(wpn);
-            from->eventParms[2] = (from->eventParms[2] & ~0xFF) | (wpn & 0xFF);
-            toEventParm2 = to->eventParms[2];
-            wpn = to->eventParms[2] & 0xFF;
-            wpn = translateGoldWeaponToSilverWeapon(wpn);
-            to->eventParms[2] = (to->eventParms[2] & ~0xFF) | (wpn & 0xFF);
-        }
-
-        if (from->events[3] == EV_WEAPON_CALLBACK && from->events[3] != to->events[3]) {
-            fromEventParm3 = from->eventParms[3];
-            int wpn = from->eventParms[3] & 0xFF;
-            wpn = translateGoldWeaponToSilverWeapon(wpn);
-            from->eventParms[3] = (from->eventParms[3] & ~0xFF) | (wpn & 0xFF);
-            toEventParm3 = to->eventParms[3];
-            wpn = to->eventParms[3] & 0xFF;
-            wpn = translateGoldWeaponToSilverWeapon(wpn);
-            to->eventParms[3] = (to->eventParms[3] & ~0xFF) | (wpn & 0xFF);
-        }
-
-        if (from->events[0] != to->events[0] || from->eventParms[0] != to->eventParms[0]) {
-
-            if (from->events[0] >= EV_ITEM_PICKUP_QUIET) {
-                fromEvents0 = from->events[0];
-                from->events[0]--;
+            if (from->events[0] == EV_WEAPON_CALLBACK) {
+                fromEventParm0 = from->eventParms[0];
+                int wpn = from->eventParms[0] & 0xFF;
+                wpn = translateGoldWeaponToSilverWeapon(wpn);
+                from->eventParms[0] = (from->eventParms[0] & ~0xFF) | (wpn & 0xFF);
             }
 
-            if (to->events[0] >= EV_ITEM_PICKUP_QUIET) {
-                toEvents0 = to->events[0];
-                to->events[0]--;
-            }
-
+            fromEvents0 = from->events[0];
+            from->events[0]--;
+            
         }
 
-        if (from->events[1] != to->events[1] || from->eventParms[1] != to->eventParms[1]) {
+        if (to->events[0] >= EV_ITEM_PICKUP_QUIET) {
 
-            if (from->events[1] >= EV_ITEM_PICKUP_QUIET) {
-                fromEvents1 = from->events[1];
-                from->events[1]--;
+            if (to->events[0] == EV_WEAPON_CALLBACK) {
+                toEventParm0 = to->eventParms[0];
+                int wpn = to->eventParms[0] & 0xFF;
+                wpn = translateGoldWeaponToSilverWeapon(wpn);
+                to->eventParms[0] = (to->eventParms[0] & ~0xFF) | (wpn & 0xFF);
             }
 
-            if (to->events[1] >= EV_ITEM_PICKUP_QUIET) {
-                toEvents1 = to->events[1];
-                to->events[1]--;
-            }
-
+            toEvents0 = to->events[0];
+            to->events[0]--;
         }
 
-        if (from->events[2] != to->events[2] || from->eventParms[2] != to->eventParms[2]) {
+        if (from->events[1] >= EV_ITEM_PICKUP_QUIET) {
 
-            if (from->events[2] >= EV_ITEM_PICKUP_QUIET) {
-                fromEvents2 = from->events[2];
-                from->events[2]--;
+            if (from->events[1] == EV_WEAPON_CALLBACK) {
+                fromEventParm1 = from->eventParms[1];
+                int wpn = from->eventParms[1] & 0xFF;
+                wpn = translateGoldWeaponToSilverWeapon(wpn);
+                from->eventParms[1] = (from->eventParms[1] & ~0xFF) | (wpn & 0xFF);
             }
 
-            if (to->events[2] >= EV_ITEM_PICKUP_QUIET) {
-                toEvents2 = to->events[2];
-                to->events[2]--;
-            }
-
+            fromEvents1 = from->events[1];
+            from->events[1]--;
         }
 
-        if (from->events[3] != to->events[3] || from->eventParms[3] != to->eventParms[3]) {
+        if (to->events[1] >= EV_ITEM_PICKUP_QUIET) {
 
-            if (from->events[3] >= EV_ITEM_PICKUP_QUIET) {
-                fromEvents3 = from->events[3];
-                from->events[3]--;
+            if (to->events[1] == EV_WEAPON_CALLBACK) {
+                toEventParm1 = to->eventParms[1];
+                int wpn = to->eventParms[1] & 0xFF;
+                wpn = translateGoldWeaponToSilverWeapon(wpn);
+                to->eventParms[1] = (to->eventParms[1] & ~0xFF) | (wpn & 0xFF);
             }
 
-            if (to->events[3] >= EV_ITEM_PICKUP_QUIET) {
-                toEvents3 = to->events[3];
-                to->events[3]--;
-            }
-
+            toEvents1 = to->events[1];
+            to->events[1]--;
         }
 
-        if (((from->externalEvent & ~EV_EVENT_BITS) == EV_ITEM_PICKUP || (from->externalEvent & ~EV_EVENT_BITS) == EV_ITEM_PICKUP_QUIET) && from->externalEvent != to->externalEvent) {
+        if (from->events[2] >= EV_ITEM_PICKUP_QUIET) {
+
+            if (from->events[2] == EV_WEAPON_CALLBACK) {
+                fromEventParm2 = from->eventParms[2];
+                int wpn = from->eventParms[2] & 0xFF;
+                wpn = translateGoldWeaponToSilverWeapon(wpn);
+                from->eventParms[2] = (from->eventParms[2] & ~0xFF) | (wpn & 0xFF);
+            }
+
+            fromEvents2 = from->events[2];
+            from->events[2]--;
+        }
+
+        if (to->events[2] >= EV_ITEM_PICKUP_QUIET) {
+
+            if (to->events[2] == EV_WEAPON_CALLBACK) {
+                toEventParm2 = to->eventParms[2];
+                int wpn = to->eventParms[2] & 0xFF;
+                wpn = translateGoldWeaponToSilverWeapon(wpn);
+                to->eventParms[2] = (to->eventParms[2] & ~0xFF) | (wpn & 0xFF);
+            }
+
+            toEvents2 = to->events[2];
+            to->events[2]--;
+        }
+
+        if (from->events[3] >= EV_ITEM_PICKUP_QUIET) {
+
+            if (from->events[3] == EV_WEAPON_CALLBACK) {
+                fromEventParm3 = from->eventParms[3];
+                int wpn = from->eventParms[3] & 0xFF;
+                wpn = translateGoldWeaponToSilverWeapon(wpn);
+                from->eventParms[3] = (from->eventParms[3] & ~0xFF) | (wpn & 0xFF);
+            }
+
+            fromEvents3 = from->events[3];
+            from->events[3]--;
+        }
+
+        if (to->events[3] >= EV_ITEM_PICKUP_QUIET) {
+
+            if (to->events[3] == EV_WEAPON_CALLBACK) {
+                toEventParm3 = to->eventParms[3];
+                int wpn = to->eventParms[3] & 0xFF;
+                wpn = translateGoldWeaponToSilverWeapon(wpn);
+                to->eventParms[3] = (to->eventParms[3] & ~0xFF) | (wpn & 0xFF);
+            }
+
+            toEvents3 = to->events[3];
+            to->events[3]--;
+        }
+
+        if (((from->externalEvent & ~EV_EVENT_BITS) == EV_ITEM_PICKUP || (from->externalEvent & ~EV_EVENT_BITS) == EV_ITEM_PICKUP_QUIET)) {
             fromExternalEventParm = from->externalEventParm;
             from->externalEventParm = translateGoldModelIdxToSilverModelIdx(from->externalEventParm);
 
         }
 
-        if ((from->externalEvent & ~EV_EVENT_BITS) >= EV_ITEM_PICKUP_QUIET && from->externalEvent != to->externalEvent) {
+        if ((from->externalEvent & ~EV_EVENT_BITS) >= EV_ITEM_PICKUP_QUIET) {
             fromExternalEvent = from->externalEvent;
             from->externalEvent--;
         }
 
 
-        if (((to->externalEvent & ~EV_EVENT_BITS) == EV_ITEM_PICKUP || (to->externalEvent & ~EV_EVENT_BITS) == EV_ITEM_PICKUP_QUIET) && from->externalEvent != to->externalEvent) {
+        if (((to->externalEvent & ~EV_EVENT_BITS) == EV_ITEM_PICKUP || (to->externalEvent & ~EV_EVENT_BITS) == EV_ITEM_PICKUP_QUIET)) {
             toExternalEventParm = to->externalEventParm;
             to->externalEventParm = translateGoldModelIdxToSilverModelIdx(to->externalEventParm);
         }
 
-        if ((to->externalEvent & ~EV_EVENT_BITS) > EV_ITEM_PICKUP_QUIET && from->externalEvent != to->externalEvent) {
+        if ((to->externalEvent & ~EV_EVENT_BITS) >= EV_ITEM_PICKUP_QUIET) {
             toExternalEvent = to->externalEvent;
             to->externalEvent--;
         }
