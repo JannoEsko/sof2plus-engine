@@ -402,12 +402,14 @@ entTypeDiff_t entTypeTranslations[] = {
 int translateGoldEntityTypeToSilverEntityType(int input) {
 
     int sizeofEntType = sizeof(entTypeTranslations) / sizeof(entTypeTranslations[0]);
+    int base = input & ~EV_EVENT_BITS;
+    int eventBits = input & EV_EVENT_BITS;
 
-    if (input < 0 || input >= sizeofEntType) {
+    if (base < 0 || base >= sizeofEntType) {
         return input;
     }
 
-    return entTypeTranslations[input].translatedEntityType;
+    return entTypeTranslations[base].translatedEntityType | eventBits;
 
 }
 
@@ -1521,13 +1523,13 @@ void MSG_WriteDeltaEntity( msg_t *msg, struct entityState_s *from, struct entity
             to->weapon = translateGoldWeaponToSilverWeapon(to->weapon);
         }
 
-        if (from->eType != to->eType) {
+        //if (from->eType != to->eType) {
             fromEType = from->eType;
             toEType = to->eType;
 
             from->eType = translateGoldEntityTypeToSilverEntityType(fromEType);
             to->eType = translateGoldEntityTypeToSilverEntityType(toEType);
-        }
+        //}
 
         
 
@@ -2301,6 +2303,31 @@ void MSG_WriteDeltaPlayerstate( msg_t *msg, struct playerState_s *from, struct p
             MSG_WriteBits( msg, 0, 1 ); // no change
             continue;
         }
+
+        /*
+        
+        if (
+            Q_stricmp(field->name, "commandTime") && 
+            Q_stricmp(field->name, "weaponAnimTime") && 
+            Q_stricmp(field->name, "weaponCallbackTime") &&
+            Q_stricmp(field->name, "pm_flags")&&
+
+            Q_stricmp(field->name, "respawnTimer")&&
+
+            Q_stricmp(field->name, "weaponAnimId")&&
+
+            Q_stricmp(field->name, "origin[0]") &&
+            Q_stricmp(field->name, "origin[1]") &&
+            Q_stricmp(field->name, "origin[2]") &&
+            Q_stricmp(field->name, "velocity[0]") &&
+            Q_stricmp(field->name, "velocity[1]") &&
+            Q_stricmp(field->name, "velocity[2]")
+            
+            ) {
+            Com_DPrintf("[NF] %s %d => %d\n", field->name, *fromF, *toF);
+        }
+
+        */
 
         MSG_WriteBits( msg, 1, 1 ); // changed
 
