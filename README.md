@@ -23,6 +23,16 @@ When building a "debug" release:
 
 Debug release brings crash stack trace logging. It will be automatically logged into your fs_game/crashdumps folder. If the game module is built also with debug symbols, you will end up with a clear stack trace from the engine start up until the actual crash logging function call.
 
+If your distro doesn't have libbacktrace available out-of-box, you can build it yourself:
+```
+git clone https://github.com/ianlancetaylor/libbacktrace.git
+cd libbacktrace
+./configure
+make
+sudo make install
+```
+
+
 
 If you wish to make your own server mod compatible with Multiprotocol, there are some parts which need to be considered:
 
