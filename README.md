@@ -7,11 +7,6 @@ Triggering multiprotocol can be done with a cvar: ```net_multiprotocol 1```
 
 When ```net_multiprotocol``` is not set, the engine acts like a regular SoF2 1.03 engine.
 
-Currently the engine is in a stable state. There are a few quirks still around, none which affect actual gameplay and only impact 1.00 players. Known quirks are that occasionally, a water effect is played to the silver clients and from time to time, while switching weapon mid spray, the next gun will seem to shoot a bullet (even if it's a nade). 
-This is a prediction error, no bullet is actually shot and also the other clients seem not to hear it, therefore it is treated as a low prio issue.
-
-Rest of the game is completely playable for both protocols.
-
 Engine also comes with a quite good in-game autodownloader speed (the one which is activated by ```cl_allowdownload 1 / sv_allowdownload 1```. By setting the cvar ```sv_dlRate 0```, the clients can get up to 1MB/s speeds directly in game.
 You can also combine it with a functionality called Smart Download, toggled by ```sv_smartDownload```. When Smart Download is turned on, the client will only be served the .pk3 where the current map is in. So, when running custommaps (a good tip is to have maps in separate pk3's), the client can utilize the server download speed to download a single pk3 - the one currently being played.
 
@@ -22,6 +17,16 @@ When building a "debug" release:
 * Windows: the engine should be linked with WinDbg. Makefile has not been adjusted on Windows as the build process for Windows was done over Visual Studio.
 
 Debug release brings crash stack trace logging. It will be automatically logged into your fs_game/crashdumps folder. If the game module is built also with debug symbols, you will end up with a clear stack trace from the engine start up until the actual crash logging function call.
+
+If your distro doesn't have libbacktrace available out-of-box, you can build it yourself:
+```
+git clone https://github.com/ianlancetaylor/libbacktrace.git
+cd libbacktrace
+./configure
+make
+sudo make install
+```
+
 
 
 If you wish to make your own server mod compatible with Multiprotocol, there are some parts which need to be considered:
