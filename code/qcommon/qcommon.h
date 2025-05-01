@@ -533,6 +533,8 @@ void Cvar_CompleteCvarName( char *args, int argNum );
 
 cvar_t* Cvar_FindVar(const char* var_name);
 
+void Cvar_DumpCvars(fileHandle_t h);
+
 extern  int         cvar_modifiedFlags;
 // whenever a cvar is modifed, its flags will be OR'd into this, so
 // a single check can determine if any CVAR_USERINFO, CVAR_SERVERINFO,

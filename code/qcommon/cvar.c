@@ -1434,6 +1434,31 @@ void    Cvar_Update( vmCvar_t *vmCvar ) {
     vmCvar->integer = cv->integer;
 }
 
+void Cvar_DumpCvars(fileHandle_t h) {
+
+    FS_Printf(h, "\nDumping CVAR values...\n");
+
+    for (cvar_t* cvar = &cvar_indexes[0]; cvar && cvar->name; cvar++) {
+
+        if (!Q_stricmp(cvar->name, "rconpassword")) {
+            // Don't dump out rconpw for debug.
+            continue;
+        }
+
+        FS_Printf(h, "[Cvar] %s => %s", cvar->name, cvar->string);
+
+        if (cvar->latchedString) {
+            FS_Printf(h, " [Latched value: %s]", cvar->latchedString);
+        }
+
+        FS_Printf(h, "\n");
+
+    }
+
+    FS_Printf(h, "\nCVAR dump completed...\n");
+
+}
+
 /*
 ==================
 Cvar_CompleteCvarName
