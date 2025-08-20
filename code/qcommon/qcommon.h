@@ -1031,6 +1031,8 @@ int SV_FrameMsec(void);
 qboolean SV_GameCommand( void );
 int SV_SendQueuedPackets(void);
 qboolean SV_SendRconLog(const char* ip, const char* command);
+void SV_Mapcycle_f(void);
+void SV_SpawnServer(char* server, qboolean killBots);
 
 //
 // UI interface

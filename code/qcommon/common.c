@@ -92,6 +92,7 @@ cvar_t  *com_legacyProtocol;
 cvar_t  *com_basegame;
 cvar_t  *com_homepath;
 cvar_t  *com_busyWait;
+cvar_t  *com_gracefulErrors;
 
 cvar_t* net_multiprotocol;
 cvar_t* sv_useLegacyNades;
@@ -272,6 +273,10 @@ void QDECL Com_Error( int code, const char *fmt, ... ) {
     int         currentTime;
     qboolean    restartClient;
 
+    static int  lastGracefulCrashTime = 0;
+    static int  gracefulErrorCount = 0;
+    static qboolean inGracefulRecovery = qfalse;
+
     if(com_errorEntered)
         Sys_Error("recursive error after: %s", com_errorMessage);
 
@@ -296,74 +301,137 @@ void QDECL Com_Error( int code, const char *fmt, ... ) {
     }
     lastErrorTime = currentTime;
 
-    va_start (argptr,fmt);
-    Q_vsnprintf (com_errorMessage, sizeof(com_errorMessage),fmt,argptr);
-    va_end (argptr);
+    if (((currentTime - lastGracefulCrashTime) < 15000 && gracefulErrorCount > 3) || inGracefulRecovery) {
+        // Seems that we're not able to proceed gracefully, so we have to drop the game.
+        code = ERR_FATAL;
+    }
+
+    va_start(argptr, fmt);
+    Q_vsnprintf(com_errorMessage, sizeof(com_errorMessage), fmt, argptr);
+    va_end(argptr);
 
     if (code != ERR_DISCONNECT && code != ERR_NEED_CD)
         Cvar_Set("com_errorMessage", com_errorMessage);
 
-    restartClient = com_gameClientRestarting && !( com_cl_running && com_cl_running->integer );
+    restartClient = com_gameClientRestarting && !(com_cl_running && com_cl_running->integer);
 
     com_gameRestarting = qfalse;
     com_gameClientRestarting = qfalse;
 
     if (code == ERR_DISCONNECT || code == ERR_SERVERDISCONNECT) {
         VM_Forced_Unload_Start();
-        SV_Shutdown( "Server disconnected" );
-        if ( restartClient ) {
+        SV_Shutdown("Server disconnected");
+        if (restartClient) {
             CL_Init();
         }
-        CL_Disconnect( qtrue );
-        CL_FlushMemory( );
+        CL_Disconnect(qtrue);
+        CL_FlushMemory();
         VM_Forced_Unload_Done();
         // make sure we can get at our local stuff
         FS_PureServerSetLoadedPaks("", "");
         com_errorEntered = qfalse;
-        longjmp (abortframe, -1);
-    } else if (code == ERR_DROP) {
-        Com_Printf ("********************\nERROR: %s\n********************\n", com_errorMessage);
+        longjmp(abortframe, -1);
+    }
+    else if (code == ERR_DROP) {
+
+        // Enhancement #5 - if we're entering a logic crash, proceed to a new map instead of shutting the server down.
+        // We do need to log down the reasons to actually act upon them.
+
+        if (com_gracefulErrors->integer) {
+
+            inGracefulRecovery = qtrue;
+
+            char filename[MAX_QPATH];
+            time_t rawtime = time(NULL);
+            struct tm* timeinfo = localtime(&rawtime);
+            snprintf(filename, sizeof(filename), "softcrashes/crash-%04d%02d%02d-%02d%02d%02d.log",
+                timeinfo->tm_year + 1900, timeinfo->tm_mon + 1, timeinfo->tm_mday,
+                timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec);
+
+
+            fileHandle_t logFile = FS_FOpenFileWrite(filename);
+            if (logFile) {
+
+                FS_Printf(logFile, "Softcrash detected, message: %s\nPlease raise an issue at https://github.com/JannoEsko/1fxplus.git and attach this log file to the issue.\n\n", com_errorMessage);
+                Cvar_DumpCvars(logFile);
+
+                FS_FCloseFile(logFile);
+                Com_Printf("^3LOGGING CRASH INTO FILE SUCCEEDED!\n");
+            }
+            else {
+                Com_Printf("^1LOGGING CRASH INTO FILE FAILED!\n");
+            }
+
+
+            if ((currentTime - lastGracefulCrashTime) < 10000) {
+                gracefulErrorCount++;
+            }
+            else {
+                gracefulErrorCount = 1;
+            }
+
+            if (gracefulErrorCount >= 3) {
+                // Proceed to mp_shop. If that fails, then next round we're hitting ERR_FATAL.
+                SV_SpawnServer("mp_shop", qtrue);
+            }
+            else {
+                SV_Mapcycle_f();
+            }
+
+            lastGracefulCrashTime = currentTime;
+            inGracefulRecovery = qfalse;
+            com_errorEntered = qfalse;
+
+            return;
+        }
+        else {
+            Com_Printf("********************\nERROR: %s\n********************\n", com_errorMessage);
+            VM_Forced_Unload_Start();
+            SV_Shutdown(va("Server crashed: %s", com_errorMessage));
+            if (restartClient) {
+                CL_Init();
+            }
+            CL_Disconnect(qtrue);
+            CL_FlushMemory();
+            VM_Forced_Unload_Done();
+            FS_PureServerSetLoadedPaks("", "");
+            com_errorEntered = qfalse;
+            longjmp(abortframe, -1);
+        }
+
+    }
+    else if (code == ERR_NEED_CD) {
         VM_Forced_Unload_Start();
-        SV_Shutdown (va("Server crashed: %s",  com_errorMessage));
-        if ( restartClient ) {
+        SV_Shutdown("Server didn't have CD");
+        if (restartClient) {
             CL_Init();
         }
-        CL_Disconnect( qtrue );
-        CL_FlushMemory( );
-        VM_Forced_Unload_Done();
-        FS_PureServerSetLoadedPaks("", "");
-        com_errorEntered = qfalse;
-        longjmp (abortframe, -1);
-    } else if ( code == ERR_NEED_CD ) {
-        VM_Forced_Unload_Start();
-        SV_Shutdown( "Server didn't have CD" );
-        if ( restartClient ) {
-            CL_Init();
-        }
-        if ( com_cl_running && com_cl_running->integer ) {
-            CL_Disconnect( qtrue );
-            CL_FlushMemory( );
+        if (com_cl_running && com_cl_running->integer) {
+            CL_Disconnect(qtrue);
+            CL_FlushMemory();
             VM_Forced_Unload_Done();
             CL_CDDialog();
-        } else {
-            Com_Printf("Server didn't have CD\n" );
+        }
+        else {
+            Com_Printf("Server didn't have CD\n");
             VM_Forced_Unload_Done();
         }
 
         FS_PureServerSetLoadedPaks("", "");
 
         com_errorEntered = qfalse;
-        longjmp (abortframe, -1);
-    } else {
+        longjmp(abortframe, -1);
+    }
+    else {
         VM_Forced_Unload_Start();
         CL_Shutdown(va("Client fatal crashed: %s", com_errorMessage), qtrue, qtrue);
         SV_Shutdown(va("Server fatal crashed: %s", com_errorMessage));
         VM_Forced_Unload_Done();
     }
 
-    Com_Shutdown ();
+    Com_Shutdown();
 
-    Sys_Error ("%s", com_errorMessage);
+    Sys_Error("%s", com_errorMessage);
 }
 
 
@@ -2685,6 +2753,8 @@ void Com_Init( char *commandLine ) {
     com_abnormalExit = Cvar_Get( "com_abnormalExit", "0", CVAR_ROM );
     com_busyWait = Cvar_Get("com_busyWait", "0", CVAR_ARCHIVE);
     Cvar_Get("com_errorMessage", "", CVAR_ROM | CVAR_NORESTART);
+
+    com_gracefulErrors = Cvar_Get("com_gracefulErrors", "1", CVAR_ARCHIVE);
 
 #ifdef CINEMATICS_INTRO
     com_introPlayed = Cvar_Get( "com_introplayed", "0", CVAR_ARCHIVE);
