@@ -1456,7 +1456,8 @@ void SV_UserinfoChanged( client_t *cl ) {
     }
 
     // snaps command
-    val = Info_ValueForKey (cl->userinfo, "snaps");
+    // 1fxplus issue 13 - we enforce snaps to always be connected to sv_fps and ignore what the client requests.
+    /*val = Info_ValueForKey(cl->userinfo, "snaps");
 
     if(strlen(val))
     {
@@ -1469,8 +1470,8 @@ void SV_UserinfoChanged( client_t *cl ) {
 
         i = 1000 / i;
     }
-    else
-        i = 50;
+    else*/
+    i = 1000 / sv_fps->integer;
 
     if(i != cl->snapshotMsec)
     {
