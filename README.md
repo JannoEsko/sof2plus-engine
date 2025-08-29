@@ -31,6 +31,9 @@ sudo make install
 
 If you wish to make your own server mod compatible with Multiprotocol, there are some parts which need to be considered:
 
+* You will need to use sof2plus-game SDK OR rewrite some of the functions over to fit sof2plus logic. Most changes are related to memory management (`trap_VM_*Alloc` functions) and the generic parser (`trap_GP*` functions; for trap_GP changes, please refer to the syscalls file in sof2plus-game SDK). This also has to be catered for in the syscalls file. Also worth noting, is that sof2plus lacks QVM support, so the SDK has to be compiled as DLL's.
+The clean SDK is available here: https://github.com/sof2plus/sof2plus-game
+
 * The engine has a built-in spoof for public gametypes (so that the client is not required to have a library for the gametype you're trying to play if it's a custom one). Setting it is mandatory on every mod. Cvar is ```g_publicGametype```and it can only be set programmatically by using ```trap_Cvar_Set```. Ensure that is set up in G_InitGame module (if you don't have any custom gametypes or don't need spoofing, just use ```trap_Cvar_Set("g_publicGametype", g_gametype.string);```
 
 * You need to ensure that ```sv_pure``` is set to 0 - it simply doesn't make sense having it turned on in a multiprotocol state.
