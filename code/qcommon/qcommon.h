@@ -316,8 +316,14 @@ VIRTUAL MACHINE
 
 typedef struct vm_s vm_t;
 
+typedef enum {
+    VMI_NATIVE,
+    VMI_BYTECODE,
+    VMI_COMPILED
+} vmInterpret_t;
+
 void    VM_Init( void );
-vm_t    *VM_Create( const char *module, intptr_t (*systemCalls)(intptr_t *) );
+vm_t    *VM_Create( const char *module, intptr_t (*systemCalls)(qboolean, intptr_t *), vmInterpret_t interpret);
 // module should be bare: "cgame", not "cgame.dll"
 
 void    VM_Free( vm_t *vm );
@@ -587,7 +593,7 @@ qboolean FS_FileExists( const char *file );
 
 qboolean FS_CreatePath (char *OSPath);
 
-qboolean FS_FindVM(void **startSearch, char *found, int foundlen, const char *name);
+int FS_FindVM(void **startSearch, char *found, int foundlen, const char *name, int enableDll);
 
 char   *FS_BuildOSPath( const char *base, const char *game, const char *qpath );
 qboolean FS_CompareZipChecksum(const char *zipfile);
@@ -1062,7 +1068,7 @@ void    Sys_Init (void);
 
 // general development dll loading for virtual machine testing
 void    * QDECL Sys_LoadGameDll( const char *name, intptr_t (QDECL **entryPoint)(int, ...),
-                  intptr_t (QDECL *systemcalls)(intptr_t, ...) );
+                  intptr_t (QDECL *systemcalls)(qboolean, intptr_t, ...) );
 void    Sys_UnloadDll( void *dllHandle );
 
 qboolean Sys_DllExtension( const char *name );

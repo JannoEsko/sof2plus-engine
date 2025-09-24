@@ -136,6 +136,7 @@ typedef struct vmSymbol_s {
     int     symValue;
     int     profileCount;
     char    symName[1];     // variable sized
+
 } vmSymbol_t;
 
 #define VM_OFFSET_PROGRAM_STACK     0
@@ -145,7 +146,7 @@ struct vm_s {
     // DO NOT MOVE OR CHANGE THESE WITHOUT CHANGING THE VM_OFFSET_* DEFINES
     // USED BY THE ASM CODE
     int         programStack;       // the vm may be recursively entered
-    intptr_t            (*systemCall)( intptr_t *parms );
+    intptr_t            (*systemCall)( qboolean runningQVM, intptr_t *parms );
 
     //------------------------------------
 
@@ -157,11 +158,48 @@ struct vm_s {
     intptr_t            (QDECL *entryPoint)( int callNum, ... );
     void (*destroy)(vm_t* self);
 
+    // for interpreted modules
+    qboolean    currentlyInterpreting;
+
+    qboolean    compiled;
+    byte* codeBase;
+    int            entryOfs;
+    int            codeLength;
+
+    intptr_t* instructionPointers;
+    int            instructionCount;
+
     byte        *dataBase;
     int         dataMask;
 
+    int            dataAlloc;            // actually allocated
+
+    int            stackBottom;        // if programStack < stackBottom, error
+
+    int            numSymbols;
+    struct vmSymbol_s* symbols;
+
     int         callLevel;      // counts recursive VM_Call
+
+    int            breakFunction;        // increment breakCount on function entry to this
+    int            breakCount;
+
+    byte* jumpTableTargets;
+    int            numJumpTableTargets;
 };
 
 extern  vm_t    *currentVM;
 extern  int     vm_debugLevel;
+
+void VM_Compile(vm_t* vm, vmHeader_t* header);
+int    VM_CallCompiled(vm_t* vm, int* args);
+
+void VM_PrepareInterpreter(vm_t* vm, vmHeader_t* header);
+int    VM_CallInterpreted(vm_t* vm, int* args);
+
+vmSymbol_t* VM_ValueToFunctionSymbol(vm_t* vm, int value);
+int VM_SymbolToValue(vm_t* vm, const char* symbol);
+const char* VM_ValueToSymbol(vm_t* vm, int value);
+void VM_LogSyscalls(int* args);
+
+void VM_BlockCopy(unsigned int dest, unsigned int src, size_t n);

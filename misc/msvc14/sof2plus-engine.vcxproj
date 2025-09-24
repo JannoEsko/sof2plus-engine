@@ -333,6 +333,11 @@
     <ClCompile Include="..\..\code\qcommon\q_shared.c" />
     <ClCompile Include="..\..\code\qcommon\unzip.c" />
     <ClCompile Include="..\..\code\qcommon\vm.c" />
+    <ClCompile Include="..\..\code\qcommon\vm_armv7l.c" />
+    <ClCompile Include="..\..\code\qcommon\vm_interpreted.c" />
+    <ClCompile Include="..\..\code\qcommon\vm_powerpc.c" />
+    <ClCompile Include="..\..\code\qcommon\vm_sparc.c" />
+    <ClCompile Include="..\..\code\qcommon\vm_x86.c" />
     <ClCompile Include="..\..\code\rd-dedicated\tr_g2_api.c" />
     <ClCompile Include="..\..\code\rd-dedicated\tr_g2_bones.c" />
     <ClCompile Include="..\..\code\rd-dedicated\tr_g2_collision.c" />
@@ -438,6 +443,15 @@
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="..\..\code\sys\win_resource.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="..\..\code\asm\vm_x86_64.asm">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">ml64 /Didx64 /c /Zi /Fo"$(IntDir)%(Filename).asm.obj" "%(FullPath)"
+</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Assembling...</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)%(Filename).asm.obj;%(Outputs)</Outputs>
+    </CustomBuild>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

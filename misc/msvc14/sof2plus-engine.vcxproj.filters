@@ -313,6 +313,21 @@
     <ClCompile Include="..\..\code\qcommon\cm_terrain.c">
       <Filter>Source Files\qcommon</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\code\qcommon\vm_x86.c">
+      <Filter>Source Files\qcommon</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\qcommon\vm_sparc.c">
+      <Filter>Source Files\qcommon</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\qcommon\vm_powerpc.c">
+      <Filter>Source Files\qcommon</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\qcommon\vm_interpreted.c">
+      <Filter>Source Files\qcommon</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\qcommon\vm_armv7l.c">
+      <Filter>Source Files\qcommon</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\code\asm\qasm.h">
@@ -531,6 +546,9 @@
       <Filter>Source Files\asm</Filter>
     </CustomBuild>
     <CustomBuild Include="..\..\code\asm\snapvector.asm">
+      <Filter>Source Files\asm</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\code\asm\vm_x86_64.asm">
       <Filter>Source Files\asm</Filter>
     </CustomBuild>
   </ItemGroup>

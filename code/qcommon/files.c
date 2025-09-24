@@ -1396,54 +1396,105 @@ long FS_FOpenFileRead(const char *filename, fileHandle_t *file, qboolean uniqueF
 =================
 FS_FindVM
 
-Find a suitable DLL file in search path order.
+Find a suitable VM file in search path order.
 
-In each searchpath try to open a DLL file.
+In each searchpath try:
+ - open DLL file if DLL loading enabled
+ - open QVM file
 
-Write found DLL to "found" and return qtrue.
+Enable search for DLL by setting enableDll to FSVM_ENABLEDLL
+
+write found DLL or QVM to "found" and return VMI_NATIVE if DLL, VMI_COMPILED if QVM
 Return the searchpath in "startSearch".
 =================
 */
 
-qboolean FS_FindVM(void **startSearch, char *found, int foundlen, const char *name)
+int FS_FindVM(void** startSearch, char* found, int foundlen, const char* name, int enableDll)
 {
-    searchpath_t *search, *lastSearch;
-    directory_t *dir;
-    char dllName[MAX_OSPATH];
-    char *netpath;
+    searchpath_t* search, * lastSearch;
+    directory_t* dir;
+    pack_t* pack;
+    char qvmName[MAX_OSPATH];
+    char* netpath;
 
-    if(!fs_searchpaths)
+    if (!fs_searchpaths)
         Com_Error(ERR_FATAL, "Filesystem call made without initialization");
 
-    Com_sprintf(dllName, sizeof(dllName), "%s" ARCH_STRING DLL_EXT, name);
+    Com_sprintf(qvmName, sizeof(qvmName), "vm/%s.qvm", name);
 
     lastSearch = *startSearch;
-    if(*startSearch == NULL)
+    if (*startSearch == NULL)
         search = fs_searchpaths;
     else
         search = lastSearch->next;
 
-    while(search)
+    while (search)
     {
-        if(search->dir && !fs_numServerPaks)
+        if (search->dir && !fs_numServerPaks)
         {
             dir = search->dir;
 
-            netpath = FS_BuildOSPath(dir->path, dir->gamedir, dllName);
-
-            if(FS_FileInPathExists(netpath))
+            if (enableDll)
             {
-                Q_strncpyz(found, netpath, foundlen);
+                // The original Q3 put the architecture in the library name; in case
+                // we're loading an old binary only mod, fallback on this format if
+                // the architecture-less library doesn't exist
+                const char* dllNameFormats[] =
+                {
+                    "%s" DLL_EXT,
+                    "%s" ARCH_STRING DLL_EXT
+                };
+
+                for (int i = 0; i < ARRAY_LEN(dllNameFormats); i++)
+                {
+                    char dllName[MAX_OSPATH];
+                    Com_sprintf(dllName, sizeof(dllName), dllNameFormats[i], name);
+                    netpath = FS_BuildOSPath(dir->path, dir->gamedir, dllName);
+
+                    if (FS_FileInPathExists(netpath))
+                    {
+                        Q_strncpyz(found, netpath, foundlen);
+                        *startSearch = search;
+
+                        return VMI_NATIVE;
+                    }
+                }
+            }
+
+            if (FS_FOpenFileReadDir(qvmName, search, NULL, qfalse, qfalse) > 0)
+            {
+                *startSearch = search;
+                return VMI_COMPILED;
+            }
+        }
+        else if (search->pack)
+        {
+            pack = search->pack;
+
+            if (lastSearch && lastSearch->pack)
+            {
+                // make sure we only try loading one VM file per game dir
+                // i.e. if VM from pak7.pk3 fails we won't try one from pak6.pk3
+
+                if (!FS_FilenameCompare(lastSearch->pack->pakPathname, pack->pakPathname))
+                {
+                    search = search->next;
+                    continue;
+                }
+            }
+
+            if (FS_FOpenFileReadDir(qvmName, search, NULL, qfalse, qfalse) > 0)
+            {
                 *startSearch = search;
 
-                return qtrue;
+                return VMI_COMPILED;
             }
         }
 
         search = search->next;
     }
 
-    return qfalse;
+    return -1;
 }
 
 /*
