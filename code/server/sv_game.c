@@ -387,6 +387,159 @@ static int  FloatAsInt( float f ) {
     return fi.i;
 }
 
+// QVM memory management, reusing the logic in SoF2Plus
+static qboolean qvmMemoryInitialized = qfalse;
+static char* qvmMemoryPool;
+#define QVM_MEMORY_POOL_SIZE  (4098 * 1024) // 2 MB, same as in SoF2Plus SDK
+static int qvmPoolSize;
+static int qvmPoolTail;
+
+static void SV_InitQvmMemory() {
+	qvmMemoryInitialized = qtrue;
+	qvmMemoryPool = Z_TagMalloc(QVM_MEMORY_POOL_SIZE, TAG_GAMEMEM);
+	Com_Memset(qvmMemoryPool, 0, QVM_MEMORY_POOL_SIZE);
+    qvmPoolSize = 0;
+    qvmPoolTail = QVM_MEMORY_POOL_SIZE;
+
+}
+
+static void SV_FreeQvmMemory() {
+    Z_FreeTags(TAG_GAMEMEM);
+	qvmMemoryInitialized = qfalse;
+    qvmPoolSize = 0;
+    qvmPoolTail = 0;
+}
+
+// Following functions are taken as-is from SoF2Plus Game SDK.
+/*
+==================
+G_Alloc
+
+Aligns memory pool pointer, then
+allocates the memory from the
+pool if it is available.
+==================
+*/
+
+static void* SV_QVM_Alloc(int size)
+{
+    // Align the memory pool (4 byte alignment).
+    qvmPoolSize = ((qvmPoolSize + 0x00000003) & 0xfffffffc);
+
+    // Check if we have enough memory left in our pool.
+    if (qvmPoolSize + size > qvmPoolTail) {
+        Com_Error(ERR_DROP, "SV_QVM_Alloc: buffer exceeded tail (%d > %d)", qvmPoolSize + size, qvmPoolTail);
+        return 0;
+    }
+
+    // Set new pool size.
+    qvmPoolSize += size;
+
+    // Return index pointer to the memory pool.
+    return &qvmMemoryPool[qvmPoolSize - size];
+}
+
+/*
+==================
+G_AllocUnaligned
+
+Allocates the memory from the
+pool if it is available,
+without alignment.
+==================
+*/
+
+static void* SV_QVM_AllocUnaligned(int size)
+{
+    // Check if we have enough memory left in our pool.
+    if (qvmPoolSize + size > qvmPoolTail) {
+        Com_Error(ERR_DROP, "SV_QVM_AllocUnaligned: buffer exceeded tail (%d > %d)", qvmPoolSize + size, qvmPoolTail);
+        return 0;
+    }
+
+    // Set new pool size.
+    qvmPoolSize += size;
+
+    // Return index pointer to the memory pool.
+    return &qvmMemoryPool[qvmPoolSize - size];
+}
+
+/*
+==================
+G_TempAlloc
+
+Aligns the requested size, then
+reserves the temporary memory
+from the pool if there is
+enough space available.
+==================
+*/
+
+static void* SV_QVM_TempAlloc(int size)
+{
+    // 4-byte align the specified size.
+    size = ((size + 0x00000003) & 0xfffffffc);
+
+    // Check if there is enough free space available in the pool.
+    if (qvmPoolTail - size < qvmPoolSize) {
+        Com_Error(ERR_DROP, "SV_QVM_TempAlloc: buffer exceeded head (%d > %d)", qvmPoolTail - size, qvmPoolSize);
+        return 0;
+    }
+
+    // Make sure we cannot use this temporary memory for regular G_Alloc* allocations.
+    qvmPoolTail -= size;
+
+    // Return index pointer to the memory pool.
+    return &qvmMemoryPool[qvmPoolTail];
+}
+
+/*
+==================
+G_TempFree
+
+Aligns the requested size, then
+puts back the reserved temporary
+memory.
+
+NOTE: Free must be in opposite
+order of allocation.
+==================
+*/
+
+static void SV_QVM_TempFree(int size)
+{
+    // 4-byte align the specified size.
+    size = ((size + 0x00000003) & 0xfffffffc);
+
+    // Check if we're not putting back more memory then initially allocated.
+    if (qvmPoolTail + size > QVM_MEMORY_POOL_SIZE) {
+        Com_Error(ERR_DROP, "SV_QVM_TempFree: tail greater than size (%d > %d)", qvmPoolTail + size, QVM_MEMORY_POOL_SIZE);
+    }
+
+    // We can use this memory again in our regular memory pool operations.
+    qvmPoolTail += size;
+}
+
+/*
+==================
+G_StringAlloc
+
+Allocates memory from the pool
+for the specified source
+string. Returns a copy of the
+source in the newly allocated
+memory.
+==================
+*/
+
+static char* SV_QVM_StringAlloc(const char* source)
+{
+    char* dest = (char*)SV_QVM_Alloc(strlen(source) + 1);
+    char* localDest = (char*)VM_ArgPtr((int)dest);
+    strcpy(localDest, source);
+    return dest;
+}
+
 /*
 ====================
 SV_GameSystemCalls
@@ -399,137 +552,228 @@ intptr_t SV_GameSystemCalls(qboolean runningQVM, intptr_t *args ) {
     if (runningQVM) {
         switch (args[0]) {
         case LEGACY_G_PRINT:
+            Com_Printf("%s", (const char*)VMA(1));
             return 0;
         case LEGACY_G_ERROR:
+            Com_Error(ERR_DROP, "%s", (const char*)VMA(1));
             return 0;
         case LEGACY_G_MILLISECONDS:
-            return 0;
+            return Sys_Milliseconds();
         case LEGACY_G_CVAR_REGISTER:
+            Cvar_Register(VMA(1), VMA(2), VMA(3), args[4], VMF(5), VMF(6));
             return 0;
         case LEGACY_G_CVAR_UPDATE:
+            Cvar_Update(VMA(1));
             return 0;
         case LEGACY_G_CVAR_SET:
+            Cvar_SetSafe((const char*)VMA(1), (const char*)VMA(2));
             return 0;
         case LEGACY_G_CVAR_VARIABLE_INTEGER_VALUE:
-            return 0;
+            return Cvar_VariableIntegerValue((const char*)VMA(1));
         case LEGACY_G_CVAR_VARIABLE_STRING_BUFFER:
+            Cvar_VariableStringBuffer(VMA(1), VMA(2), args[3]);
             return 0;
         case LEGACY_G_ARGC:
-            return 0;
+            return Cmd_Argc();
         case LEGACY_G_ARGV:
+            Cmd_ArgvBuffer(args[1], VMA(2), args[3]);
             return 0;
         case LEGACY_G_FS_FOPEN_FILE:
-            return 0;
+        {
+            fsMode_t mode = 0;
+			legacyFsMode_t legacyMode = (legacyFsMode_t)args[3];
+
+            switch (legacyMode) {
+
+            case LEGACY_FS_READ:
+                mode = FS_READ;
+                break;
+            case LEGACY_FS_WRITE:
+                mode = FS_WRITE;
+                break;
+            case LEGACY_FS_APPEND:
+                mode = FS_APPEND;
+                break;
+            case LEGACY_FS_APPEND_SYNC:
+                mode = FS_APPEND_SYNC;
+                break;
+            case LEGACY_FS_READ_TEXT:
+                mode = FS_READ;
+                break;
+            case LEGACY_FS_WRITE_TEXT:
+                mode = FS_WRITE;
+                break;
+            case LEGACY_FS_APPEND_TEXT:
+                mode = FS_APPEND;
+                break;
+            case LEGACY_FS_APPEND_SYNC_TEXT:
+                mode = FS_APPEND_SYNC;
+                break;
+            default:
+                Com_Error(ERR_DROP, "SV_GameSystemCalls: LEGACY_G_FS_FOPEN_FILE: bad mode %d", legacyMode);
+
+                
+            }
+            return FS_FOpenFileByMode(VMA(1), VMA(2), mode);
+        }
+            
         case LEGACY_G_FS_READ:
+            FS_Read(VMA(1), args[2], args[3]);
             return 0;
         case LEGACY_G_FS_WRITE:
+            FS_Write(VMA(1), args[2], args[3]);
             return 0;
         case LEGACY_G_FS_FCLOSE_FILE:
+            FS_FCloseFile(args[1]);
             return 0;
         case LEGACY_G_SEND_CONSOLE_COMMAND:
+            Cbuf_ExecuteText(args[1], VMA(2));
             return 0;
         case LEGACY_G_LOCATE_GAME_DATA:
+            SV_LocateGameData(VMA(1), args[2], args[3], VMA(4), args[5]);
             return 0;
         case LEGACY_G_GET_WORLD_BOUNDS:
+            CM_ModelBounds(0, VMA(1), VMA(2));
             return 0;
         case LEGACY_G_RMG_INIT:
+			// SoF2Plus currently lacks RMG support.
             return 0;
         case LEGACY_G_DROP_CLIENT:
+            SV_GameDropClient(args[1], VMA(2));
             return 0;
         case LEGACY_G_SEND_SERVER_COMMAND:
+            SV_GameSendServerCommand(args[1], VMA(2));
             return 0;
         case LEGACY_G_SET_CONFIGSTRING:
+            SV_SetConfigstring(args[1], VMA(2));
             return 0;
         case LEGACY_G_GET_CONFIGSTRING:
+            SV_GetConfigstring(args[1], VMA(2), args[3]);
             return 0;
         case LEGACY_G_GET_USERINFO:
+            SV_GetUserinfo(args[1], VMA(2), args[3]);
             return 0;
         case LEGACY_G_SET_USERINFO:
+            SV_SetUserinfo(args[1], VMA(2));
             return 0;
         case LEGACY_G_GET_SERVERINFO:
+            SV_GetServerinfo(VMA(1), args[2]);
             return 0;
         case LEGACY_G_SET_BRUSH_MODEL:
+            SV_SetBrushModel(VMA(1), VMA(2));
             return 0;
         case LEGACY_G_SET_ACTIVE_SUBBSP:
+            SV_SetActiveSubBSP(args[1]);
             return 0;
         case LEGACY_G_TRACE:
+            SV_Trace(VMA(1), VMA(2), VMA(3), VMA(4), VMA(5), args[6], args[7], /*int capsule*/ qfalse);
             return 0;
         case LEGACY_G_POINT_CONTENTS:
-            return 0;
+            return SV_PointContents(VMA(1), args[2]);
         case LEGACY_G_IN_PVS:
-            return 0;
+            return SV_inPVS(VMA(1), VMA(2));
         case LEGACY_G_IN_PVS_IGNORE_PORTALS:
-            return 0;
+            return SV_inPVSIgnorePortals(VMA(1), VMA(2));
         case LEGACY_G_ADJUST_AREA_PORTAL_STATE:
+            SV_AdjustAreaPortalState(VMA(1), args[2]);
             return 0;
         case LEGACY_G_AREAS_CONNECTED:
-            return 0;
+            return CM_AreasConnected(args[1], args[2]);
         case LEGACY_G_LINKENTITY:
+            SV_LinkEntity(VMA(1));
             return 0;
         case LEGACY_G_UNLINKENTITY:
+            SV_UnlinkEntity(VMA(1));
             return 0;
         case LEGACY_G_ENTITIES_IN_BOX:
-            return 0;
+            return SV_AreaEntities(VMA(1), VMA(2), VMA(3), args[4]);
         case LEGACY_G_ENTITY_CONTACT:
-            return 0;
+            return SV_EntityContact(VMA(1), VMA(2), VMA(3), /*int capsule*/ qfalse);
         case LEGACY_G_BOT_ALLOCATE_CLIENT:
-            return 0;
+            return SV_BotAllocateClient();
         case LEGACY_G_BOT_FREE_CLIENT:
+            SV_BotFreeClient(args[1]);
             return 0;
         case LEGACY_G_GET_USERCMD:
+            SV_GetUsercmd(args[1], VMA(2));
             return 0;
-        case LEGACY_G_GET_ENTITY_TOKEN:
-            return 0;
+        case LEGACY_G_GET_ENTITY_TOKEN: // JANFIXME - inSubBSP is not covered here at the moment, needs mod support or another workaround.
+        {
+            const char* s = COM_Parse(&sv.entityParsePoint);
+            Q_strncpyz(VMA(1), s, args[2]);
+            if (!sv.entityParsePoint && !s[0]) {
+                return qfalse;
+            }
+            else {
+                return qtrue;
+            }
+        }
         case LEGACY_G_FS_GETFILELIST:
-            return 0;
+            return FS_GetFileList(VMA(1), VMA(2), VMA(3), args[4]);
         case LEGACY_G_BOT_GET_MEMORY:
-            return 0;
+            return (intptr_t)Z_TagMalloc(TAG_BOTLIB, args[1]);
         case LEGACY_G_BOT_FREE_MEMORY:
+			Z_Free(args[1]);
             return 0;
         case LEGACY_G_DEBUG_POLYGON_CREATE:
-            return 0;
+            return BotImport_DebugPolygonCreate(args[1], args[2], VMA(3));
         case LEGACY_G_DEBUG_POLYGON_DELETE:
+            BotImport_DebugPolygonDelete(args[1]);
             return 0;
         case LEGACY_G_REAL_TIME:
-            return 0;
+            return Com_RealTime(VMA(1));
         case LEGACY_G_SNAPVECTOR:
+            Q_SnapVector(VMA(1));
             return 0;
         case LEGACY_G_TRACECAPSULE:
+            SV_Trace(VMA(1), VMA(2), VMA(3), VMA(4), VMA(5), args[6], args[7], /*int capsule*/ qtrue);
             return 0;
         case LEGACY_G_ENTITY_CONTACTCAPSULE:
+            return SV_EntityContact(VMA(1), VMA(2), VMA(3), /*int capsule*/ qtrue);
             return 0;
         case LEGACY_G_MEMSET:
+            Com_Memset(VMA(1), args[2], args[3]);
             return 0;
         case LEGACY_G_MEMCPY:
+            Com_Memcpy(VMA(1), VMA(2), args[3]);
             return 0;
         case LEGACY_G_STRNCPY:
-            return 0;
+            strncpy(VMA(1), VMA(2), args[3]);
+            return args[1];
         case LEGACY_G_SIN:
-            return 0;
+            return FloatAsInt(sin(VMF(1)));
         case LEGACY_G_COS:
-            return 0;
+            return FloatAsInt(cos(VMF(1)));
         case LEGACY_G_ATAN2:
-            return 0;
+            return FloatAsInt(atan2(VMF(1), VMF(2)));
         case LEGACY_G_SQRT:
-            return 0;
+            return FloatAsInt(sqrt(VMF(1)));
         case LEGACY_G_ANGLEVECTORS:
+            AngleVectors(VMA(1), VMA(2), VMA(3), VMA(4));
             return 0;
         case LEGACY_G_PERPENDICULARVECTOR:
+            PerpendicularVector(VMA(1), VMA(2));
             return 0;
         case LEGACY_G_FLOOR:
-            return 0;
+            return FloatAsInt(floor(VMF(1)));
         case LEGACY_G_CEIL:
-            return 0;
+            return FloatAsInt(ceil(VMF(1)));
         case LEGACY_G_TESTPRINTINT:
+            Com_DPrintf("Testprintint - not implemented");
             return 0;
         case LEGACY_G_TESTPRINTFLOAT:
+            Com_DPrintf("Testprintfloat - not implemented");
             return 0;
         case LEGACY_G_ACOS:
-            return 0;
+            return FloatAsInt(acos(VMF(1)));
         case LEGACY_G_ASIN:
-            return 0;
+            return FloatAsInt(asin(VMF(1)));
         case LEGACY_G_MATRIXMULTIPLY:
+            MatrixMultiply(VMA(1), VMA(2), VMA(3));
             return 0;
+
+
+		// Botlib calls
         case LEGACY_BOTLIB_SETUP:
             return 0;
         case LEGACY_BOTLIB_SHUTDOWN:
@@ -812,98 +1056,224 @@ intptr_t SV_GameSystemCalls(qboolean runningQVM, intptr_t *args ) {
             return 0;
         case LEGACY_BOTLIB_PC_REMOVE_ALL_GLOBAL_DEFINES:
             return 0;
+
+
+		// Ghoul2 Insert Start
+        // NB - Ghoul2 calls are most likely different to vanilla SoF2.
         case LEGACY_G_G2_LISTBONES:
+            G2API_ListBones(VMA(1)); // arg2 frame ignored, but also NB - vanilla SDK does not call this function.
             return 0;
         case LEGACY_G_G2_LISTSURFACES:
+            G2API_ListSurfaces(VMA(1));
             return 0;
         case LEGACY_G_G2_HAVEWEGHOULMODELS:
+			// CGame syscall, not used in the server.
             return 0;
         case LEGACY_G_G2_SETMODELS:
+			// CGame syscall, not used in the server.
             return 0;
         case LEGACY_G_G2_GETBOLT:
+			// CGame syscall, not used in the server.
             return 0;
         case LEGACY_G_G2_INITGHOUL2MODEL:
-            return 0;
+            return G2API_InitGhoul2Model(VMA(1), (const char*)VMA(2), args[3], args[4]);
         case LEGACY_G_G2_ADDBOLT:
+			// CGame / UI syscall, not used in the server.
             return 0;
         case LEGACY_G_G2_SETBOLTINFO:
+			// Cgame / UI syscall, not used in the server.
             return 0;
         case LEGACY_G_G2_ANGLEOVERRIDE:
+            // BG syscall.
+			G2API_SetBoneAngles(VMA(1), VMA(2), VMA(3), args[4], args[5], args[6], args[7]); // has 3 more args which are ignored.
             return 0;
         case LEGACY_G_G2_PLAYANIM:
+			G2API_SetBoneAnim(VMA(1), VMA(3), args[4], args[5], args[6], args[7], args[9]); // arg2 and arg8 are ignored.
             return 0;
         case LEGACY_G_G2_GETGLANAME:
+            // Not used.
             return 0;
         case LEGACY_G_G2_COPYGHOUL2INSTANCE:
+            // Not used.
             return 0;
         case LEGACY_G_G2_COPYSPECIFICGHOUL2MODEL:
+			// CGame syscall, not used in the server.
             return 0;
         case LEGACY_G_G2_DUPLICATEGHOUL2INSTANCE:
+			// CGame syscall, not used in the server.
             return 0;
         case LEGACY_G_G2_REMOVEGHOUL2MODEL:
-            return 0;
         case LEGACY_G_G2_CLEANMODELS:
-            return 0;
-        case LEGACY_G_GP_PARSE:
-            return 0;
+            return G2API_RemoveGhoul2Model(VMA(1));
+
+        // CGenericParser
+        case LEGACY_G_GP_PARSE: {
+            void* gp = GP_Parse(VMA(1));
+            // Return QVM-accessible pointer
+            return (intptr_t)gp;
+        }
+            
         case LEGACY_G_GP_PARSE_FILE:
-            return 0;
+        {
+            void* gp = GP_ParseFile((const char*)VMA(1));
+            // Return QVM-accessible pointer
+            return (intptr_t)gp;
+        }
         case LEGACY_G_GP_CLEAN:
+			Com_Printf("G_GP_CLEAN called\r\n");
+            GP_Clean((TGenericParser2)args[1]);
             return 0;
         case LEGACY_G_GP_DELETE:
-            return 0;
+            {
+            //Cbuf_ExecuteText(EXEC_NOW, "meminfo");
+                TGenericParser2 ptr = (TGenericParser2)VM_ArgPtr((intptr_t)args[1]);
+                //assert(0);
+                GP_Delete(args[1]);
+                return 0;
+            }
+
         case LEGACY_G_GP_GET_BASE_PARSE_GROUP:
-            return 0;
+        {
+            TGenericParser2 ptr = (TGenericParser2)VM_ArgPtr((intptr_t)args[1]);
+            void* group = GP_GetBaseParseGroup(ptr);
+            return (intptr_t)VM_ArgPtr((intptr_t)group);
+        }
+
+        // GPG (TGPGroup) calls
         case LEGACY_G_GPG_GET_NAME:
-            return 0;
+            return GPG_GetName((TGPGroup)VM_ArgPtr((intptr_t)args[1]), VMA(2), -1);
+
         case LEGACY_G_GPG_GET_NEXT:
-            return 0;
+        {
+            TGPGroup ptr = (TGPGroup)VM_ArgPtr((intptr_t)args[1]);
+            return (intptr_t)VM_ArgPtr((intptr_t)GPG_GetNext(ptr));
+        }
         case LEGACY_G_GPG_GET_INORDER_NEXT:
-            return 0;
+        {
+            TGPGroup ptr = (TGPGroup)VM_ArgPtr((intptr_t)args[1]);
+            return (intptr_t)VM_ArgPtr((intptr_t)GPG_GetInOrderNext(ptr));
+        }
         case LEGACY_G_GPG_GET_INORDER_PREVIOUS:
-            return 0;
+        {
+            TGPGroup ptr = (TGPGroup)VM_ArgPtr((intptr_t)args[1]);
+            return (intptr_t)VM_ArgPtr((intptr_t)GPG_GetInOrderPrevious(ptr));
+        }
         case LEGACY_G_GPG_GET_PAIRS:
-            return 0;
+        {
+            TGPGroup ptr = (TGPGroup)VM_ArgPtr((intptr_t)args[1]);
+            return (intptr_t)VM_ArgPtr((intptr_t)GPG_GetPairs(ptr));
+        }
         case LEGACY_G_GPG_GET_INORDER_PAIRS:
-            return 0;
+        {
+            TGPGroup ptr = (TGPGroup)VM_ArgPtr((intptr_t)args[1]);
+            return (intptr_t)VM_ArgPtr((intptr_t)GPG_GetInOrderPairs(ptr));
+        }
         case LEGACY_G_GPG_GET_SUBGROUPS:
-            return 0;
+        {
+            TGPGroup ptr = (TGPGroup)VM_ArgPtr((intptr_t)args[1]);
+            return (intptr_t)VM_ArgPtr((intptr_t)GPG_GetSubGroups(ptr));
+        }
         case LEGACY_G_GPG_GET_INORDER_SUBGROUPS:
-            return 0;
+        {
+            TGPGroup ptr = (TGPGroup)VM_ArgPtr((intptr_t)args[1]);
+            return (intptr_t)VM_ArgPtr((intptr_t)GPG_GetInOrderSubGroups(ptr));
+        }
         case LEGACY_G_GPG_FIND_SUBGROUP:
-            return 0;
+        {
+            TGPGroup ptr = (TGPGroup)VM_ArgPtr((intptr_t)args[1]);
+            return (intptr_t)VM_ArgPtr((intptr_t)GPG_FindSubGroup(ptr, VMA(2)));
+        }
         case LEGACY_G_GPG_FIND_PAIR:
-            return 0;
+        {
+            TGPGroup ptr = (TGPGroup)VM_ArgPtr((intptr_t)VMA(1));
+            return (intptr_t)VM_ArgPtr((intptr_t)GPG_FindPair(ptr, VMA(2)));
+        }
         case LEGACY_G_GPG_FIND_PAIRVALUE:
+        {
+            GPG_FindPairValue(VMA(1), VMA(2), VMA(3), VMA(4), -1);
             return 0;
+        }
+
+        // GPV (TGPValue) calls
         case LEGACY_G_GPV_GET_NAME:
-            return 0;
+            return GPV_GetName((TGPValue)VM_ArgPtr((intptr_t)args[1]), VMA(2), -1);
+
         case LEGACY_G_GPV_GET_NEXT:
-            return 0;
+        {
+            TGPValue ptr = (TGPValue)VM_ArgPtr((intptr_t)args[1]);
+            return (intptr_t)VM_ArgPtr((intptr_t)GPV_GetNext(ptr));
+        }
         case LEGACY_G_GPV_GET_INORDER_NEXT:
-            return 0;
+        {
+            TGPValue ptr = (TGPValue)VM_ArgPtr((intptr_t)args[1]);
+            return (intptr_t)VM_ArgPtr((intptr_t)GPV_GetInOrderNext(ptr));
+        }
         case LEGACY_G_GPV_GET_INORDER_PREVIOUS:
-            return 0;
+        {
+            TGPValue ptr = (TGPValue)VM_ArgPtr((intptr_t)args[1]);
+            return (intptr_t)VM_ArgPtr((intptr_t)GPV_GetInOrderPrevious(ptr));
+        }
         case LEGACY_G_GPV_IS_LIST:
-            return 0;
+            return GPV_IsList((TGPValue)VM_ArgPtr((intptr_t)args[1]));
         case LEGACY_G_GPV_GET_TOP_VALUE:
-            return 0;
+            return GPV_GetTopValue((TGPValue)VM_ArgPtr((intptr_t)args[1]), VMA(2), -1);
         case LEGACY_G_GPV_GET_LIST:
-            return 0;
+        {
+            TGPValue ptr = (TGPValue)VM_ArgPtr((intptr_t)args[1]);
+            return (intptr_t)VM_ArgPtr((intptr_t)GPV_GetList(ptr));
+        }
+
         case LEGACY_G_CM_REGISTER_TERRAIN:
             return 0;
         case LEGACY_G_GET_MODEL_FORMALNAME:
             return 0;
+
+        // Memory management
+        // In SoF2Plus, memory management is actually handled by the game module, but QVM expects them to be managed by the engine module.
         case LEGACY_G_VM_LOCALALLOC:
-            return 0;
+        {
+            if (!qvmMemoryInitialized) {
+                SV_InitQvmMemory();
+            }
+
+            return (intptr_t)SV_QVM_Alloc(args[1]);
+        }
         case LEGACY_G_VM_LOCALALLOCUNALIGNED:
-            return 0;
+        {
+            if (!qvmMemoryInitialized) {
+                SV_InitQvmMemory();
+            }
+
+			return (intptr_t)SV_QVM_AllocUnaligned(args[1]);
+        }
         case LEGACY_G_VM_LOCALTEMPALLOC:
-            return 0;
+        {
+            if (!qvmMemoryInitialized) {
+                SV_InitQvmMemory();
+            }
+
+			return (intptr_t)SV_QVM_TempAlloc(args[1]);
+        }
         case LEGACY_G_VM_LOCALTEMPFREE:
+        {
+            if (!qvmMemoryInitialized) {
+                SV_InitQvmMemory();
+            }
+
+			SV_QVM_TempFree(args[1]);
             return 0;
+        }
         case LEGACY_G_VM_LOCALSTRINGALLOC:
-            return 0;
+        {
+            if (!qvmMemoryInitialized) {
+                SV_InitQvmMemory();
+            }
+
+			return SV_QVM_StringAlloc((const char*)VMA(1));
+        }
+
+		// End memory management
+
         case LEGACY_G_G2_COLLISIONDETECT:
             return 0;
         case LEGACY_G_G2_REGISTERSKIN:
@@ -913,13 +1283,16 @@ intptr_t SV_GameSystemCalls(qboolean runningQVM, intptr_t *args ) {
         case LEGACY_G_G2_GETANIMFILENAMEINDEX:
             return 0;
         case LEGACY_G_GT_INIT:
+            SV_GT_Init((const char*)VMA(1), args[2]);
             return 0;
         case LEGACY_G_GT_RUNFRAME:
+            SV_GT_RunFrame(args[1]);
             return 0;
         case LEGACY_G_GT_START:
+            SV_GT_Start(args[1]);
             return 0;
         case LEGACY_G_GT_SENDEVENT:
-            return 0;
+            return SV_GT_SendEvent(args[1], args[2], args[3], args[4], args[5], args[6], args[7]);
 
         default:
             Com_Error(ERR_DROP, "Bad game system trap: %ld", (long int)args[0]);
@@ -1619,6 +1992,12 @@ void SV_ShutdownGameProgs( void ) {
     }
     VM_Call( gvm, GAME_GHOUL_SHUTDOWN, qfalse );
     VM_Call( gvm, GAME_SHUTDOWN, qfalse );
+
+    // Free the QVM memory
+    if (qvmMemoryInitialized) {
+        SV_FreeQvmMemory();
+    }
+
     VM_Free( gvm );
     gvm = NULL;
 }

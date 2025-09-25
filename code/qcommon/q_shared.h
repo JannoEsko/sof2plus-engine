@@ -665,6 +665,17 @@ typedef enum {
 } fsMode_t;
 
 typedef enum {
+    LEGACY_FS_READ,
+    LEGACY_FS_WRITE,
+    LEGACY_FS_APPEND,
+    LEGACY_FS_APPEND_SYNC,
+    LEGACY_FS_READ_TEXT,
+    LEGACY_FS_WRITE_TEXT,
+    LEGACY_FS_APPEND_TEXT,
+    LEGACY_FS_APPEND_SYNC_TEXT
+} legacyFsMode_t;
+
+typedef enum {
     FS_SEEK_CUR,
     FS_SEEK_END,
     FS_SEEK_SET

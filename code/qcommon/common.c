@@ -277,6 +277,11 @@ void QDECL Com_Error( int code, const char *fmt, ... ) {
     static int  gracefulErrorCount = 0;
     static qboolean inGracefulRecovery = qfalse;
 
+#ifdef _CRASH_ON_ERR
+    volatile int* zero = (volatile int*)0;;
+	*zero = 0;
+#endif
+
     if(com_errorEntered)
         Sys_Error("recursive error after: %s", com_errorMessage);
 
