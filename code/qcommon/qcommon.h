@@ -348,7 +348,22 @@ static ID_INLINE float _vmf(intptr_t x)
 }
 #define VMF(x)  _vmf(args[x])
 
+// VMMEM
 
+char *QVM_Local_StringAlloc ( const char *source );
+void QVM_Local_TempFree( int size );
+void *QVM_Local_TempAlloc( int size );
+void *QVM_Local_AllocUnaligned ( int size );
+void *QVM_Local_Alloc ( int size );
+
+// VM pointer marshalling shenanigans
+#define QVMPTR_MAX_PTRS 1024
+#define QVMPTR_INVALID_HANDLE 0
+void        qvmPtr_init(void);
+intptr_t    qvmPtr_register(intptr_t ptr);
+intptr_t    qvmPtr_resolve(intptr_t handle);
+intptr_t    qvmPtr_remove(intptr_t handle);
+void qvmPtr_show(void);
 /*
 ==============================================================
 

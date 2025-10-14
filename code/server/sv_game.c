@@ -387,158 +387,7 @@ static int  FloatAsInt( float f ) {
     return fi.i;
 }
 
-// QVM memory management, reusing the logic in SoF2Plus
-static qboolean qvmMemoryInitialized = qfalse;
-static char* qvmMemoryPool;
-#define QVM_MEMORY_POOL_SIZE  (4098 * 1024) // 2 MB, same as in SoF2Plus SDK
-static int qvmPoolSize;
-static int qvmPoolTail;
-
-static void SV_InitQvmMemory() {
-	qvmMemoryInitialized = qtrue;
-	qvmMemoryPool = Z_TagMalloc(QVM_MEMORY_POOL_SIZE, TAG_GAMEMEM);
-	Com_Memset(qvmMemoryPool, 0, QVM_MEMORY_POOL_SIZE);
-    qvmPoolSize = 0;
-    qvmPoolTail = QVM_MEMORY_POOL_SIZE;
-
-}
-
-static void SV_FreeQvmMemory() {
-    Z_FreeTags(TAG_GAMEMEM);
-	qvmMemoryInitialized = qfalse;
-    qvmPoolSize = 0;
-    qvmPoolTail = 0;
-}
-
-// Following functions are taken as-is from SoF2Plus Game SDK.
-/*
-==================
-G_Alloc
-
-Aligns memory pool pointer, then
-allocates the memory from the
-pool if it is available.
-==================
-*/
-
-static void* SV_QVM_Alloc(int size)
-{
-    // Align the memory pool (4 byte alignment).
-    qvmPoolSize = ((qvmPoolSize + 0x00000003) & 0xfffffffc);
-
-    // Check if we have enough memory left in our pool.
-    if (qvmPoolSize + size > qvmPoolTail) {
-        Com_Error(ERR_DROP, "SV_QVM_Alloc: buffer exceeded tail (%d > %d)", qvmPoolSize + size, qvmPoolTail);
-        return 0;
-    }
-
-    // Set new pool size.
-    qvmPoolSize += size;
-
-    // Return index pointer to the memory pool.
-    return &qvmMemoryPool[qvmPoolSize - size];
-}
-
-/*
-==================
-G_AllocUnaligned
-
-Allocates the memory from the
-pool if it is available,
-without alignment.
-==================
-*/
-
-static void* SV_QVM_AllocUnaligned(int size)
-{
-    // Check if we have enough memory left in our pool.
-    if (qvmPoolSize + size > qvmPoolTail) {
-        Com_Error(ERR_DROP, "SV_QVM_AllocUnaligned: buffer exceeded tail (%d > %d)", qvmPoolSize + size, qvmPoolTail);
-        return 0;
-    }
-
-    // Set new pool size.
-    qvmPoolSize += size;
-
-    // Return index pointer to the memory pool.
-    return &qvmMemoryPool[qvmPoolSize - size];
-}
-
-/*
-==================
-G_TempAlloc
-
-Aligns the requested size, then
-reserves the temporary memory
-from the pool if there is
-enough space available.
-==================
-*/
-
-static void* SV_QVM_TempAlloc(int size)
-{
-    // 4-byte align the specified size.
-    size = ((size + 0x00000003) & 0xfffffffc);
-
-    // Check if there is enough free space available in the pool.
-    if (qvmPoolTail - size < qvmPoolSize) {
-        Com_Error(ERR_DROP, "SV_QVM_TempAlloc: buffer exceeded head (%d > %d)", qvmPoolTail - size, qvmPoolSize);
-        return 0;
-    }
-
-    // Make sure we cannot use this temporary memory for regular G_Alloc* allocations.
-    qvmPoolTail -= size;
-
-    // Return index pointer to the memory pool.
-    return &qvmMemoryPool[qvmPoolTail];
-}
-
-/*
-==================
-G_TempFree
-
-Aligns the requested size, then
-puts back the reserved temporary
-memory.
-
-NOTE: Free must be in opposite
-order of allocation.
-==================
-*/
-
-static void SV_QVM_TempFree(int size)
-{
-    // 4-byte align the specified size.
-    size = ((size + 0x00000003) & 0xfffffffc);
-
-    // Check if we're not putting back more memory then initially allocated.
-    if (qvmPoolTail + size > QVM_MEMORY_POOL_SIZE) {
-        Com_Error(ERR_DROP, "SV_QVM_TempFree: tail greater than size (%d > %d)", qvmPoolTail + size, QVM_MEMORY_POOL_SIZE);
-    }
-
-    // We can use this memory again in our regular memory pool operations.
-    qvmPoolTail += size;
-}
-
-/*
-==================
-G_StringAlloc
-
-Allocates memory from the pool
-for the specified source
-string. Returns a copy of the
-source in the newly allocated
-memory.
-==================
-*/
-
-static char* SV_QVM_StringAlloc(const char* source)
-{
-    char* dest = (char*)SV_QVM_Alloc(strlen(source) + 1);
-    char* localDest = (char*)VM_ArgPtr((int)dest);
-    strcpy(localDest, source);
-    return dest;
-}
+static qboolean qvmPointerMarshallingInitialized = qfalse;
 
 /*
 ====================
@@ -550,6 +399,12 @@ The module is making a system call
 intptr_t SV_GameSystemCalls(qboolean runningQVM, intptr_t *args ) {
 
     if (runningQVM) {
+
+        if (!qvmPointerMarshallingInitialized) {
+            qvmPtr_init();
+            qvmPointerMarshallingInitialized = qtrue;
+        }
+
         switch (args[0]) {
         case LEGACY_G_PRINT:
             Com_Printf("%s", (const char*)VMA(1));
@@ -757,6 +612,7 @@ intptr_t SV_GameSystemCalls(qboolean runningQVM, intptr_t *args ) {
         case LEGACY_G_FLOOR:
             return FloatAsInt(floor(VMF(1)));
         case LEGACY_G_CEIL:
+            Com_Printf("rly? %.02f\r\n", VMF(1));
             return FloatAsInt(ceil(VMF(1)));
         case LEGACY_G_TESTPRINTINT:
             Com_DPrintf("Testprintint - not implemented");
@@ -775,25 +631,25 @@ intptr_t SV_GameSystemCalls(qboolean runningQVM, intptr_t *args ) {
 
 		// Botlib calls
         case LEGACY_BOTLIB_SETUP:
-            return 0;
+                return SV_BotLibSetup();
         case LEGACY_BOTLIB_SHUTDOWN:
-            return 0;
+                return SV_BotLibShutdown();
         case LEGACY_BOTLIB_LIBVAR_SET:
-            return 0;
+                return botlib_export->BotLibVarSet( VMA(1), VMA(2) );
         case LEGACY_BOTLIB_LIBVAR_GET:
-            return 0;
+                return botlib_export->BotLibVarGet( VMA(1), VMA(2), args[3] );
         case LEGACY_BOTLIB_PC_ADD_GLOBAL_DEFINE:
-            return 0;
+                return botlib_export->PC_AddGlobalDefine( VMA(1) );
         case LEGACY_BOTLIB_START_FRAME:
-            return 0;
+                return botlib_export->BotLibStartFrame( VMF(1) );
         case LEGACY_BOTLIB_LOAD_MAP:
-            return 0;
+                return botlib_export->BotLibLoadMap( VMA(1) );
         case LEGACY_BOTLIB_UPDATENTITY:
-            return 0;
+                return botlib_export->BotLibUpdateEntity( args[1], VMA(2) );
         case LEGACY_BOTLIB_TEST:
             return 0;
         case LEGACY_BOTLIB_GET_SNAPSHOT_ENTITY:
-            return 0;
+                return SV_BotGetSnapshotEntity( args[1], args[2] );
         case LEGACY_BOTLIB_GET_CONSOLE_MESSAGE:
             return 0;
         case LEGACY_BOTLIB_USER_COMMAND:
@@ -1043,15 +899,15 @@ intptr_t SV_GameSystemCalls(qboolean runningQVM, intptr_t *args ) {
         case LEGACY_BOTLIB_AAS_PREDICT_ROUTE:
             return 0;
         case LEGACY_BOTLIB_AAS_POINT_REACHABILITY_AREA_INDEX:
-            return 0;
+                return botlib_export->aas.AAS_PointReachabilityAreaIndex( VMA(1) );
         case LEGACY_BOTLIB_PC_LOAD_SOURCE:
-            return 0;
+                return botlib_export->PC_LoadSourceHandle( VMA(1) );
         case LEGACY_BOTLIB_PC_FREE_SOURCE:
-            return 0;
+                return botlib_export->PC_FreeSourceHandle( args[1] );
         case LEGACY_BOTLIB_PC_READ_TOKEN:
-            return 0;
+                return botlib_export->PC_ReadTokenHandle( args[1], VMA(2) );
         case LEGACY_BOTLIB_PC_SOURCE_FILE_AND_LINE:
-            return 0;
+                return botlib_export->PC_SourceFileAndLine( args[1], VMA(2), VMA(3) );
         case LEGACY_BOTLIB_PC_LOAD_GLOBAL_DEFINES:
             return 0;
         case LEGACY_BOTLIB_PC_REMOVE_ALL_GLOBAL_DEFINES:
@@ -1061,10 +917,12 @@ intptr_t SV_GameSystemCalls(qboolean runningQVM, intptr_t *args ) {
 		// Ghoul2 Insert Start
         // NB - Ghoul2 calls are most likely different to vanilla SoF2.
         case LEGACY_G_G2_LISTBONES:
-            G2API_ListBones(VMA(1)); // arg2 frame ignored, but also NB - vanilla SDK does not call this function.
+            //G2API_ListBones(VMA(1)); // arg2 frame ignored, but also NB - vanilla SDK does not call this function.
+                Com_Printf("G_G2_LISTBONES: Not implemented!\r\n");
             return 0;
         case LEGACY_G_G2_LISTSURFACES:
-            G2API_ListSurfaces(VMA(1));
+                Com_Printf("G_G2_LISTSURFACES: Not implemented!\r\n");
+            //G2API_ListSurfaces(VMA(1));
             return 0;
         case LEGACY_G_G2_HAVEWEGHOULMODELS:
 			// CGame syscall, not used in the server.
@@ -1075,21 +933,73 @@ intptr_t SV_GameSystemCalls(qboolean runningQVM, intptr_t *args ) {
         case LEGACY_G_G2_GETBOLT:
 			// CGame syscall, not used in the server.
             return 0;
-        case LEGACY_G_G2_INITGHOUL2MODEL:
-            return G2API_InitGhoul2Model(VMA(1), (const char*)VMA(2), args[3], args[4]);
+        case LEGACY_G_G2_INITGHOUL2MODEL: {
+                // CGhoul2Model_t **modelPtr
+            //return 0;
+            uint32_t *vm_handle32 = (uint32_t *)VMA(1);
+            const char *fileName = (const char *)VMA(2);
+            CGhoul2Model_t *modelPtr = NULL;
+
+            if (!vm_handle32) {
+                Com_DPrintf("G_G2_INITGHOUL2MODEL: VMA(1) is NULL\n");
+                return qfalse;
+            }
+
+            // create the model (engine pointer)
+            qboolean ok = G2API_InitGhoul2Model(&modelPtr, fileName, args[4], args[7]);
+            if (!ok || !modelPtr) {
+                *vm_handle32 = 0;
+                Com_DPrintf("G_G2_INITGHOUL2MODEL: !ok || !modelPtr\n");
+                return qfalse;
+            }
+
+            // register returns an intptr_t or int index; store only the low 32 bits into VM
+            intptr_t reg = qvmPtr_register((intptr_t)modelPtr);
+            if (reg == QVMPTR_INVALID_HANDLE) {
+                // registration failed: free model if necessary
+                Com_DPrintf("G_G2_INITGHOUL2MODEL: qvmPtr_register failed\n");
+                // optionally cleanup model here...
+                *vm_handle32 = 0;
+                return qfalse;
+            }
+
+            uint32_t handle32 = (uint32_t)reg; // keep only 32 bits
+            *vm_handle32 = handle32;           // write 32-bit handle into VM memory
+
+            Com_Printf("G_G2_INITGHOUL2MODEL: model=%p handle=%u vm_ptr=%p\n",
+                       (void*)modelPtr, handle32, (void*)vm_handle32);
+
+            return qtrue;
+        }
         case LEGACY_G_G2_ADDBOLT:
 			// CGame / UI syscall, not used in the server.
             return 0;
         case LEGACY_G_G2_SETBOLTINFO:
 			// Cgame / UI syscall, not used in the server.
             return 0;
-        case LEGACY_G_G2_ANGLEOVERRIDE:
+        case LEGACY_G_G2_ANGLEOVERRIDE: {
             // BG syscall.
-			G2API_SetBoneAngles(VMA(1), VMA(2), VMA(3), args[4], args[5], args[6], args[7]); // has 3 more args which are ignored.
-            return 0;
-        case LEGACY_G_G2_PLAYANIM:
-			G2API_SetBoneAnim(VMA(1), VMA(3), args[4], args[5], args[6], args[7], args[9]); // arg2 and arg8 are ignored.
-            return 0;
+            //return 0;
+                uint32_t handle = (uint32_t)args[1];
+                CGhoul2Model_t *model = (CGhoul2Model_t *)qvmPtr_resolve(handle);
+                if (!model) {
+                    Com_DPrintf("LEGACY_G_G2_ANGLEOVERRIDE: ptr not resolved.\r\n");
+                    return 0;
+                }
+			    G2API_SetBoneAngles(model, VMA(2), VMA(3), args[4], args[5], args[6], args[7]); // has 3 more args which are ignored.
+                return 0;
+            }
+        case LEGACY_G_G2_PLAYANIM: {
+            //return 0;
+                uint32_t handle = (uint32_t)args[1];
+                CGhoul2Model_t *model = (CGhoul2Model_t *)qvmPtr_resolve(handle);
+                if (!model) {
+                    Com_DPrintf("LEGACY_G_G2_PLAYANIM: ptr not resolved.\r\n");
+                    return 0;
+                }
+			    G2API_SetBoneAnim(model, VMA(3), args[4], args[5], args[6], args[7], args[9]); // arg2 and arg8 are ignored.
+                return 0;
+            }
         case LEGACY_G_G2_GETGLANAME:
             // Not used.
             return 0;
@@ -1103,185 +1013,234 @@ intptr_t SV_GameSystemCalls(qboolean runningQVM, intptr_t *args ) {
 			// CGame syscall, not used in the server.
             return 0;
         case LEGACY_G_G2_REMOVEGHOUL2MODEL:
-        case LEGACY_G_G2_CLEANMODELS:
-            return G2API_RemoveGhoul2Model(VMA(1));
+        case LEGACY_G_G2_CLEANMODELS: {
+            //return 0;
+            uint32_t *vm_handle_ptr = (uint32_t *)VMA(1);
+            if (!vm_handle_ptr) return qfalse;
+
+            uint32_t handle = *vm_handle_ptr;
+            if (!handle) return qfalse;
+
+            CGhoul2Model_t *model = (CGhoul2Model_t *)qvmPtr_resolve(handle);
+            if (!model) {
+                Com_DPrintf("LEGACY_G_G2_REMOVEGHOUL2MODEL: ptr not resolved.\r\n");
+                return qfalse;
+            }
+            // Use a local pointer-to-pointer to avoid writing into VM memory
+            CGhoul2Model_t *local_model = model;
+
+            // Remove handle from table and zero VM memory BEFORE or AFTER call depending on semantics.
+            // It's safer to remove after G2API_RemoveGhoul2Model if that function expects the pointer still to be resolvable.
+            // Example: call delete first, then remove and zero VM mem:
+            qboolean result = G2API_RemoveGhoul2Model(&local_model);
+
+            // Now free handle slot and clear VM variable
+            qvmPtr_remove(handle);
+            *vm_handle_ptr = 0;
+        }
 
         // CGenericParser
         case LEGACY_G_GP_PARSE: {
-            void* gp = GP_Parse(VMA(1));
+            //void* gp = GP_Parse(VMA(1));
             // Return QVM-accessible pointer
-            return (intptr_t)gp;
+            //TGenericParser2 gp = GP_Parse(VMA(1));
+            //Com_Printf("GP_Parse: Ptr %p - %p\r\n", gp, (intptr_t)gp);
+            //qvmPtr_show();
+            //return qvmPtr_register((intptr_t)gp);
+            //return gp;
+            return (intptr_t)GP_Parse(VMA(1));
+            // Actually seems to never be called.
         }
             
         case LEGACY_G_GP_PARSE_FILE:
         {
-            void* gp = GP_ParseFile((const char*)VMA(1));
-            // Return QVM-accessible pointer
-            return (intptr_t)gp;
+            /*TGenericParser2 gp = GP_ParseFile((const char*)VMA(1));
+            Com_Printf("GP_ParseFile %s [ptr %p]\n", VMA(1), gp);
+
+            // Register engine pointer and return a 32-bit handle to VM
+            intptr_t handle = qvmPtr_register((intptr_t)gp);
+
+            // Cast handle to 32-bit and write into VM memory
+            uint32_t *vm_handle32 = (uint32_t *)VMA(1);
+            *vm_handle32 = (uint32_t)handle;
+
+            //return handle; // optional: engine may also return it
+            return gp;*/
+            //return (intptr_t)GP_ParseFile((const char*)VMA(1));
+            return qvmPtr_register((intptr_t)GP_ParseFile(VMA(1)));
         }
         case LEGACY_G_GP_CLEAN:
 			Com_Printf("G_GP_CLEAN called\r\n");
+                //qvmPtr_show();
+            //GP_Clean((TGenericParser2)qvmPtr_resolve((intptr_t)VMA(1)));
             GP_Clean((TGenericParser2)args[1]);
             return 0;
         case LEGACY_G_GP_DELETE:
-            {
-            //Cbuf_ExecuteText(EXEC_NOW, "meminfo");
-                TGenericParser2 ptr = (TGenericParser2)VM_ArgPtr((intptr_t)args[1]);
-                //assert(0);
-                GP_Delete(args[1]);
-                return 0;
-            }
+        {
+            //qvmPtr_show();
+            /*uint32_t* vm_handle32 = (uint32_t*)VMA(1);
+            uint32_t handle32 = *vm_handle32;
+
+            Com_Printf("VMA: %d [%p], hand %d [%p], han32 %d [%p - %p - %p - %p]\r\n", VMA(1), VMA(1), vm_handle32, vm_handle32, handle32, handle32, &handle32, *(&handle32));
+
+            if (!handle32) return 0;
+
+            TGenericParser2 gp = (TGenericParser2)qvmPtr_resolve((intptr_t)handle32);
+
+                GP_Delete(args[1]);                 // pointer-to-pointer
+
+            // zero the VM memory safely
+            *vm_handle32 = 0;
+            qvmPtr_remove((intptr_t)handle32);*/
+            uint32_t* vmhandle = (uint32_t*)VMA(1);
+            intptr_t inthandle = (intptr_t)*vmhandle;
+            Com_Printf("G_GP_Delete with args %lld [%p] vma %lld [%p], gp2 %lld [%p], tmp %lld [%p]\r\n", args[1], args[1], VMA(1), VMA(1), vmhandle, vmhandle, inthandle, inthandle);
+            TGenericParser2 gp2 = (TGenericParser2)qvmPtr_resolve(inthandle);
+
+            GP_Delete((TGenericParser2)&gp2);
+            //qvmPtr_remove(*(VMA(1)));
+            return 0;
+        }
 
         case LEGACY_G_GP_GET_BASE_PARSE_GROUP:
-        {
-            TGenericParser2 ptr = (TGenericParser2)VM_ArgPtr((intptr_t)args[1]);
-            void* group = GP_GetBaseParseGroup(ptr);
-            return (intptr_t)VM_ArgPtr((intptr_t)group);
-        }
+                /*uint32_t* vm_handle32 = (uint32_t*)VMA(1);
+                uint32_t handle32 = *vm_handle32;
 
-        // GPG (TGPGroup) calls
+                TGenericParser2 gp = (TGenericParser2)qvmPtr_resolve((intptr_t)handle32);
+                if (!gp) {
+                    Com_Printf("qvmPtr_resolve: handle %u not resolved..\n", handle32);
+                    return 0;
+                }
+                */
+                return ((intptr_t)GP_GetBaseParseGroup((TGenericParser2)qvmPtr_resolve((intptr_t)args[1])));
+
+            // CGPGroup (void *) routines
         case LEGACY_G_GPG_GET_NAME:
-            return GPG_GetName((TGPGroup)VM_ArgPtr((intptr_t)args[1]), VMA(2), -1);
-
+            return (intptr_t)GPG_GetName((TGPGroup)(args[1]), VMA(2), -1);
         case LEGACY_G_GPG_GET_NEXT:
-        {
-            TGPGroup ptr = (TGPGroup)VM_ArgPtr((intptr_t)args[1]);
-            return (intptr_t)VM_ArgPtr((intptr_t)GPG_GetNext(ptr));
-        }
+            return ((intptr_t)GPG_GetNext((TGPGroup)(args[1])));
         case LEGACY_G_GPG_GET_INORDER_NEXT:
-        {
-            TGPGroup ptr = (TGPGroup)VM_ArgPtr((intptr_t)args[1]);
-            return (intptr_t)VM_ArgPtr((intptr_t)GPG_GetInOrderNext(ptr));
-        }
+            return ((intptr_t)GPG_GetInOrderNext((TGPGroup)(args[1])));
         case LEGACY_G_GPG_GET_INORDER_PREVIOUS:
-        {
-            TGPGroup ptr = (TGPGroup)VM_ArgPtr((intptr_t)args[1]);
-            return (intptr_t)VM_ArgPtr((intptr_t)GPG_GetInOrderPrevious(ptr));
-        }
+            return ((intptr_t)GPG_GetInOrderPrevious((TGPGroup)(args[1])));
         case LEGACY_G_GPG_GET_PAIRS:
-        {
-            TGPGroup ptr = (TGPGroup)VM_ArgPtr((intptr_t)args[1]);
-            return (intptr_t)VM_ArgPtr((intptr_t)GPG_GetPairs(ptr));
-        }
+            return ((intptr_t)GPG_GetPairs((TGPGroup)(args[1])));
         case LEGACY_G_GPG_GET_INORDER_PAIRS:
-        {
-            TGPGroup ptr = (TGPGroup)VM_ArgPtr((intptr_t)args[1]);
-            return (intptr_t)VM_ArgPtr((intptr_t)GPG_GetInOrderPairs(ptr));
-        }
+            return ((intptr_t)GPG_GetInOrderPairs((TGPGroup)(args[1])));
         case LEGACY_G_GPG_GET_SUBGROUPS:
-        {
-            TGPGroup ptr = (TGPGroup)VM_ArgPtr((intptr_t)args[1]);
-            return (intptr_t)VM_ArgPtr((intptr_t)GPG_GetSubGroups(ptr));
-        }
+            return ((intptr_t)GPG_GetSubGroups((TGPGroup)(args[1])));
         case LEGACY_G_GPG_GET_INORDER_SUBGROUPS:
-        {
-            TGPGroup ptr = (TGPGroup)VM_ArgPtr((intptr_t)args[1]);
-            return (intptr_t)VM_ArgPtr((intptr_t)GPG_GetInOrderSubGroups(ptr));
-        }
+            return ((intptr_t)GPG_GetInOrderSubGroups((TGPGroup)(args[1])));
         case LEGACY_G_GPG_FIND_SUBGROUP:
-        {
-            TGPGroup ptr = (TGPGroup)VM_ArgPtr((intptr_t)args[1]);
-            return (intptr_t)VM_ArgPtr((intptr_t)GPG_FindSubGroup(ptr, VMA(2)));
-        }
+            return ((intptr_t)GPG_FindSubGroup((TGPGroup)(args[1]), VMA(2)));
         case LEGACY_G_GPG_FIND_PAIR:
-        {
-            TGPGroup ptr = (TGPGroup)VM_ArgPtr((intptr_t)VMA(1));
-            return (intptr_t)VM_ArgPtr((intptr_t)GPG_FindPair(ptr, VMA(2)));
-        }
+            return ((intptr_t)GPG_FindPair((TGPGroup)(args[1]), VMA(2)));
         case LEGACY_G_GPG_FIND_PAIRVALUE:
-        {
-            GPG_FindPairValue(VMA(1), VMA(2), VMA(3), VMA(4), -1);
+            GPG_FindPairValue((TGPGroup)(args[1]), VMA(2), VMA(3), VMA(4), -1);
             return 0;
-        }
 
-        // GPV (TGPValue) calls
+            // CGPValue (void *) routines
         case LEGACY_G_GPV_GET_NAME:
-            return GPV_GetName((TGPValue)VM_ArgPtr((intptr_t)args[1]), VMA(2), -1);
-
+            return GPV_GetName((TGPValue)(args[1]), VMA(2), -1);
         case LEGACY_G_GPV_GET_NEXT:
-        {
-            TGPValue ptr = (TGPValue)VM_ArgPtr((intptr_t)args[1]);
-            return (intptr_t)VM_ArgPtr((intptr_t)GPV_GetNext(ptr));
-        }
+            return ((intptr_t)GPV_GetNext((TGPValue)(args[1])));
         case LEGACY_G_GPV_GET_INORDER_NEXT:
-        {
-            TGPValue ptr = (TGPValue)VM_ArgPtr((intptr_t)args[1]);
-            return (intptr_t)VM_ArgPtr((intptr_t)GPV_GetInOrderNext(ptr));
-        }
+            return ((intptr_t)GPV_GetInOrderNext((TGPValue)(args[1])));
         case LEGACY_G_GPV_GET_INORDER_PREVIOUS:
-        {
-            TGPValue ptr = (TGPValue)VM_ArgPtr((intptr_t)args[1]);
-            return (intptr_t)VM_ArgPtr((intptr_t)GPV_GetInOrderPrevious(ptr));
-        }
+            return ((intptr_t)GPV_GetInOrderPrevious((TGPValue)(args[1])));
         case LEGACY_G_GPV_IS_LIST:
-            return GPV_IsList((TGPValue)VM_ArgPtr((intptr_t)args[1]));
+            return GPV_IsList((TGPValue)(args[1]));
         case LEGACY_G_GPV_GET_TOP_VALUE:
-            return GPV_GetTopValue((TGPValue)VM_ArgPtr((intptr_t)args[1]), VMA(2), -1);
+            return GPV_GetTopValue((TGPValue)(args[1]), VMA(2), -1);
         case LEGACY_G_GPV_GET_LIST:
-        {
-            TGPValue ptr = (TGPValue)VM_ArgPtr((intptr_t)args[1]);
-            return (intptr_t)VM_ArgPtr((intptr_t)GPV_GetList(ptr));
-        }
+            return ((intptr_t)GPV_GetList((TGPValue)(args[1])));
 
         case LEGACY_G_CM_REGISTER_TERRAIN:
-            return 0;
+            return CM_RegisterTerrain((const char*)VMA(1));
+
         case LEGACY_G_GET_MODEL_FORMALNAME:
+            // Doesn't seem to be used.
             return 0;
 
         // Memory management
         // In SoF2Plus, memory management is actually handled by the game module, but QVM expects them to be managed by the engine module.
         case LEGACY_G_VM_LOCALALLOC:
         {
-            if (!qvmMemoryInitialized) {
+            /*if (!qvmMemoryInitialized) {
                 SV_InitQvmMemory();
             }
 
-            return (intptr_t)SV_QVM_Alloc(args[1]);
+            return (intptr_t)SV_QVM_Alloc(args[1]);*/
+
+            return (intptr_t)QVM_Local_Alloc(args[1]);
         }
         case LEGACY_G_VM_LOCALALLOCUNALIGNED:
         {
-            if (!qvmMemoryInitialized) {
+            /*if (!qvmMemoryInitialized) {
                 SV_InitQvmMemory();
             }
 
-			return (intptr_t)SV_QVM_AllocUnaligned(args[1]);
+			return (intptr_t)SV_QVM_AllocUnaligned(args[1]);*/
+            return (intptr_t)QVM_Local_AllocUnaligned(args[1]);
         }
         case LEGACY_G_VM_LOCALTEMPALLOC:
         {
-            if (!qvmMemoryInitialized) {
+            /*if (!qvmMemoryInitialized) {
                 SV_InitQvmMemory();
             }
 
-			return (intptr_t)SV_QVM_TempAlloc(args[1]);
+			return (intptr_t)SV_QVM_TempAlloc(args[1]);*/
+            return (intptr_t)QVM_Local_TempAlloc(args[1]);
         }
         case LEGACY_G_VM_LOCALTEMPFREE:
         {
-            if (!qvmMemoryInitialized) {
+            /*if (!qvmMemoryInitialized) {
                 SV_InitQvmMemory();
             }
 
-			SV_QVM_TempFree(args[1]);
+			SV_QVM_TempFree(args[1]);*/
+            QVM_Local_TempFree(args[1]);
             return 0;
         }
         case LEGACY_G_VM_LOCALSTRINGALLOC:
         {
-            if (!qvmMemoryInitialized) {
+            /*if (!qvmMemoryInitialized) {
                 SV_InitQvmMemory();
             }
 
-			return SV_QVM_StringAlloc((const char*)VMA(1));
+			return SV_QVM_StringAlloc((const char*)VMA(1));*/
+            return (intptr_t)QVM_Local_StringAlloc((const char*)VMA(1));
         }
 
 		// End memory management
 
         case LEGACY_G_G2_COLLISIONDETECT:
+            G2API_CollisionDetect(VMA(1), VMA(2), (const float*)VMA(3), (const float*)VMA(4), args[5], args[6],
+                (float*)VMA(7), (float*)VMA(8), (float*)VMA(9), args[10], args[11]);
             return 0;
         case LEGACY_G_G2_REGISTERSKIN:
-            return 0;
-        case LEGACY_G_G2_SETSKIN:
-            return 0;
+            return G2API_RegisterSkin((const char*)VMA(1), args[2], (const char*)VMA(3));
+        case LEGACY_G_G2_SETSKIN: {
+            uint32_t handle = (uint32_t)args[1];
+            CGhoul2Model_t *model = (CGhoul2Model_t *)qvmPtr_resolve(handle);
+            if (!model) {
+                Com_DPrintf("LEGACY_G_G2_PLAYANIM: ptr not resolved.\r\n");
+                return 0;
+            }
+            return (intptr_t)G2API_SetSkin(model, args[3]);
+        }
+
         case LEGACY_G_G2_GETANIMFILENAMEINDEX:
-            return 0;
+            //Com_DPrintf("args0 %lld args1 maybe str? %s [%p] / [%d]\r\n", args[0], VMA(1), VMA(1), args[1]);
+        {
+            uint32_t handle = (uint32_t)args[1];
+            CGhoul2Model_t* model = (CGhoul2Model_t*)qvmPtr_resolve(handle);
+            if (!model) {
+                Com_DPrintf("LEGACY_G_G2_PLAYANIM: ptr not resolved.\r\n");
+                return 0;
+            }
+            return (intptr_t)G2API_GetAnimFileName(model, VMA(3), -1);
+        }
         case LEGACY_G_GT_INIT:
             SV_GT_Init((const char*)VMA(1), args[2]);
             return 0;

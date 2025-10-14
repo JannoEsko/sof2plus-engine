@@ -173,6 +173,10 @@ struct vm_s {
     int         dataMask;
 
     int            dataAlloc;            // actually allocated
+    int			localPoolStart;
+    int			localPoolSize;
+    int			localPoolTail;
+
 
     int            stackBottom;        // if programStack < stackBottom, error
 

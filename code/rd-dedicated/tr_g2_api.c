@@ -24,6 +24,57 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #include "tr_g2_local.h"
 
+// ====================================================
+// G2 Handle Marshalling (engine <-> QVM)
+// ====================================================
+
+#define MAX_G2_HANDLES 4096
+
+typedef struct {
+    intptr_t handle;
+    CGhoul2Model_t *ptr;
+} g2HandleEntry_t;
+
+static g2HandleEntry_t g2HandleTable[MAX_G2_HANDLES];
+
+static intptr_t g2HandleNext = 1;
+
+// ----------------------------------------------------
+// Register a new model and return handle
+// ----------------------------------------------------
+intptr_t G2ModelToHandle(CGhoul2Model_t *model) {
+    if (!model) return 0;
+
+    for (int i = 1; i < MAX_G2_HANDLES; i++) {
+        if (!g2HandleTable[i].ptr) {
+            g2HandleTable[i].ptr = model;
+            g2HandleTable[i].handle = g2HandleNext++;
+            if (g2HandleNext <= 0) g2HandleNext = 1;
+            return (intptr_t)i;
+        }
+    }
+
+    Com_Printf("G2ModelToHandle: table full!\n");
+    return 0;
+}
+
+// ----------------------------------------------------
+// Resolve handle to real pointer
+// ----------------------------------------------------
+CGhoul2Model_t *HandleToG2Model(intptr_t handle) {
+    if (handle <= 0 || handle >= MAX_G2_HANDLES) return NULL;
+    return g2HandleTable[handle].ptr;
+}
+
+// ----------------------------------------------------
+// Remove a model handle (when freeing it)
+// ----------------------------------------------------
+void G2ModelHandle_Remove(intptr_t handle) {
+    if (handle <= 0 || handle >= MAX_G2_HANDLES) return;
+    g2HandleTable[handle].ptr = NULL;
+    g2HandleTable[handle].handle = 0;
+}
+
 /*
 ==================
 G2API_ListBones
@@ -435,7 +486,12 @@ qboolean G2API_GetAnimFileName(CGhoul2Model_t *model, char *dest, int destSize)
 
     // Copy the animation file name from the loaded header
     // to the destination buffer.
-    Q_strncpyz(dest, mdxmHeader->animName, destSize);
+    if (destSize == -1) {
+        strcpy(dest, mdxmHeader->animName);
+    }
+    else {
+        Q_strncpyz(dest, mdxmHeader->animName, destSize);
+    }
 
     return qtrue;
 }

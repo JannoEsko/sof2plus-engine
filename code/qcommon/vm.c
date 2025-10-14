@@ -309,7 +309,7 @@ intptr_t QDECL VM_DllSyscall( intptr_t arg, ... ) {
     return currentVM->systemCall(qfalse, &arg );
 #endif
 }
-
+#define LOCAL_POOL_SIZE 2048000
 /*
 =================
 VM_LoadQVM
@@ -398,11 +398,14 @@ vmHeader_t* VM_LoadQVM(vm_t* vm, qboolean alloc, qboolean unpure)
 
     // round up to next power of 2 so all data operations can
     // be mask protected
-    dataLength = header.h->dataLength + header.h->litLength +
+    vm->localPoolStart = header.h->dataLength + header.h->litLength +
         header.h->bssLength;
-    for (i = 0; dataLength > (1 << i); i++) {
-    }
-    dataLength = 1 << i;
+    vm->localPoolSize = 0;
+	vm->localPoolTail = LOCAL_POOL_SIZE;
+	dataLength = vm->localPoolStart + LOCAL_POOL_SIZE;
+	for ( i = 0 ; dataLength > ( 1 << i ) ; i++ ) {
+	}
+	dataLength = 1 << i;
 
     if (alloc)
     {
@@ -526,11 +529,12 @@ VM_Create
 Attempt to load a system dll
 ================
 */
+
 vm_t *VM_Create( const char *module, intptr_t (*systemCalls)(qboolean, intptr_t *), vmInterpret_t interpret)
 {
     vm_t        *vm;
     int         i;
-    qboolean    retval;
+    int    retval;
     char filename[MAX_OSPATH];
     void *startSearch = NULL;
     vmHeader_t* header = NULL;
@@ -637,7 +641,6 @@ vm_t *VM_Create( const char *module, intptr_t (*systemCalls)(qboolean, intptr_t 
     vm->stackBottom = vm->programStack - PROGRAM_STACK_SIZE;
 
     Com_Printf("%s loaded in %d bytes on the hunk\n", module, remaining - Hunk_MemoryRemaining());
-
     return vm;
 }
 
@@ -954,4 +957,159 @@ void VM_BlockCopy(unsigned int dest, unsigned int src, size_t n)
     }
 
     Com_Memcpy(currentVM->dataBase + dest, currentVM->dataBase + src, n);
+}
+
+// Memory management in VM
+void *VM_Shift ( void * mem )
+{
+	//Alright, subtract the database from the memory pointer to get a memory address relative to the VM.
+	//When the VM modifies it it should be modifying the same chunk of memory we have allocated in the engine.
+	return (void*)((int)mem - (int)currentVM->dataBase);
+}
+
+/// Local pool allocation mirrored from BG_Local_Alloc and such
+void *QVM_Local_Alloc ( int size )
+{
+	if (!currentVM)
+	{
+		assert(0);
+		return NULL;
+	}
+
+	currentVM->localPoolSize = ((currentVM->localPoolSize + 0x00000003) & 0xfffffffc);
+
+	if (currentVM->localPoolSize + size > currentVM->localPoolTail)
+	{
+		Com_Error( ERR_DROP, "VM_Local_Alloc: buffer exceeded tail (%d > %d)", currentVM->localPoolSize + size, currentVM->localPoolTail);
+		return 0;
+	}
+
+	currentVM->localPoolSize += size;
+
+	byte * pool = currentVM->dataBase;
+	return VM_Shift(&pool[currentVM->localPoolStart + currentVM->localPoolSize - size]);
+}
+
+void *QVM_Local_AllocUnaligned ( int size )
+{
+	if (!currentVM)
+	{
+		assert(0);
+		return NULL;
+	}
+
+	if (currentVM->localPoolSize + size > currentVM->localPoolTail)
+	{
+		Com_Error( ERR_DROP, "VM_Local_AllocUnaligned: buffer exceeded tail (%d > %d)", currentVM->localPoolSize + size, currentVM->localPoolTail);
+		return 0;
+	}
+
+	currentVM->localPoolSize += size;
+
+	byte * pool = currentVM->dataBase;
+	return VM_Shift(&pool[currentVM->localPoolStart + currentVM->localPoolSize-size]);
+}
+
+void *QVM_Local_TempAlloc( int size )
+{
+	if (!currentVM)
+	{
+		assert(0);
+		return NULL;
+	}
+
+	size = ((size + 0x00000003) & 0xfffffffc);
+
+	if (currentVM->localPoolTail - size < currentVM->localPoolSize)
+	{
+		Com_Error( ERR_DROP, "VM_Local_TempAlloc: buffer exceeded head (%d > %d)", currentVM->localPoolTail - size, currentVM->localPoolSize);
+		return 0;
+	}
+
+	currentVM->localPoolTail -= size;
+
+	byte * pool = currentVM->dataBase;
+	return VM_Shift(&pool[currentVM->localPoolStart + currentVM->localPoolTail]);
+}
+
+void QVM_Local_TempFree( int size )
+{
+	size = ((size + 0x00000003) & 0xfffffffc);
+
+	if (currentVM->localPoolTail+size > LOCAL_POOL_SIZE)
+	{
+		Com_Error( ERR_DROP, "BG_TempFree: tail greater than size (%d > %d)", currentVM->localPoolTail+size, LOCAL_POOL_SIZE );
+	}
+
+	currentVM->localPoolTail += size;
+}
+
+char *QVM_Local_StringAlloc ( const char *source )
+{
+	char *dest = (char*)QVM_Local_Alloc( strlen ( source ) + 1 );
+	char *localDest = (char*)VM_ArgPtr((int)dest);
+	strcpy( localDest, source );
+	return dest;
+}
+
+// Pointer marshalling shenanigans...
+
+static intptr_t qvmPtrTable[QVMPTR_MAX_PTRS];
+static intptr_t qvmPtrTable_free_indices[QVMPTR_MAX_PTRS];
+static intptr_t qvmPtrTable_free_count = 0;
+static intptr_t qvmPtrTable_next_index = 1;
+
+void            qvmPtr_init(void) {
+    Com_Memset(qvmPtrTable, 0, sizeof(qvmPtrTable));
+    qvmPtrTable_free_count = 0;
+    qvmPtrTable_next_index = 1;
+}
+
+intptr_t  qvmPtr_register(intptr_t ptr) {
+    if (!ptr)
+        return QVMPTR_INVALID_HANDLE;
+
+    int idx;
+    if (qvmPtrTable_free_count > 0) {
+        idx = qvmPtrTable_free_indices[--qvmPtrTable_free_count];
+    } else if (qvmPtrTable_next_index < QVMPTR_MAX_PTRS) {
+        idx = qvmPtrTable_next_index++;
+    } else {
+        return QVMPTR_INVALID_HANDLE;
+    }
+
+    qvmPtrTable[idx] = ptr;
+    Com_DPrintf("[qvmPtr_register] Register idx %d as %lld [%p]\r\n", idx, ptr, ptr);
+    return idx;
+}
+
+intptr_t            qvmPtr_resolve(intptr_t handle) {
+    //qvmPtr_show();
+    Com_DPrintf("[qvmPtr_resolve] handle: %lld ... ", handle);
+    if (handle <= QVMPTR_INVALID_HANDLE || handle >= QVMPTR_MAX_PTRS) {
+        qvmPtr_show();
+        Com_DPrintf("not resolved..\r\n");
+        return QVMPTR_INVALID_HANDLE;
+    }
+        Com_DPrintf("resolved into %d [%p]\r\n", qvmPtrTable[handle], qvmPtrTable[handle]);
+    return qvmPtrTable[handle];
+}
+
+intptr_t            qvmPtr_remove(intptr_t handle) {
+    if (handle <= QVMPTR_INVALID_HANDLE || handle >= QVMPTR_MAX_PTRS)
+        return QVMPTR_INVALID_HANDLE;
+    if (!qvmPtrTable[handle])
+        return QVMPTR_INVALID_HANDLE;
+
+    qvmPtrTable[handle] = 0;
+    if (qvmPtrTable_free_count < QVMPTR_MAX_PTRS)
+        qvmPtrTable_free_indices[qvmPtrTable_free_count++] = handle;
+}
+
+void qvmPtr_show() {
+    for (int i = 0; i < QVMPTR_MAX_PTRS; i++) {
+        if (qvmPtrTable[i] != QVMPTR_INVALID_HANDLE) {
+            Com_DPrintf("[QVMPtr] Idx %d points to %lld [%p]\r\n", i, qvmPtrTable[i], (void*)qvmPtrTable[i]);
+        }
+    }
 }
