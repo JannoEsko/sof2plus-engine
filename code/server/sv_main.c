@@ -592,6 +592,7 @@ static void SVC_Status( netadr_t from, qboolean legacyProtocol ) {
     // Add the game version to the status response.
     if (legacyProtocol) {
         Info_SetValueForKey(infostring, "game_version", GAME_VERSION_LEGACY);
+        Info_SetValueForKey(infostring, "protocol", va("%i", com_legacyProtocol->integer));
     }
     else {
         Info_SetValueForKey(infostring, "game_version", GAME_VERSION);
