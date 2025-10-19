@@ -86,6 +86,7 @@ typedef struct {
     // Server sub-BSP support.
     int             subBSPIndex;
     int             subBSPModelIndex;
+    qboolean        inSubBSP;
 } server_t;
 
 

@@ -313,6 +313,11 @@ static void SV_SetActiveSubBSP(int modelIndex)
 
     // Set the entity parse point to the beginning of the active BSP.
     sv.subBSPParsePoint = CM_EntityString(sv.subBSPIndex);
+    if (modelIndex > 0) {
+        sv.inSubBSP = qtrue;
+    } else {
+        sv.inSubBSP = qfalse;
+    }
 }
 
 /*
@@ -553,13 +558,28 @@ intptr_t SV_GameSystemCalls(qboolean runningQVM, intptr_t *args ) {
             return 0;
         case LEGACY_G_GET_ENTITY_TOKEN: // JANFIXME - inSubBSP is not covered here at the moment, needs mod support or another workaround.
         {
-            const char* s = COM_Parse(&sv.entityParsePoint);
-            Q_strncpyz(VMA(1), s, args[2]);
-            if (!sv.entityParsePoint && !s[0]) {
-                return qfalse;
+            const char* s;
+            qboolean inSubBSP = sv.inSubBSP;
+
+            if (inSubBSP) {
+                s = COM_Parse(&sv.subBSPParsePoint);
+                Q_strncpyz(VMA(1), s, args[2]);
+                if (!sv.subBSPParsePoint && !s[0]) {
+                    return qfalse;
+                }
+                else {
+                    return qtrue;
+                }
             }
             else {
-                return qtrue;
+                s = COM_Parse(&sv.entityParsePoint);
+                Q_strncpyz(VMA(1), s, args[2]);
+                if (!sv.entityParsePoint && !s[0]) {
+                    return qfalse;
+                }
+                else {
+                    return qtrue;
+                }
             }
         }
         case LEGACY_G_FS_GETFILELIST:
