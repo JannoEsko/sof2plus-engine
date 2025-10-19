@@ -592,6 +592,7 @@ static void SVC_Status( netadr_t from, qboolean legacyProtocol ) {
     // Add the game version to the status response.
     if (legacyProtocol) {
         Info_SetValueForKey(infostring, "game_version", GAME_VERSION_LEGACY);
+        Info_SetValueForKey(infostring, "protocol", va("%i", com_legacyProtocol->integer));
     }
     else {
         Info_SetValueForKey(infostring, "game_version", GAME_VERSION);
@@ -678,12 +679,7 @@ void SVC_Info( netadr_t from, qboolean legacyProtocol ) {
     // to prevent timed spoofed reply packets that add ghost servers
     Info_SetValueForKey( infostring, "challenge", Cmd_Argv(1) );
 
-#ifdef LEGACY_PROTOCOL
-    if(com_legacyprotocol->integer > 0)
-        Info_SetValueForKey(infostring, "protocol", va("%i", com_legacyprotocol->integer));
-    else
-#endif
-        Info_SetValueForKey(infostring, "protocol", va("%i", legacyProtocol ? com_legacyProtocol->integer : com_protocol->integer));
+    Info_SetValueForKey(infostring, "protocol", va("%i", legacyProtocol ? com_legacyProtocol->integer : com_protocol->integer));
 
     Info_SetValueForKey( infostring, "hostname", sv_hostname->string );
     Info_SetValueForKey( infostring, "mapname", sv_mapname->string );
