@@ -1,20 +1,24 @@
 include_guard(GLOBAL)
 
-set(DETECT_ARCH_C ${CMAKE_BINARY_DIR}/detect_arch.c)
+if(NOT FORCE_32BIT)
 
-file(WRITE ${DETECT_ARCH_C}
-"#include \"${SOURCE_DIR}/qcommon/q_platform.h\"
-#pragma message(\"@\" ARCH_STRING \"@\")
-int main(void) { return 0; }
-")
+    set(DETECT_ARCH_C ${CMAKE_BINARY_DIR}/detect_arch.c)
 
-try_compile(COMPILE_SUCCESS
-    SOURCES ${DETECT_ARCH_C}
-    OUTPUT_VARIABLE COMPILE_OUTPUT)
+    file(WRITE ${DETECT_ARCH_C}
+    "#include \"${SOURCE_DIR}/qcommon/q_platform.h\"
+    #pragma message(\"@\" ARCH_STRING \"@\")
+    int main(void) { return 0; }
+    ")
 
-string(REGEX MATCH "^[^\@]+@([a-zA-Z0-9_]+)@.*$" HAVE_MATCH ${COMPILE_OUTPUT})
-set(ARCH ${CMAKE_MATCH_1})
+    try_compile(COMPILE_SUCCESS
+        SOURCES ${DETECT_ARCH_C}
+        OUTPUT_VARIABLE COMPILE_OUTPUT)
 
-if(NOT COMPILE_SUCCESS OR RUN_EXITCODE OR NOT HAVE_MATCH OR NOT ARCH)
-    message(FATAL_ERROR "Architecture detection failed")
+    string(REGEX MATCH "^[^\@]+@([a-zA-Z0-9_]+)@.*$" HAVE_MATCH ${COMPILE_OUTPUT})
+    set(ARCH ${CMAKE_MATCH_1})
+
+    if(NOT COMPILE_SUCCESS OR RUN_EXITCODE OR NOT HAVE_MATCH OR NOT ARCH)
+        message(FATAL_ERROR "Architecture detection failed")
+    endif()
+
 endif()

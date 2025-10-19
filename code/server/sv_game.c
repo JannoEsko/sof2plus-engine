@@ -397,13 +397,9 @@ The module is making a system call
 ====================
 */
 intptr_t SV_GameSystemCalls(qboolean runningQVM, intptr_t *args ) {
+    // TEMPORARY
+#if !defined(_WIN64) && !defined(__x86_64__) && !defined(__amd64__) && !defined(__LP64__)
 
-    if (runningQVM) {
-
-        if (!qvmPointerMarshallingInitialized) {
-            qvmPtr_init();
-            qvmPointerMarshallingInitialized = qtrue;
-        }
 
         switch (args[0]) {
         case LEGACY_G_PRINT:
@@ -468,6 +464,9 @@ intptr_t SV_GameSystemCalls(qboolean runningQVM, intptr_t *args ) {
                 Com_Error(ERR_DROP, "SV_GameSystemCalls: LEGACY_G_FS_FOPEN_FILE: bad mode %d", legacyMode);
 
                 
+            }
+            if (mode != legacyMode) {
+                Com_Printf("Translated lmode %d to mode %d\r\n", legacyMode, mode);
             }
             return FS_FOpenFileByMode(VMA(1), VMA(2), mode);
         }
@@ -568,7 +567,7 @@ intptr_t SV_GameSystemCalls(qboolean runningQVM, intptr_t *args ) {
         case LEGACY_G_BOT_GET_MEMORY:
             return (intptr_t)Z_TagMalloc(TAG_BOTLIB, args[1]);
         case LEGACY_G_BOT_FREE_MEMORY:
-			Z_Free(args[1]);
+			Z_Free((intptr_t*)args[1]);
             return 0;
         case LEGACY_G_DEBUG_POLYGON_CREATE:
             return BotImport_DebugPolygonCreate(args[1], args[2], VMA(3));
@@ -612,7 +611,6 @@ intptr_t SV_GameSystemCalls(qboolean runningQVM, intptr_t *args ) {
         case LEGACY_G_FLOOR:
             return FloatAsInt(floor(VMF(1)));
         case LEGACY_G_CEIL:
-            Com_Printf("rly? %.02f\r\n", VMF(1));
             return FloatAsInt(ceil(VMF(1)));
         case LEGACY_G_TESTPRINTINT:
             Com_DPrintf("Testprintint - not implemented");
@@ -934,42 +932,9 @@ intptr_t SV_GameSystemCalls(qboolean runningQVM, intptr_t *args ) {
 			// CGame syscall, not used in the server.
             return 0;
         case LEGACY_G_G2_INITGHOUL2MODEL: {
-                // CGhoul2Model_t **modelPtr
-            //return 0;
-            uint32_t *vm_handle32 = (uint32_t *)VMA(1);
-            const char *fileName = (const char *)VMA(2);
-            CGhoul2Model_t *modelPtr = NULL;
-
-            if (!vm_handle32) {
-                Com_DPrintf("G_G2_INITGHOUL2MODEL: VMA(1) is NULL\n");
-                return qfalse;
-            }
-
-            // create the model (engine pointer)
-            qboolean ok = G2API_InitGhoul2Model(&modelPtr, fileName, args[4], args[7]);
-            if (!ok || !modelPtr) {
-                *vm_handle32 = 0;
-                Com_DPrintf("G_G2_INITGHOUL2MODEL: !ok || !modelPtr\n");
-                return qfalse;
-            }
-
-            // register returns an intptr_t or int index; store only the low 32 bits into VM
-            intptr_t reg = qvmPtr_register((intptr_t)modelPtr);
-            if (reg == QVMPTR_INVALID_HANDLE) {
-                // registration failed: free model if necessary
-                Com_DPrintf("G_G2_INITGHOUL2MODEL: qvmPtr_register failed\n");
-                // optionally cleanup model here...
-                *vm_handle32 = 0;
-                return qfalse;
-            }
-
-            uint32_t handle32 = (uint32_t)reg; // keep only 32 bits
-            *vm_handle32 = handle32;           // write 32-bit handle into VM memory
-
-            Com_Printf("G_G2_INITGHOUL2MODEL: model=%p handle=%u vm_ptr=%p\n",
-                       (void*)modelPtr, handle32, (void*)vm_handle32);
-
-            return qtrue;
+            CGhoul2Model_t** test = VMA(1);
+            G2API_InitGhoul2Model(test, (const char *)VMA(2), args[4], args[7]);
+            Com_Printf("break");
         }
         case LEGACY_G_G2_ADDBOLT:
 			// CGame / UI syscall, not used in the server.
@@ -977,29 +942,10 @@ intptr_t SV_GameSystemCalls(qboolean runningQVM, intptr_t *args ) {
         case LEGACY_G_G2_SETBOLTINFO:
 			// Cgame / UI syscall, not used in the server.
             return 0;
-        case LEGACY_G_G2_ANGLEOVERRIDE: {
-            // BG syscall.
-            //return 0;
-                uint32_t handle = (uint32_t)args[1];
-                CGhoul2Model_t *model = (CGhoul2Model_t *)qvmPtr_resolve(handle);
-                if (!model) {
-                    Com_DPrintf("LEGACY_G_G2_ANGLEOVERRIDE: ptr not resolved.\r\n");
-                    return 0;
-                }
-			    G2API_SetBoneAngles(model, VMA(2), VMA(3), args[4], args[5], args[6], args[7]); // has 3 more args which are ignored.
-                return 0;
-            }
-        case LEGACY_G_G2_PLAYANIM: {
-            //return 0;
-                uint32_t handle = (uint32_t)args[1];
-                CGhoul2Model_t *model = (CGhoul2Model_t *)qvmPtr_resolve(handle);
-                if (!model) {
-                    Com_DPrintf("LEGACY_G_G2_PLAYANIM: ptr not resolved.\r\n");
-                    return 0;
-                }
-			    G2API_SetBoneAnim(model, VMA(3), args[4], args[5], args[6], args[7], args[9]); // arg2 and arg8 are ignored.
-                return 0;
-            }
+        case LEGACY_G_G2_ANGLEOVERRIDE:
+			return G2API_SetBoneAngles(VMA(1), VMA(2), VMA(3), args[4], args[5], args[6], args[7]); // has 3 more args which are ignored.
+        case LEGACY_G_G2_PLAYANIM:
+			    return G2API_SetBoneAnim(VMA(1), VMA(3), args[4], args[5], args[6], VMF(7), VMF(9)); // arg2 and arg8 are ignored.
         case LEGACY_G_G2_GETGLANAME:
             // Not used.
             return 0;
@@ -1013,108 +959,24 @@ intptr_t SV_GameSystemCalls(qboolean runningQVM, intptr_t *args ) {
 			// CGame syscall, not used in the server.
             return 0;
         case LEGACY_G_G2_REMOVEGHOUL2MODEL:
-        case LEGACY_G_G2_CLEANMODELS: {
-            //return 0;
-            uint32_t *vm_handle_ptr = (uint32_t *)VMA(1);
-            if (!vm_handle_ptr) return qfalse;
-
-            uint32_t handle = *vm_handle_ptr;
-            if (!handle) return qfalse;
-
-            CGhoul2Model_t *model = (CGhoul2Model_t *)qvmPtr_resolve(handle);
-            if (!model) {
-                Com_DPrintf("LEGACY_G_G2_REMOVEGHOUL2MODEL: ptr not resolved.\r\n");
-                return qfalse;
-            }
-            // Use a local pointer-to-pointer to avoid writing into VM memory
-            CGhoul2Model_t *local_model = model;
-
-            // Remove handle from table and zero VM memory BEFORE or AFTER call depending on semantics.
-            // It's safer to remove after G2API_RemoveGhoul2Model if that function expects the pointer still to be resolvable.
-            // Example: call delete first, then remove and zero VM mem:
-            qboolean result = G2API_RemoveGhoul2Model(&local_model);
-
-            // Now free handle slot and clear VM variable
-            qvmPtr_remove(handle);
-            *vm_handle_ptr = 0;
-        }
-
-        // CGenericParser
+        case LEGACY_G_G2_CLEANMODELS:
+                Com_Printf("Syscall %d cleanmodel %p\r\n", args[0], VMA(1));
+            return G2API_RemoveGhoul2Model(VMA(1));
         case LEGACY_G_GP_PARSE: {
-            //void* gp = GP_Parse(VMA(1));
-            // Return QVM-accessible pointer
-            //TGenericParser2 gp = GP_Parse(VMA(1));
-            //Com_Printf("GP_Parse: Ptr %p - %p\r\n", gp, (intptr_t)gp);
-            //qvmPtr_show();
-            //return qvmPtr_register((intptr_t)gp);
-            //return gp;
             return (intptr_t)GP_Parse(VMA(1));
-            // Actually seems to never be called.
         }
             
         case LEGACY_G_GP_PARSE_FILE:
-        {
-            /*TGenericParser2 gp = GP_ParseFile((const char*)VMA(1));
-            Com_Printf("GP_ParseFile %s [ptr %p]\n", VMA(1), gp);
-
-            // Register engine pointer and return a 32-bit handle to VM
-            intptr_t handle = qvmPtr_register((intptr_t)gp);
-
-            // Cast handle to 32-bit and write into VM memory
-            uint32_t *vm_handle32 = (uint32_t *)VMA(1);
-            *vm_handle32 = (uint32_t)handle;
-
-            //return handle; // optional: engine may also return it
-            return gp;*/
-            //return (intptr_t)GP_ParseFile((const char*)VMA(1));
-            return qvmPtr_register((intptr_t)GP_ParseFile(VMA(1)));
-        }
+            return (intptr_t)GP_ParseFile(VMA(1));
         case LEGACY_G_GP_CLEAN:
-			Com_Printf("G_GP_CLEAN called\r\n");
-                //qvmPtr_show();
-            //GP_Clean((TGenericParser2)qvmPtr_resolve((intptr_t)VMA(1)));
-            GP_Clean((TGenericParser2)args[1]);
+            GP_Clean(VMA(1));
             return 0;
         case LEGACY_G_GP_DELETE:
-        {
-            //qvmPtr_show();
-            /*uint32_t* vm_handle32 = (uint32_t*)VMA(1);
-            uint32_t handle32 = *vm_handle32;
-
-            Com_Printf("VMA: %d [%p], hand %d [%p], han32 %d [%p - %p - %p - %p]\r\n", VMA(1), VMA(1), vm_handle32, vm_handle32, handle32, handle32, &handle32, *(&handle32));
-
-            if (!handle32) return 0;
-
-            TGenericParser2 gp = (TGenericParser2)qvmPtr_resolve((intptr_t)handle32);
-
-                GP_Delete(args[1]);                 // pointer-to-pointer
-
-            // zero the VM memory safely
-            *vm_handle32 = 0;
-            qvmPtr_remove((intptr_t)handle32);*/
-            uint32_t* vmhandle = (uint32_t*)VMA(1);
-            intptr_t inthandle = (intptr_t)*vmhandle;
-            Com_Printf("G_GP_Delete with args %lld [%p] vma %lld [%p], gp2 %lld [%p], tmp %lld [%p]\r\n", args[1], args[1], VMA(1), VMA(1), vmhandle, vmhandle, inthandle, inthandle);
-            TGenericParser2 gp2 = (TGenericParser2)qvmPtr_resolve(inthandle);
-
-            GP_Delete((TGenericParser2)&gp2);
-            //qvmPtr_remove(*(VMA(1)));
+            GP_Delete(VMA(1));
             return 0;
-        }
 
         case LEGACY_G_GP_GET_BASE_PARSE_GROUP:
-                /*uint32_t* vm_handle32 = (uint32_t*)VMA(1);
-                uint32_t handle32 = *vm_handle32;
-
-                TGenericParser2 gp = (TGenericParser2)qvmPtr_resolve((intptr_t)handle32);
-                if (!gp) {
-                    Com_Printf("qvmPtr_resolve: handle %u not resolved..\n", handle32);
-                    return 0;
-                }
-                */
-                return ((intptr_t)GP_GetBaseParseGroup((TGenericParser2)qvmPtr_resolve((intptr_t)args[1])));
-
-            // CGPGroup (void *) routines
+            return (intptr_t)GP_GetBaseParseGroup((TGenericParser2)args[1]);
         case LEGACY_G_GPG_GET_NAME:
             return (intptr_t)GPG_GetName((TGPGroup)(args[1]), VMA(2), -1);
         case LEGACY_G_GPG_GET_NEXT:
@@ -1209,7 +1071,7 @@ intptr_t SV_GameSystemCalls(qboolean runningQVM, intptr_t *args ) {
             }
 
 			return SV_QVM_StringAlloc((const char*)VMA(1));*/
-            return (intptr_t)QVM_Local_StringAlloc((const char*)VMA(1));
+            return QVM_Local_StringAlloc((const char*)VMA(1));
         }
 
 		// End memory management
@@ -1221,26 +1083,16 @@ intptr_t SV_GameSystemCalls(qboolean runningQVM, intptr_t *args ) {
         case LEGACY_G_G2_REGISTERSKIN:
             return G2API_RegisterSkin((const char*)VMA(1), args[2], (const char*)VMA(3));
         case LEGACY_G_G2_SETSKIN: {
-            uint32_t handle = (uint32_t)args[1];
-            CGhoul2Model_t *model = (CGhoul2Model_t *)qvmPtr_resolve(handle);
-            if (!model) {
-                Com_DPrintf("LEGACY_G_G2_PLAYANIM: ptr not resolved.\r\n");
-                return 0;
-            }
-            return (intptr_t)G2API_SetSkin(model, args[3]);
+            CGhoul2Model_t* test = args[1];
+            CGhoul2Model_t* test2 = VMA(1);
+            return (intptr_t)G2API_SetSkin(args[1], args[3]);
         }
 
         case LEGACY_G_G2_GETANIMFILENAMEINDEX:
-            //Com_DPrintf("args0 %lld args1 maybe str? %s [%p] / [%d]\r\n", args[0], VMA(1), VMA(1), args[1]);
-        {
-            uint32_t handle = (uint32_t)args[1];
-            CGhoul2Model_t* model = (CGhoul2Model_t*)qvmPtr_resolve(handle);
-            if (!model) {
-                Com_DPrintf("LEGACY_G_G2_PLAYANIM: ptr not resolved.\r\n");
-                return 0;
-            }
-            return (intptr_t)G2API_GetAnimFileName(model, VMA(3), -1);
-        }
+            qboolean ok = G2API_GetAnimFileName(args[1], VMA(3), -1);
+            char* test = VMA(3);
+                //L;OL
+                return ok;
         case LEGACY_G_GT_INIT:
             SV_GT_Init((const char*)VMA(1), args[2]);
             return 0;
@@ -1256,8 +1108,7 @@ intptr_t SV_GameSystemCalls(qboolean runningQVM, intptr_t *args ) {
         default:
             Com_Error(ERR_DROP, "Bad game system trap: %ld", (long int)args[0]);
         }
-    }
-    else {
+#else
         switch (args[0]) {
         case G_PRINT:
             Com_Printf("%s", (const char*)VMA(1));
@@ -1932,7 +1783,7 @@ intptr_t SV_GameSystemCalls(qboolean runningQVM, intptr_t *args ) {
         default:
             Com_Error(ERR_DROP, "Bad game system trap: %ld", (long int)args[0]);
         }
-    }
+#endif
 
     
     return 0;
@@ -1951,11 +1802,6 @@ void SV_ShutdownGameProgs( void ) {
     }
     VM_Call( gvm, GAME_GHOUL_SHUTDOWN, qfalse );
     VM_Call( gvm, GAME_SHUTDOWN, qfalse );
-
-    // Free the QVM memory
-    if (qvmMemoryInitialized) {
-        SV_FreeQvmMemory();
-    }
 
     VM_Free( gvm );
     gvm = NULL;

@@ -310,6 +310,7 @@ intptr_t QDECL VM_DllSyscall( intptr_t arg, ... ) {
 #endif
 }
 #define LOCAL_POOL_SIZE 2048000
+static byte * dllLocalPool = 0;
 /*
 =================
 VM_LoadQVM
@@ -401,7 +402,7 @@ vmHeader_t* VM_LoadQVM(vm_t* vm, qboolean alloc, qboolean unpure)
     vm->localPoolStart = header.h->dataLength + header.h->litLength +
         header.h->bssLength;
     vm->localPoolSize = 0;
-	vm->localPoolTail = LOCAL_POOL_SIZE;
+	vm->localPoolTail = vm->localPoolStart + LOCAL_POOL_SIZE;
 	dataLength = vm->localPoolStart + LOCAL_POOL_SIZE;
 	for ( i = 0 ; dataLength > ( 1 << i ) ; i++ ) {
 	}
@@ -582,6 +583,10 @@ vm_t *VM_Create( const char *module, intptr_t (*systemCalls)(qboolean, intptr_t 
             if (vm->dllHandle)
             {
                 vm->systemCall = systemCalls;
+                vm->localPoolStart = 0;
+                vm->localPoolSize = 0;
+                vm->localPoolTail = LOCAL_POOL_SIZE;
+                dllLocalPool = (unsigned char *)Hunk_Alloc(LOCAL_POOL_SIZE, h_high);
                 return vm;
             }
 
@@ -987,6 +992,9 @@ void *QVM_Local_Alloc ( int size )
 	currentVM->localPoolSize += size;
 
 	byte * pool = currentVM->dataBase;
+    if (!currentVM->dataBase) {
+        pool = dllLocalPool;
+    }
 	return VM_Shift(&pool[currentVM->localPoolStart + currentVM->localPoolSize - size]);
 }
 
@@ -1007,6 +1015,9 @@ void *QVM_Local_AllocUnaligned ( int size )
 	currentVM->localPoolSize += size;
 
 	byte * pool = currentVM->dataBase;
+    if (!currentVM->dataBase) {
+        pool = dllLocalPool;
+    }
 	return VM_Shift(&pool[currentVM->localPoolStart + currentVM->localPoolSize-size]);
 }
 
@@ -1029,6 +1040,9 @@ void *QVM_Local_TempAlloc( int size )
 	currentVM->localPoolTail -= size;
 
 	byte * pool = currentVM->dataBase;
+    if (!currentVM->dataBase) {
+        pool = dllLocalPool;
+    }
 	return VM_Shift(&pool[currentVM->localPoolStart + currentVM->localPoolTail]);
 }
 
@@ -1050,66 +1064,4 @@ char *QVM_Local_StringAlloc ( const char *source )
 	char *localDest = (char*)VM_ArgPtr((int)dest);
 	strcpy( localDest, source );
 	return dest;
-}
-
-// Pointer marshalling shenanigans...
-
-static intptr_t qvmPtrTable[QVMPTR_MAX_PTRS];
-static intptr_t qvmPtrTable_free_indices[QVMPTR_MAX_PTRS];
-static intptr_t qvmPtrTable_free_count = 0;
-static intptr_t qvmPtrTable_next_index = 1;
-
-void            qvmPtr_init(void) {
-    Com_Memset(qvmPtrTable, 0, sizeof(qvmPtrTable));
-    qvmPtrTable_free_count = 0;
-    qvmPtrTable_next_index = 1;
-}
-
-intptr_t  qvmPtr_register(intptr_t ptr) {
-    if (!ptr)
-        return QVMPTR_INVALID_HANDLE;
-
-    int idx;
-    if (qvmPtrTable_free_count > 0) {
-        idx = qvmPtrTable_free_indices[--qvmPtrTable_free_count];
-    } else if (qvmPtrTable_next_index < QVMPTR_MAX_PTRS) {
-        idx = qvmPtrTable_next_index++;
-    } else {
-        return QVMPTR_INVALID_HANDLE;
-    }
-
-    qvmPtrTable[idx] = ptr;
-    Com_DPrintf("[qvmPtr_register] Register idx %d as %lld [%p]\r\n", idx, ptr, ptr);
-    return idx;
-}
-
-intptr_t            qvmPtr_resolve(intptr_t handle) {
-    //qvmPtr_show();
-    Com_DPrintf("[qvmPtr_resolve] handle: %lld ... ", handle);
-    if (handle <= QVMPTR_INVALID_HANDLE || handle >= QVMPTR_MAX_PTRS) {
-        qvmPtr_show();
-        Com_DPrintf("not resolved..\r\n");
-        return QVMPTR_INVALID_HANDLE;
-    }
-        Com_DPrintf("resolved into %d [%p]\r\n", qvmPtrTable[handle], qvmPtrTable[handle]);
-    return qvmPtrTable[handle];
-}
-
-intptr_t            qvmPtr_remove(intptr_t handle) {
-    if (handle <= QVMPTR_INVALID_HANDLE || handle >= QVMPTR_MAX_PTRS)
-        return QVMPTR_INVALID_HANDLE;
-    if (!qvmPtrTable[handle])
-        return QVMPTR_INVALID_HANDLE;
-
-    qvmPtrTable[handle] = 0;
-    if (qvmPtrTable_free_count < QVMPTR_MAX_PTRS)
-        qvmPtrTable_free_indices[qvmPtrTable_free_count++] = handle;
-}
-
-void qvmPtr_show() {
-    for (int i = 0; i < QVMPTR_MAX_PTRS; i++) {
-        if (qvmPtrTable[i] != QVMPTR_INVALID_HANDLE) {
-            Com_DPrintf("[QVMPtr] Idx %d points to %lld [%p]\r\n", i, qvmPtrTable[i], (void*)qvmPtrTable[i]);
-        }
-    }
 }
