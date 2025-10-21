@@ -86,7 +86,6 @@ cvar_t  *com_maxfpsUnfocused;
 cvar_t  *com_minimized;
 cvar_t  *com_maxfpsMinimized;
 cvar_t  *com_abnormalExit;
-cvar_t  *com_gamename;
 cvar_t  *com_protocol;
 cvar_t  *com_legacyProtocol;
 cvar_t  *com_basegame;
@@ -2762,9 +2761,8 @@ void Com_Init( char *commandLine ) {
 
     s = va("%s %s %s", Q3_VERSION, PLATFORM_STRING, PRODUCT_DATE );
     com_version = Cvar_Get ("version", s, CVAR_ROM | CVAR_SERVERINFO );
-    com_gamename = Cvar_Get("com_gamename", GAMENAME_FOR_MASTER, CVAR_SERVERINFO | CVAR_INIT);
     com_protocol = Cvar_Get("protocol", va("%i", PROTOCOL_VERSION), CVAR_SERVERINFO | CVAR_INIT);
-    com_legacyProtocol = Cvar_Get("legacyprotocol", va("%i", PROTOCOL_LEGACY_VERSION), CVAR_SERVERINFO | CVAR_INIT);
+    com_legacyProtocol = Cvar_Get("legacyprotocol", va("%i", PROTOCOL_LEGACY_VERSION), CVAR_INIT);
     sv_useLegacyNades = Cvar_Get("sv_useLegacyNades", "0", CVAR_ARCHIVE | CVAR_LATCH);
     /*
 #ifdef LEGACY_PROTOCOL

@@ -602,7 +602,10 @@ static void SVC_Status( netadr_t from, qboolean legacyProtocol ) {
     // Add the player information to the status response.
     status[0] = 0;
     statusLength = 0;
+    int infoStringLength = strlen(infostring);
 
+    int maxMessageLength = 1400;
+    
     for (i=0 ; i < sv_maxclients->integer ; i++) {
         cl = &svs.clients[i];
         if ( cl->state >= CS_CONNECTED ) {
@@ -618,7 +621,7 @@ static void SVC_Status( netadr_t from, qboolean legacyProtocol ) {
             }
 
             playerLength = strlen(player);
-            if (statusLength + playerLength >= sizeof(status) ) {
+            if (infoStringLength + statusLength + playerLength >= maxMessageLength) {
                 break;      // can't hold any more
             }
             strcpy (status + statusLength, player);
