@@ -633,10 +633,10 @@ intptr_t SV_GameSystemCalls(qboolean runningQVM, intptr_t *args ) {
         case LEGACY_G_CEIL:
             return FloatAsInt(ceil(VMF(1)));
         case LEGACY_G_TESTPRINTINT:
-            Com_DPrintf("Testprintint - not implemented");
+            Com_Printf("G_TESTPRINTINT: %d\r\n", args[1]);
             return 0;
         case LEGACY_G_TESTPRINTFLOAT:
-            Com_DPrintf("Testprintfloat - not implemented");
+            Com_Printf("G_TESTPRINTFLOAT: %f\r\n", VMF(1));
             return 0;
         case LEGACY_G_ACOS:
             return FloatAsInt(acos(VMF(1)));
@@ -665,385 +665,339 @@ intptr_t SV_GameSystemCalls(qboolean runningQVM, intptr_t *args ) {
         case LEGACY_BOTLIB_UPDATENTITY:
                 return botlib_export->BotLibUpdateEntity( args[1], VMA(2) );
         case LEGACY_BOTLIB_TEST:
-                Com_Printf("LEGACY_BOTLIB_TEST - not implemented\r\n");
-            return 0;
+            return botlib_export->Test( args[1], VMA(2), VMA(3), VMA(4) );;
         case LEGACY_BOTLIB_GET_SNAPSHOT_ENTITY:
-                return SV_BotGetSnapshotEntity( args[1], args[2] );
-                case LEGACY_BOTLIB_GET_CONSOLE_MESSAGE:
-            Com_Printf("LEGACY_BOTLIB_GET_CONSOLE_MESSAGE - not implemented\r\n");
-            return 0;
+            return SV_BotGetSnapshotEntity( args[1], args[2] );
+        case LEGACY_BOTLIB_GET_CONSOLE_MESSAGE:
+            return SV_BotGetConsoleMessage( args[1], VMA(2), args[3] );
         case LEGACY_BOTLIB_USER_COMMAND:
-            Com_Printf("LEGACY_BOTLIB_USER_COMMAND - not implemented\r\n");
+            {
+                int clientNum = args[1];
+
+                if ( clientNum >= 0 && clientNum < sv_maxclients->integer ) {
+                    SV_ClientThink( &svs.clients[clientNum], VMA(2) );
+                }
+            }
             return 0;
         case LEGACY_BOTLIB_AAS_ENABLE_ROUTING_AREA:
-            Com_Printf("LEGACY_BOTLIB_AAS_ENABLE_ROUTING_AREA - not implemented\r\n");
-            return 0;
+            return botlib_export->aas.AAS_EnableRoutingArea( args[1], args[2] );
         case LEGACY_BOTLIB_AAS_BBOX_AREAS:
-            Com_Printf("LEGACY_BOTLIB_AAS_BBOX_AREAS - not implemented\r\n");
-            return 0;
+            return botlib_export->aas.AAS_BBoxAreas( VMA(1), VMA(2), VMA(3), args[4] );
         case LEGACY_BOTLIB_AAS_AREA_INFO:
-            Com_Printf("LEGACY_BOTLIB_AAS_AREA_INFO - not implemented\r\n");
-            return 0;
+            return botlib_export->aas.AAS_AreaInfo( args[1], VMA(2) );
         case LEGACY_BOTLIB_AAS_ENTITY_INFO:
-            Com_Printf("LEGACY_BOTLIB_AAS_ENTITY_INFO - not implemented\r\n");
+            botlib_export->aas.AAS_EntityInfo( args[1], VMA(2) );
             return 0;
         case LEGACY_BOTLIB_AAS_INITIALIZED:
-            Com_Printf("LEGACY_BOTLIB_AAS_INITIALIZED - not implemented\r\n");
-            return 0;
+            return botlib_export->aas.AAS_Initialized();
         case LEGACY_BOTLIB_AAS_PRESENCE_TYPE_BOUNDING_BOX:
-            Com_Printf("LEGACY_BOTLIB_AAS_PRESENCE_TYPE_BOUNDING_BOX - not implemented\r\n");
+            botlib_export->aas.AAS_PresenceTypeBoundingBox( args[1], VMA(2), VMA(3) );
             return 0;
         case LEGACY_BOTLIB_AAS_TIME:
-            Com_Printf("LEGACY_BOTLIB_AAS_TIME - not implemented\r\n");
-            return 0;
+            return FloatAsInt( botlib_export->aas.AAS_Time() );
         case LEGACY_BOTLIB_AAS_POINT_AREA_NUM:
-            Com_Printf("LEGACY_BOTLIB_AAS_POINT_AREA_NUM - not implemented\r\n");
-            return 0;
+            return botlib_export->aas.AAS_PointAreaNum( VMA(1) );
         case LEGACY_BOTLIB_AAS_TRACE_AREAS:
-            Com_Printf("LEGACY_BOTLIB_AAS_TRACE_AREAS - not implemented\r\n");
-            return 0;
+            return botlib_export->aas.AAS_TraceAreas( VMA(1), VMA(2), VMA(3), VMA(4), args[5] );
         case LEGACY_BOTLIB_AAS_POINT_CONTENTS:
-            Com_Printf("LEGACY_BOTLIB_AAS_POINT_CONTENTS - not implemented\r\n");
-            return 0;
+            return botlib_export->aas.AAS_PointContents( VMA(1) );
         case LEGACY_BOTLIB_AAS_NEXT_BSP_ENTITY:
-            Com_Printf("LEGACY_BOTLIB_AAS_NEXT_BSP_ENTITY - not implemented\r\n");
-            return 0;
+            return botlib_export->aas.AAS_NextBSPEntity( args[1] );
         case LEGACY_BOTLIB_AAS_VALUE_FOR_BSP_EPAIR_KEY:
-            Com_Printf("LEGACY_BOTLIB_AAS_VALUE_FOR_BSP_EPAIR_KEY - not implemented\r\n");
-            return 0;
+            return botlib_export->aas.AAS_ValueForBSPEpairKey( args[1], VMA(2), VMA(3), args[4] );
         case LEGACY_BOTLIB_AAS_VECTOR_FOR_BSP_EPAIR_KEY:
-            Com_Printf("LEGACY_BOTLIB_AAS_VECTOR_FOR_BSP_EPAIR_KEY - not implemented\r\n");
-            return 0;
+            return botlib_export->aas.AAS_VectorForBSPEpairKey( args[1], VMA(2), VMA(3) );
         case LEGACY_BOTLIB_AAS_FLOAT_FOR_BSP_EPAIR_KEY:
-            Com_Printf("LEGACY_BOTLIB_AAS_FLOAT_FOR_BSP_EPAIR_KEY - not implemented\r\n");
-            return 0;
+            return botlib_export->aas.AAS_FloatForBSPEpairKey( args[1], VMA(2), VMA(3) );
         case LEGACY_BOTLIB_AAS_INT_FOR_BSP_EPAIR_KEY:
-            Com_Printf("LEGACY_BOTLIB_AAS_INT_FOR_BSP_EPAIR_KEY - not implemented\r\n");
-            return 0;
+            return botlib_export->aas.AAS_IntForBSPEpairKey( args[1], VMA(2), VMA(3) );
         case LEGACY_BOTLIB_AAS_AREA_REACHABILITY:
-            Com_Printf("LEGACY_BOTLIB_AAS_AREA_REACHABILITY - not implemented\r\n");
-            return 0;
+            return botlib_export->aas.AAS_AreaReachability( args[1] );
         case LEGACY_BOTLIB_AAS_AREA_TRAVEL_TIME_TO_GOAL_AREA:
-            Com_Printf("LEGACY_BOTLIB_AAS_AREA_TRAVEL_TIME_TO_GOAL_AREA - not implemented\r\n");
-            return 0;
+            return botlib_export->aas.AAS_AreaTravelTimeToGoalArea( args[1], VMA(2), args[3], args[4] );
         case LEGACY_BOTLIB_AAS_SWIMMING:
-            Com_Printf("LEGACY_BOTLIB_AAS_SWIMMING - not implemented\r\n");
-            return 0;
+            return botlib_export->aas.AAS_Swimming( VMA(1) );
         case LEGACY_BOTLIB_AAS_PREDICT_CLIENT_MOVEMENT:
-            Com_Printf("LEGACY_BOTLIB_AAS_PREDICT_CLIENT_MOVEMENT - not implemented\r\n");
-            return 0;
+            return botlib_export->aas.AAS_PredictClientMovement( VMA(1), args[2], VMA(3), args[4], args[5],
+                VMA(6), VMA(7), args[8], args[9], VMF(10), args[11], args[12], args[13] );
+
         case LEGACY_BOTLIB_EA_SAY:
-            Com_Printf("LEGACY_BOTLIB_EA_SAY - not implemented\r\n");
+            botlib_export->ea.EA_Say( args[1], VMA(2) );
             return 0;
         case LEGACY_BOTLIB_EA_SAY_TEAM:
-            Com_Printf("LEGACY_BOTLIB_EA_SAY_TEAM - not implemented\r\n");
+            botlib_export->ea.EA_SayTeam( args[1], VMA(2) );
             return 0;
         case LEGACY_BOTLIB_EA_COMMAND:
-            Com_Printf("LEGACY_BOTLIB_EA_COMMAND - not implemented\r\n");
+            botlib_export->ea.EA_Command( args[1], VMA(2) );
             return 0;
         case LEGACY_BOTLIB_EA_ACTION:
-            Com_Printf("LEGACY_BOTLIB_EA_ACTION - not implemented\r\n");
+            botlib_export->ea.EA_Action( args[1], args[2] );
             return 0;
         case LEGACY_BOTLIB_EA_GESTURE:
-            Com_Printf("LEGACY_BOTLIB_EA_GESTURE - not implemented\r\n");
+            botlib_export->ea.EA_Gesture( args[1] );
             return 0;
         case LEGACY_BOTLIB_EA_TALK:
-            Com_Printf("LEGACY_BOTLIB_EA_TALK - not implemented\r\n");
+            botlib_export->ea.EA_Talk( args[1] );
             return 0;
         case LEGACY_BOTLIB_EA_ATTACK:
-            Com_Printf("LEGACY_BOTLIB_EA_ATTACK - not implemented\r\n");
+            botlib_export->ea.EA_Attack( args[1] );
             return 0;
         case LEGACY_BOTLIB_EA_ALT_ATTACK:
-            Com_Printf("LEGACY_BOTLIB_EA_ALT_ATTACK - not implemented\r\n");
+            botlib_export->ea.EA_AltAttack( args[1] );
             return 0;
         case LEGACY_BOTLIB_EA_FORCEPOWER:
-            Com_Printf("LEGACY_BOTLIB_EA_FORCEPOWER - not implemented\r\n");
+            // Pretty sure this was just "left" here from JK or smth - what "force power" should've exist in SoF?
+            botlib_export->ea.EA_ForcePower( args[1] );
             return 0;
         case LEGACY_BOTLIB_EA_USE:
-            Com_Printf("LEGACY_BOTLIB_EA_USE - not implemented\r\n");
+            botlib_export->ea.EA_Use( args[1] );
             return 0;
         case LEGACY_BOTLIB_EA_RESPAWN:
-            Com_Printf("LEGACY_BOTLIB_EA_RESPAWN - not implemented\r\n");
+            botlib_export->ea.EA_Respawn( args[1] );
             return 0;
         case LEGACY_BOTLIB_EA_CROUCH:
-            Com_Printf("LEGACY_BOTLIB_EA_CROUCH - not implemented\r\n");
+            botlib_export->ea.EA_Crouch( args[1] );
             return 0;
         case LEGACY_BOTLIB_EA_MOVE_UP:
-            Com_Printf("LEGACY_BOTLIB_EA_MOVE_UP - not implemented\r\n");
+            botlib_export->ea.EA_MoveUp( args[1] );
             return 0;
         case LEGACY_BOTLIB_EA_MOVE_DOWN:
-            Com_Printf("LEGACY_BOTLIB_EA_MOVE_DOWN - not implemented\r\n");
+            botlib_export->ea.EA_MoveDown( args[1] );
             return 0;
         case LEGACY_BOTLIB_EA_MOVE_FORWARD:
-            Com_Printf("LEGACY_BOTLIB_EA_MOVE_FORWARD - not implemented\r\n");
+            botlib_export->ea.EA_MoveForward( args[1] );
             return 0;
         case LEGACY_BOTLIB_EA_MOVE_BACK:
-            Com_Printf("LEGACY_BOTLIB_EA_MOVE_BACK - not implemented\r\n");
+            botlib_export->ea.EA_MoveBack( args[1] );
             return 0;
         case LEGACY_BOTLIB_EA_MOVE_LEFT:
-            Com_Printf("LEGACY_BOTLIB_EA_MOVE_LEFT - not implemented\r\n");
+            botlib_export->ea.EA_MoveLeft( args[1] );
             return 0;
         case LEGACY_BOTLIB_EA_MOVE_RIGHT:
-            Com_Printf("LEGACY_BOTLIB_EA_MOVE_RIGHT - not implemented\r\n");
+            botlib_export->ea.EA_MoveRight( args[1] );
             return 0;
         case LEGACY_BOTLIB_EA_SELECT_WEAPON:
-            Com_Printf("LEGACY_BOTLIB_EA_SELECT_WEAPON - not implemented\r\n");
+            botlib_export->ea.EA_SelectWeapon( args[1], args[2] );
             return 0;
         case LEGACY_BOTLIB_EA_JUMP:
-            Com_Printf("LEGACY_BOTLIB_EA_JUMP - not implemented\r\n");
+            botlib_export->ea.EA_Jump( args[1] );
             return 0;
         case LEGACY_BOTLIB_EA_DELAYED_JUMP:
-            Com_Printf("LEGACY_BOTLIB_EA_DELAYED_JUMP - not implemented\r\n");
+            botlib_export->ea.EA_DelayedJump( args[1] );
             return 0;
         case LEGACY_BOTLIB_EA_MOVE:
-            Com_Printf("LEGACY_BOTLIB_EA_MOVE - not implemented\r\n");
+            botlib_export->ea.EA_Move( args[1], VMA(2), VMF(3) );
             return 0;
         case LEGACY_BOTLIB_EA_VIEW:
-            Com_Printf("LEGACY_BOTLIB_EA_VIEW - not implemented\r\n");
+            botlib_export->ea.EA_View( args[1], VMA(2) );
             return 0;
         case LEGACY_BOTLIB_EA_END_REGULAR:
-            Com_Printf("LEGACY_BOTLIB_EA_END_REGULAR - not implemented\r\n");
+            botlib_export->ea.EA_EndRegular( args[1], VMF(2) );
             return 0;
         case LEGACY_BOTLIB_EA_GET_INPUT:
-            Com_Printf("LEGACY_BOTLIB_EA_GET_INPUT - not implemented\r\n");
+            botlib_export->ea.EA_GetInput( args[1], VMF(2), VMA(3) );
             return 0;
         case LEGACY_BOTLIB_EA_RESET_INPUT:
-            Com_Printf("LEGACY_BOTLIB_EA_RESET_INPUT - not implemented\r\n");
+            botlib_export->ea.EA_ResetInput( args[1] );
             return 0;
         case LEGACY_BOTLIB_AI_LOAD_CHARACTER:
-            Com_Printf("LEGACY_BOTLIB_AI_LOAD_CHARACTER - not implemented\r\n");
-            return 0;
+            return botlib_export->ai.BotLoadCharacter( VMA(1), VMF(2) );
         case LEGACY_BOTLIB_AI_FREE_CHARACTER:
-            Com_Printf("LEGACY_BOTLIB_AI_FREE_CHARACTER - not implemented\r\n");
+            botlib_export->ai.BotFreeCharacter( args[1] );
             return 0;
         case LEGACY_BOTLIB_AI_CHARACTERISTIC_FLOAT:
-            Com_Printf("LEGACY_BOTLIB_AI_CHARACTERISTIC_FLOAT - not implemented\r\n");
-            return 0;
+            return FloatAsInt( botlib_export->ai.Characteristic_Float( args[1], args[2] ) );
         case LEGACY_BOTLIB_AI_CHARACTERISTIC_BFLOAT:
-            Com_Printf("LEGACY_BOTLIB_AI_CHARACTERISTIC_BFLOAT - not implemented\r\n");
-            return 0;
+            return FloatAsInt( botlib_export->ai.Characteristic_BFloat( args[1], args[2], VMF(3), VMF(4) ) );
         case LEGACY_BOTLIB_AI_CHARACTERISTIC_INTEGER:
-            Com_Printf("LEGACY_BOTLIB_AI_CHARACTERISTIC_INTEGER - not implemented\r\n");
-            return 0;
+            return botlib_export->ai.Characteristic_Integer( args[1], args[2] );
         case LEGACY_BOTLIB_AI_CHARACTERISTIC_BINTEGER:
-            Com_Printf("LEGACY_BOTLIB_AI_CHARACTERISTIC_BINTEGER - not implemented\r\n");
-            return 0;
+            return botlib_export->ai.Characteristic_BInteger( args[1], args[2], args[3], args[4] );
         case LEGACY_BOTLIB_AI_CHARACTERISTIC_STRING:
-            Com_Printf("LEGACY_BOTLIB_AI_CHARACTERISTIC_STRING - not implemented\r\n");
+            botlib_export->ai.Characteristic_String( args[1], args[2], VMA(3), args[4] );
             return 0;
         case LEGACY_BOTLIB_AI_ALLOC_CHAT_STATE:
-            Com_Printf("LEGACY_BOTLIB_AI_ALLOC_CHAT_STATE - not implemented\r\n");
-            return 0;
+            return botlib_export->ai.BotAllocChatState();
         case LEGACY_BOTLIB_AI_FREE_CHAT_STATE:
-            Com_Printf("LEGACY_BOTLIB_AI_FREE_CHAT_STATE - not implemented\r\n");
+            botlib_export->ai.BotFreeChatState( args[1] );
             return 0;
         case LEGACY_BOTLIB_AI_QUEUE_CONSOLE_MESSAGE:
-            Com_Printf("LEGACY_BOTLIB_AI_QUEUE_CONSOLE_MESSAGE - not implemented\r\n");
+            botlib_export->ai.BotQueueConsoleMessage( args[1], args[2], VMA(3) );
             return 0;
         case LEGACY_BOTLIB_AI_REMOVE_CONSOLE_MESSAGE:
-            Com_Printf("LEGACY_BOTLIB_AI_REMOVE_CONSOLE_MESSAGE - not implemented\r\n");
+            botlib_export->ai.BotRemoveConsoleMessage( args[1], args[2] );
             return 0;
         case LEGACY_BOTLIB_AI_NEXT_CONSOLE_MESSAGE:
-            Com_Printf("LEGACY_BOTLIB_AI_NEXT_CONSOLE_MESSAGE - not implemented\r\n");
-            return 0;
+            return botlib_export->ai.BotNextConsoleMessage( args[1], VMA(2) );
         case LEGACY_BOTLIB_AI_NUM_CONSOLE_MESSAGE:
-            Com_Printf("LEGACY_BOTLIB_AI_NUM_CONSOLE_MESSAGE - not implemented\r\n");
-            return 0;
+            return botlib_export->ai.BotNumConsoleMessages( args[1] );
         case LEGACY_BOTLIB_AI_INITIAL_CHAT:
-            Com_Printf("LEGACY_BOTLIB_AI_INITIAL_CHAT - not implemented\r\n");
+            botlib_export->ai.BotInitialChat( args[1], VMA(2), args[3], VMA(4), VMA(5), VMA(6), VMA(7), VMA(8), VMA(9), VMA(10), VMA(11) );
             return 0;
         case LEGACY_BOTLIB_AI_REPLY_CHAT:
-            Com_Printf("LEGACY_BOTLIB_AI_REPLY_CHAT - not implemented\r\n");
-            return 0;
+            return botlib_export->ai.BotReplyChat( args[1], VMA(2), args[3], args[4], VMA(5), VMA(6), VMA(7), VMA(8), VMA(9), VMA(10), VMA(11), VMA(12) );
         case LEGACY_BOTLIB_AI_CHAT_LENGTH:
-            Com_Printf("LEGACY_BOTLIB_AI_CHAT_LENGTH - not implemented\r\n");
-            return 0;
+            return botlib_export->ai.BotChatLength( args[1] );
         case LEGACY_BOTLIB_AI_ENTER_CHAT:
-            Com_Printf("LEGACY_BOTLIB_AI_ENTER_CHAT - not implemented\r\n");
+            botlib_export->ai.BotEnterChat( args[1], args[2], args[3] );
             return 0;
         case LEGACY_BOTLIB_AI_STRING_CONTAINS:
-            Com_Printf("LEGACY_BOTLIB_AI_STRING_CONTAINS - not implemented\r\n");
-            return 0;
+            return botlib_export->ai.StringContains( VMA(1), VMA(2), args[3] );
         case LEGACY_BOTLIB_AI_FIND_MATCH:
-            Com_Printf("LEGACY_BOTLIB_AI_FIND_MATCH - not implemented\r\n");
-            return 0;
+            return botlib_export->ai.BotFindMatch( VMA(1), VMA(2), args[3] );
         case LEGACY_BOTLIB_AI_MATCH_VARIABLE:
-            Com_Printf("LEGACY_BOTLIB_AI_MATCH_VARIABLE - not implemented\r\n");
+            botlib_export->ai.BotMatchVariable( VMA(1), args[2], VMA(3), args[4] );
             return 0;
         case LEGACY_BOTLIB_AI_UNIFY_WHITE_SPACES:
-            Com_Printf("LEGACY_BOTLIB_AI_UNIFY_WHITE_SPACES - not implemented\r\n");
+            botlib_export->ai.UnifyWhiteSpaces( VMA(1) );
             return 0;
         case LEGACY_BOTLIB_AI_REPLACE_SYNONYMS:
-            Com_Printf("LEGACY_BOTLIB_AI_REPLACE_SYNONYMS - not implemented\r\n");
+            botlib_export->ai.BotReplaceSynonyms( VMA(1), args[2] );
             return 0;
         case LEGACY_BOTLIB_AI_LOAD_CHAT_FILE:
-            Com_Printf("LEGACY_BOTLIB_AI_LOAD_CHAT_FILE - not implemented\r\n");
-            return 0;
+            return botlib_export->ai.BotLoadChatFile( args[1], VMA(2), VMA(3) );
         case LEGACY_BOTLIB_AI_SET_CHAT_GENDER:
-            Com_Printf("LEGACY_BOTLIB_AI_SET_CHAT_GENDER - not implemented\r\n");
+            botlib_export->ai.BotSetChatGender( args[1], args[2] );
             return 0;
         case LEGACY_BOTLIB_AI_SET_CHAT_NAME:
-            Com_Printf("LEGACY_BOTLIB_AI_SET_CHAT_NAME - not implemented\r\n");
+            botlib_export->ai.BotSetChatName( args[1], VMA(2), args[3] );
             return 0;
         case LEGACY_BOTLIB_AI_RESET_GOAL_STATE:
-            Com_Printf("LEGACY_BOTLIB_AI_RESET_GOAL_STATE - not implemented\r\n");
+            botlib_export->ai.BotResetGoalState( args[1] );
             return 0;
         case LEGACY_BOTLIB_AI_RESET_AVOID_GOALS:
-            Com_Printf("LEGACY_BOTLIB_AI_RESET_AVOID_GOALS - not implemented\r\n");
+            botlib_export->ai.BotResetAvoidGoals( args[1] );
             return 0;
         case LEGACY_BOTLIB_AI_PUSH_GOAL:
-            Com_Printf("LEGACY_BOTLIB_AI_PUSH_GOAL - not implemented\r\n");
+            botlib_export->ai.BotPushGoal( args[1], VMA(2) );
             return 0;
         case LEGACY_BOTLIB_AI_POP_GOAL:
-            Com_Printf("LEGACY_BOTLIB_AI_POP_GOAL - not implemented\r\n");
+            botlib_export->ai.BotPopGoal( args[1] );
             return 0;
         case LEGACY_BOTLIB_AI_EMPTY_GOAL_STACK:
-            Com_Printf("LEGACY_BOTLIB_AI_EMPTY_GOAL_STACK - not implemented\r\n");
+            botlib_export->ai.BotEmptyGoalStack( args[1] );
             return 0;
         case LEGACY_BOTLIB_AI_DUMP_AVOID_GOALS:
-            Com_Printf("LEGACY_BOTLIB_AI_DUMP_AVOID_GOALS - not implemented\r\n");
+            botlib_export->ai.BotDumpAvoidGoals( args[1] );
             return 0;
         case LEGACY_BOTLIB_AI_DUMP_GOAL_STACK:
-            Com_Printf("LEGACY_BOTLIB_AI_DUMP_GOAL_STACK - not implemented\r\n");
+            botlib_export->ai.BotDumpGoalStack( args[1] );
             return 0;
         case LEGACY_BOTLIB_AI_GOAL_NAME:
-            Com_Printf("LEGACY_BOTLIB_AI_GOAL_NAME - not implemented\r\n");
+            botlib_export->ai.BotGoalName( args[1], VMA(2), args[3] );
             return 0;
         case LEGACY_BOTLIB_AI_GET_TOP_GOAL:
-            Com_Printf("LEGACY_BOTLIB_AI_GET_TOP_GOAL - not implemented\r\n");
-            return 0;
+            return botlib_export->ai.BotGetTopGoal( args[1], VMA(2) );
         case LEGACY_BOTLIB_AI_GET_SECOND_GOAL:
-            Com_Printf("LEGACY_BOTLIB_AI_GET_SECOND_GOAL - not implemented\r\n");
-            return 0;
+            return botlib_export->ai.BotGetSecondGoal( args[1], VMA(2) );
         case LEGACY_BOTLIB_AI_CHOOSE_LTG_ITEM:
-            Com_Printf("LEGACY_BOTLIB_AI_CHOOSE_LTG_ITEM - not implemented\r\n");
-            return 0;
+            return botlib_export->ai.BotChooseLTGItem( args[1], VMA(2), VMA(3), args[4] );
         case LEGACY_BOTLIB_AI_CHOOSE_NBG_ITEM:
-            Com_Printf("LEGACY_BOTLIB_AI_CHOOSE_NBG_ITEM - not implemented\r\n");
-            return 0;
+            return botlib_export->ai.BotChooseNBGItem( args[1], VMA(2), VMA(3), args[4], VMA(5), VMF(6) );
         case LEGACY_BOTLIB_AI_TOUCHING_GOAL:
-            Com_Printf("LEGACY_BOTLIB_AI_TOUCHING_GOAL - not implemented\r\n");
-            return 0;
+            return botlib_export->ai.BotTouchingGoal( VMA(1), VMA(2) );
         case LEGACY_BOTLIB_AI_ITEM_GOAL_IN_VIS_BUT_NOT_VISIBLE:
-            Com_Printf("LEGACY_BOTLIB_AI_ITEM_GOAL_IN_VIS_BUT_NOT_VISIBLE - not implemented\r\n");
-            return 0;
+            return botlib_export->ai.BotItemGoalInVisButNotVisible( args[1], VMA(2), VMA(3), VMA(4) );
         case LEGACY_BOTLIB_AI_GET_LEVEL_ITEM_GOAL:
-            Com_Printf("LEGACY_BOTLIB_AI_GET_LEVEL_ITEM_GOAL - not implemented\r\n");
-            return 0;
+            return botlib_export->ai.BotGetLevelItemGoal( args[1], VMA(2), VMA(3) );
         case LEGACY_BOTLIB_AI_AVOID_GOAL_TIME:
-            Com_Printf("LEGACY_BOTLIB_AI_AVOID_GOAL_TIME - not implemented\r\n");
-            return 0;
+            return FloatAsInt( botlib_export->ai.BotAvoidGoalTime( args[1], args[2] ) );
         case LEGACY_BOTLIB_AI_INIT_LEVEL_ITEMS:
-            Com_Printf("LEGACY_BOTLIB_AI_INIT_LEVEL_ITEMS - not implemented\r\n");
+            botlib_export->ai.BotInitLevelItems();
             return 0;
         case LEGACY_BOTLIB_AI_UPDATE_ENTITY_ITEMS:
-            Com_Printf("LEGACY_BOTLIB_AI_UPDATE_ENTITY_ITEMS - not implemented\r\n");
+            botlib_export->ai.BotUpdateEntityItems();
             return 0;
         case LEGACY_BOTLIB_AI_LOAD_ITEM_WEIGHTS:
-            Com_Printf("LEGACY_BOTLIB_AI_LOAD_ITEM_WEIGHTS - not implemented\r\n");
-            return 0;
+            return botlib_export->ai.BotLoadItemWeights( args[1], VMA(2) );
         case LEGACY_BOTLIB_AI_FREE_ITEM_WEIGHTS:
-            Com_Printf("LEGACY_BOTLIB_AI_FREE_ITEM_WEIGHTS - not implemented\r\n");
+            botlib_export->ai.BotFreeItemWeights( args[1] );
             return 0;
         case LEGACY_BOTLIB_AI_SAVE_GOAL_FUZZY_LOGIC:
-            Com_Printf("LEGACY_BOTLIB_AI_SAVE_GOAL_FUZZY_LOGIC - not implemented\r\n");
+            botlib_export->ai.BotSaveGoalFuzzyLogic( args[1], VMA(2) );
             return 0;
         case LEGACY_BOTLIB_AI_ALLOC_GOAL_STATE:
-            Com_Printf("LEGACY_BOTLIB_AI_ALLOC_GOAL_STATE - not implemented\r\n");
-            return 0;
+            return botlib_export->ai.BotAllocGoalState( args[1] );
         case LEGACY_BOTLIB_AI_FREE_GOAL_STATE:
-            Com_Printf("LEGACY_BOTLIB_AI_FREE_GOAL_STATE - not implemented\r\n");
+            botlib_export->ai.BotFreeGoalState( args[1] );
             return 0;
         case LEGACY_BOTLIB_AI_RESET_MOVE_STATE:
-            Com_Printf("LEGACY_BOTLIB_AI_RESET_MOVE_STATE - not implemented\r\n");
+            botlib_export->ai.BotResetMoveState( args[1] );
             return 0;
         case LEGACY_BOTLIB_AI_MOVE_TO_GOAL:
-            Com_Printf("LEGACY_BOTLIB_AI_MOVE_TO_GOAL - not implemented\r\n");
+            botlib_export->ai.BotMoveToGoal( VMA(1), args[2], VMA(3), args[4] );
             return 0;
         case LEGACY_BOTLIB_AI_MOVE_IN_DIRECTION:
-            Com_Printf("LEGACY_BOTLIB_AI_MOVE_IN_DIRECTION - not implemented\r\n");
-            return 0;
+            return botlib_export->ai.BotMoveInDirection( args[1], VMA(2), VMF(3), args[4] );
         case LEGACY_BOTLIB_AI_RESET_AVOID_REACH:
-            Com_Printf("LEGACY_BOTLIB_AI_RESET_AVOID_REACH - not implemented\r\n");
+            botlib_export->ai.BotResetAvoidReach( args[1] );
             return 0;
         case LEGACY_BOTLIB_AI_RESET_LAST_AVOID_REACH:
-            Com_Printf("LEGACY_BOTLIB_AI_RESET_LAST_AVOID_REACH - not implemented\r\n");
+            botlib_export->ai.BotResetLastAvoidReach( args[1] );
             return 0;
         case LEGACY_BOTLIB_AI_REACHABILITY_AREA:
-            Com_Printf("LEGACY_BOTLIB_AI_REACHABILITY_AREA - not implemented\r\n");
-            return 0;
+            return botlib_export->ai.BotReachabilityArea( VMA(1), args[2] );
         case LEGACY_BOTLIB_AI_MOVEMENT_VIEW_TARGET:
-            Com_Printf("LEGACY_BOTLIB_AI_MOVEMENT_VIEW_TARGET - not implemented\r\n");
-            return 0;
+            return botlib_export->ai.BotMovementViewTarget( args[1], VMA(2), args[3], VMF(4), VMA(5) );
         case LEGACY_BOTLIB_AI_ALLOC_MOVE_STATE:
-            Com_Printf("LEGACY_BOTLIB_AI_ALLOC_MOVE_STATE - not implemented\r\n");
-            return 0;
+            return botlib_export->ai.BotAllocMoveState();
         case LEGACY_BOTLIB_AI_FREE_MOVE_STATE:
-            Com_Printf("LEGACY_BOTLIB_AI_FREE_MOVE_STATE - not implemented\r\n");
+            botlib_export->ai.BotFreeMoveState( args[1] );
             return 0;
         case LEGACY_BOTLIB_AI_INIT_MOVE_STATE:
-            Com_Printf("LEGACY_BOTLIB_AI_INIT_MOVE_STATE - not implemented\r\n");
+            botlib_export->ai.BotInitMoveState( args[1], VMA(2) );
             return 0;
         case LEGACY_BOTLIB_AI_CHOOSE_BEST_FIGHT_WEAPON:
-            Com_Printf("LEGACY_BOTLIB_AI_CHOOSE_BEST_FIGHT_WEAPON - not implemented\r\n");
-            return 0;
+            return botlib_export->ai.BotChooseBestFightWeapon( args[1], VMA(2) );
         case LEGACY_BOTLIB_AI_GET_WEAPON_INFO:
-            Com_Printf("LEGACY_BOTLIB_AI_GET_WEAPON_INFO - not implemented\r\n");
+            botlib_export->ai.BotGetWeaponInfo( args[1], args[2], VMA(3) );
             return 0;
         case LEGACY_BOTLIB_AI_LOAD_WEAPON_WEIGHTS:
-            Com_Printf("LEGACY_BOTLIB_AI_LOAD_WEAPON_WEIGHTS - not implemented\r\n");
-            return 0;
+            return botlib_export->ai.BotLoadWeaponWeights( args[1], VMA(2) );
         case LEGACY_BOTLIB_AI_ALLOC_WEAPON_STATE:
-            Com_Printf("LEGACY_BOTLIB_AI_ALLOC_WEAPON_STATE - not implemented\r\n");
-            return 0;
+            return botlib_export->ai.BotAllocWeaponState();
         case LEGACY_BOTLIB_AI_FREE_WEAPON_STATE:
-            Com_Printf("LEGACY_BOTLIB_AI_FREE_WEAPON_STATE - not implemented\r\n");
+            botlib_export->ai.BotFreeWeaponState( args[1] );
             return 0;
         case LEGACY_BOTLIB_AI_RESET_WEAPON_STATE:
-            Com_Printf("LEGACY_BOTLIB_AI_RESET_WEAPON_STATE - not implemented\r\n");
+            botlib_export->ai.BotResetWeaponState( args[1] );
             return 0;
         case LEGACY_BOTLIB_AI_GENETIC_PARENTS_AND_CHILD_SELECTION:
-            Com_Printf("LEGACY_BOTLIB_AI_GENETIC_PARENTS_AND_CHILD_SELECTION - not implemented\r\n");
-            return 0;
+            return botlib_export->ai.GeneticParentsAndChildSelection(args[1], VMA(2), VMA(3), VMA(4), VMA(5));
         case LEGACY_BOTLIB_AI_INTERBREED_GOAL_FUZZY_LOGIC:
-            Com_Printf("LEGACY_BOTLIB_AI_INTERBREED_GOAL_FUZZY_LOGIC - not implemented\r\n");
+            botlib_export->ai.BotInterbreedGoalFuzzyLogic( args[1], args[2], args[3] );
             return 0;
         case LEGACY_BOTLIB_AI_MUTATE_GOAL_FUZZY_LOGIC:
-            Com_Printf("LEGACY_BOTLIB_AI_MUTATE_GOAL_FUZZY_LOGIC - not implemented\r\n");
+            botlib_export->ai.BotMutateGoalFuzzyLogic( args[1], VMF(2) );
             return 0;
         case LEGACY_BOTLIB_AI_GET_NEXT_CAMP_SPOT_GOAL:
-            Com_Printf("LEGACY_BOTLIB_AI_GET_NEXT_CAMP_SPOT_GOAL - not implemented\r\n");
-            return 0;
+            return botlib_export->ai.BotGetNextCampSpotGoal( args[1], VMA(2) );
         case LEGACY_BOTLIB_AI_GET_MAP_LOCATION_GOAL:
-            Com_Printf("LEGACY_BOTLIB_AI_GET_MAP_LOCATION_GOAL - not implemented\r\n");
-            return 0;
+            return botlib_export->ai.BotGetMapLocationGoal( VMA(1), VMA(2) );
         case LEGACY_BOTLIB_AI_NUM_INITIAL_CHATS:
-            Com_Printf("LEGACY_BOTLIB_AI_NUM_INITIAL_CHATS - not implemented\r\n");
-            return 0;
+            return botlib_export->ai.BotNumInitialChats( args[1], VMA(2) );
         case LEGACY_BOTLIB_AI_GET_CHAT_MESSAGE:
-            Com_Printf("LEGACY_BOTLIB_AI_GET_CHAT_MESSAGE - not implemented\r\n");
+            botlib_export->ai.BotGetChatMessage( args[1], VMA(2), args[3] );
             return 0;
         case LEGACY_BOTLIB_AI_REMOVE_FROM_AVOID_GOALS:
-            Com_Printf("LEGACY_BOTLIB_AI_REMOVE_FROM_AVOID_GOALS - not implemented\r\n");
+            botlib_export->ai.BotRemoveFromAvoidGoals( args[1], args[2] );
             return 0;
         case LEGACY_BOTLIB_AI_PREDICT_VISIBLE_POSITION:
-            Com_Printf("LEGACY_BOTLIB_AI_PREDICT_VISIBLE_POSITION - not implemented\r\n");
-            return 0;
+            return botlib_export->ai.BotPredictVisiblePosition( VMA(1), args[2], VMA(3), args[4], VMA(5) );
         case LEGACY_BOTLIB_AI_SET_AVOID_GOAL_TIME:
-            Com_Printf("LEGACY_BOTLIB_AI_SET_AVOID_GOAL_TIME - not implemented\r\n");
+            botlib_export->ai.BotSetAvoidGoalTime( args[1], args[2], VMF(3));
             return 0;
         case LEGACY_BOTLIB_AI_ADD_AVOID_SPOT:
-            Com_Printf("LEGACY_BOTLIB_AI_ADD_AVOID_SPOT - not implemented\r\n");
+            botlib_export->ai.BotAddAvoidSpot( args[1], VMA(2), VMF(3), args[4] );
             return 0;
         case LEGACY_BOTLIB_AAS_ALTERNATIVE_ROUTE_GOAL:
-            Com_Printf("LEGACY_BOTLIB_AAS_ALTERNATIVE_ROUTE_GOAL - not implemented\r\n");
-            return 0;
+            return botlib_export->aas.AAS_AlternativeRouteGoals( VMA(1), args[2], VMA(3), args[4], args[5], VMA(6), args[7], args[8] );
+
         case LEGACY_BOTLIB_AAS_PREDICT_ROUTE:
-            Com_Printf("LEGACY_BOTLIB_AAS_PREDICT_ROUTE - not implemented\r\n");
-            return 0;
+            return botlib_export->aas.AAS_PredictRoute( VMA(1), args[2], VMA(3), args[4], args[5], args[6], args[7], args[8], args[9], args[10], args[11] );
 
         case LEGACY_BOTLIB_AAS_POINT_REACHABILITY_AREA_INDEX:
-                return botlib_export->aas.AAS_PointReachabilityAreaIndex( VMA(1) );
+            return botlib_export->aas.AAS_PointReachabilityAreaIndex( VMA(1) );
         case LEGACY_BOTLIB_PC_LOAD_SOURCE:
                 return botlib_export->PC_LoadSourceHandle( VMA(1) );
         case LEGACY_BOTLIB_PC_FREE_SOURCE:
@@ -1053,26 +1007,22 @@ intptr_t SV_GameSystemCalls(qboolean runningQVM, intptr_t *args ) {
         case LEGACY_BOTLIB_PC_SOURCE_FILE_AND_LINE:
                 return botlib_export->PC_SourceFileAndLine( args[1], VMA(2), VMA(3) );
         case LEGACY_BOTLIB_PC_LOAD_GLOBAL_DEFINES:
-                Com_Printf("LEGACY_BOTLIB_PC_LOAD_GLOBAL_DEFINES - not implemented.\r\n");
-            return 0;
+            return botlib_export->PC_LoadGlobalDefines(VMA(1));
         case LEGACY_BOTLIB_PC_REMOVE_ALL_GLOBAL_DEFINES:
-                Com_Printf("LEGACY_BOTLIB_PC_REMOVE_ALL_GLOBAL_DEFINES - not implemented\r\n");
+            botlib_export->PC_RemoveAllGlobalDefines();
             return 0;
-
 
 		// Ghoul2 Insert Start
         // NB - Ghoul2 calls are most likely different to vanilla SoF2.
         case LEGACY_G_G2_LISTBONES:
-            //G2API_ListBones(VMA(1)); // arg2 frame ignored, but also NB - vanilla SDK does not call this function.
-                Com_Printf("G_G2_LISTBONES: Not implemented!\r\n");
+            G2API_ListBones(VMA(1)); // arg2 frame ignored, but also NB - vanilla SDK does not call this function.
             return 0;
         case LEGACY_G_G2_LISTSURFACES:
-                Com_Printf("G_G2_LISTSURFACES: Not implemented!\r\n");
-            //G2API_ListSurfaces(VMA(1));
+            G2API_ListSurfaces(VMA(1));
             return 0;
         case LEGACY_G_G2_HAVEWEGHOULMODELS:
 			// CGame syscall, not used in the server.
-                Com_Printf("LEGACY_G_G2_HAVEWEGHOULMODELS - Not implemented\r\n");
+            Com_Printf("LEGACY_G_G2_HAVEWEGHOULMODELS - Not implemented\r\n");
             return 0;
         case LEGACY_G_G2_SETMODELS:
 			// CGame syscall, not used in the server.
@@ -1085,7 +1035,6 @@ intptr_t SV_GameSystemCalls(qboolean runningQVM, intptr_t *args ) {
         case LEGACY_G_G2_INITGHOUL2MODEL: {
             CGhoul2Model_t** test = VMA(1);
             G2API_InitGhoul2Model(test, (const char *)VMA(2), args[4], args[7]);
-            Com_Printf("break\r\n");
             return 0;
         }
         case LEGACY_G_G2_ADDBOLT:
@@ -1119,7 +1068,6 @@ intptr_t SV_GameSystemCalls(qboolean runningQVM, intptr_t *args ) {
             return 0;
         case LEGACY_G_G2_REMOVEGHOUL2MODEL:
         case LEGACY_G_G2_CLEANMODELS:
-                Com_Printf("Syscall %d cleanmodel %p\r\n", args[0], VMA(1));
             return G2API_RemoveGhoul2Model(VMA(1));
         case LEGACY_G_GP_PARSE: {
             return (intptr_t)GP_Parse(VMA(1));

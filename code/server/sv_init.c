@@ -527,6 +527,8 @@ void SV_SpawnServer( char *server, qboolean killBots ) {
         }
     }
 
+    net_runningLegacy = Cvar_Get("net_runningLegacy", "0", CVAR_ARCHIVE | CVAR_LATCH); // 0 => run gold, 1 => run silver.
+
     SV_SendMapChange();
 
     // (Re-)initialize renderer.

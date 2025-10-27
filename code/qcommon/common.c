@@ -95,6 +95,7 @@ cvar_t  *com_busyWait;
 cvar_t  *com_gracefulErrors;
 
 cvar_t* net_multiprotocol;
+cvar_t* net_runningLegacy;
 cvar_t* sv_useLegacyNades;
 #ifndef DEDICATED
 cvar_t  *con_autochat;

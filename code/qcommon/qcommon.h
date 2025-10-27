@@ -881,6 +881,7 @@ extern  fileHandle_t    com_journalFile;
 extern  fileHandle_t    com_journalDataFile;
 
 extern  cvar_t* net_multiprotocol;
+extern  cvar_t* net_runningLegacy;
 extern  cvar_t* sv_useLegacyNades;
 
 /*
