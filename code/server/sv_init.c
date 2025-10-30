@@ -67,34 +67,34 @@ static void SV_SendConfigstring(client_t *client, int index)
         // standard cs, just send it
 
         char bigInfoString[BIG_INFO_STRING];
-        cvar_t* legacyClmod = Cvar_FindVar("sv_legacyClientMod");
-        cvar_t* clientMod = Cvar_FindVar("sv_clientMod");
+        cvar_t* silverMod = Cvar_FindVar("sv_silverClientMod");
+        cvar_t* goldMod = Cvar_FindVar("sv_goldClientMod");
         if (index == CS_SYSTEMINFO) {
             char refPaks[BIG_INFO_VALUE], refChecksums[BIG_INFO_VALUE], filteredPaks[BIG_INFO_VALUE], filteredChecksums[BIG_INFO_VALUE];
             Q_strncpyz(bigInfoString, sv.configstrings[index], sizeof(bigInfoString));
 
-            if (client->legacyProtocol && legacyClmod && legacyClmod->string && strlen(legacyClmod->string) > 0 && Q_stricmp(legacyClmod->string, "none")) {
-                Info_SetValueForKey_Big(bigInfoString, "fs_game", legacyClmod->string);
+            if (client->commProto == COMMPROTO_SILVER && silverMod && silverMod->string && strlen(silverMod->string) > 0 && Q_stricmp(silverMod->string, "none")) {
+                Info_SetValueForKey_Big(bigInfoString, "fs_game", silverMod->string);
 
 
-                if (clientMod && clientMod->string && strlen(clientMod->string) > 0 && Q_stricmp(clientMod->string, "none") && Q_stricmp(clientMod->string, legacyClmod->string)) {
+                if (goldMod && goldMod->string && strlen(goldMod->string) > 0 && Q_stricmp(goldMod->string, "none") && Q_stricmp(goldMod->string, goldMod->string)) {
                     Q_strncpyz(refPaks, Info_ValueForKey(bigInfoString, "sv_referencedPakNames"), sizeof(refPaks));
                     Q_strncpyz(refChecksums, Info_ValueForKey(bigInfoString, "sv_referencedPaks"), sizeof(refChecksums));
 
-                    SV_FilterPaksAndChecksums(refPaks, refChecksums, clientMod->string, filteredPaks, sizeof(filteredPaks), filteredChecksums, sizeof(filteredChecksums));
+                    SV_FilterPaksAndChecksums(refPaks, refChecksums, goldMod->string, filteredPaks, sizeof(filteredPaks), filteredChecksums, sizeof(filteredChecksums));
 
                     Info_SetValueForKey_Big(bigInfoString, "sv_referencedPakNames", filteredPaks);
                     Info_SetValueForKey_Big(bigInfoString, "sv_referencedPaks", filteredChecksums);
                 }
             }
-            else if (!client->legacyProtocol && clientMod && clientMod->string && strlen(clientMod->string) > 0 && Q_stricmp(clientMod->string, "none")) {
-                Info_SetValueForKey_Big(bigInfoString, "fs_game", clientMod->string);
+            else if (client->commProto == COMMPROTO_GOLD && goldMod && goldMod->string && strlen(goldMod->string) > 0 && Q_stricmp(goldMod->string, "none")) {
+                Info_SetValueForKey_Big(bigInfoString, "fs_game", goldMod->string);
 
-                if (legacyClmod && legacyClmod->string && strlen(legacyClmod->string) > 0 && Q_stricmp(legacyClmod->string, "none") && Q_stricmp(legacyClmod->string, clientMod->string)) {
+                if (silverMod && silverMod->string && strlen(silverMod->string) > 0 && Q_stricmp(silverMod->string, "none") && Q_stricmp(silverMod->string, silverMod->string)) {
                     Q_strncpyz(refPaks, Info_ValueForKey(bigInfoString, "sv_referencedPakNames"), sizeof(refPaks));
                     Q_strncpyz(refChecksums, Info_ValueForKey(bigInfoString, "sv_referencedPaks"), sizeof(refChecksums));
 
-                    SV_FilterPaksAndChecksums(refPaks, refChecksums, legacyClmod->string, filteredPaks, sizeof(filteredPaks), filteredChecksums, sizeof(filteredChecksums));
+                    SV_FilterPaksAndChecksums(refPaks, refChecksums, silverMod->string, filteredPaks, sizeof(filteredPaks), filteredChecksums, sizeof(filteredChecksums));
 
                     Info_SetValueForKey_Big(bigInfoString, "sv_referencedPakNames", filteredPaks);
                     Info_SetValueForKey_Big(bigInfoString, "sv_referencedPaks", filteredChecksums);
@@ -104,37 +104,37 @@ static void SV_SendConfigstring(client_t *client, int index)
             SV_SendServerCommand(client, "cs %i \"%s\"\n", index,
                 bigInfoString);
 
-        }
-        else if (client->legacyProtocol && index == CS_SERVERINFO) {
-            //legacy_availableWpns
+        } else if (index == CS_SERVERINFO) {
+            if (client->commProto == COMMPROTO_SILVER && !net_runningLegacy->integer) {
+                Q_strncpyz(bigInfoString, sv.configstrings[index], sizeof(bigInfoString));
+                Info_SetValueForKey_Big(bigInfoString, "g_availableWeapons", SV_SpoofAvailableWeaponsFromGoldToSilver());
 
-            Q_strncpyz(bigInfoString, sv.configstrings[index], sizeof(bigInfoString));
+                SV_SendServerCommand(client, "cs %i \"%s\"\n", index,
+                    bigInfoString);
+            } else if (client->commProto == COMMPROTO_GOLD && net_runningLegacy->integer) {
+                Q_strncpyz(bigInfoString, sv.configstrings[index], sizeof(bigInfoString));
+                Info_SetValueForKey_Big(bigInfoString, "g_availableWeapons", SV_SpoofAvailableWeaponsFromSilverToGold());
 
-            char* legacyWpns = Cvar_VariableString("legacy_availableWpns");
-            Info_SetValueForKey_Big(bigInfoString, "g_availableWeapons", legacyWpns);
-            SV_SendServerCommand(client, "cs %i \"%s\"\n", index,
-                bigInfoString);
-        }
-        else {
-            // legacy protocol - as the game version is a short string, it will never be truncated.
-            if (client->legacyProtocol) {
-
-                if (index == CS_GAME_VERSION) {
-                    SV_SendServerCommand(client, "cs %i \"%s\"\n", index,
-                        GAME_VERSION_LEGACY);
-                }
-
-                else {
-                    SV_SendServerCommand(client, "cs %i \"%s\"\n", index,
-                        sv.configstrings[index]);
-                }
-
-
-            }
-            else {
+                SV_SendServerCommand(client, "cs %i \"%s\"\n", index,
+                    bigInfoString);
+            } else {
                 SV_SendServerCommand(client, "cs %i \"%s\"\n", index,
                     sv.configstrings[index]);
             }
+        } else if (index == CS_GAME_VERSION) {
+            if (client->commProto == COMMPROTO_SILVER) {
+                SV_SendServerCommand(client, "cs %i \"%s\"\n", index,
+                        SILVER_GAME_VERSION);
+            } else if (client->commProto == COMMPROTO_GOLD) {
+                SV_SendServerCommand(client, "cs %i \"%s\"\n", index,
+                        GOLD_GAME_VERSION);
+            } else {
+                SV_SendServerCommand(client, "cs %i \"%s\"\n", index,
+                        sv.configstrings[index]);
+            }
+        } else {
+            SV_SendServerCommand(client, "cs %i \"%s\"\n", index,
+                        sv.configstrings[index]);
         }
     }
 }
@@ -527,8 +527,6 @@ void SV_SpawnServer( char *server, qboolean killBots ) {
         }
     }
 
-    net_runningLegacy = Cvar_Get("net_runningLegacy", "0", CVAR_ARCHIVE | CVAR_LATCH); // 0 => run gold, 1 => run silver.
-
     SV_SendMapChange();
 
     // (Re-)initialize renderer.
@@ -689,8 +687,8 @@ void SV_SpawnServer( char *server, qboolean killBots ) {
     // the server sends these to the clients so they can figure
     // out which pk3s should be auto-downloaded
 
-    sv_clientMod = Cvar_Get("sv_clientMod", "", CVAR_ARCHIVE | CVAR_LATCH);
-    sv_legacyClientMod = Cvar_Get("sv_legacyClientMod", "", CVAR_ARCHIVE | CVAR_LATCH);
+    sv_goldClientMod = Cvar_Get("sv_goldClientMod", "", CVAR_ARCHIVE | CVAR_LATCH);
+    sv_silverClientMod = Cvar_Get("sv_silverClientMod", "", CVAR_ARCHIVE | CVAR_LATCH);
 
     sv_smartDownload = Cvar_Get("sv_smartDownload", "1", CVAR_ARCHIVE | CVAR_LATCH);
     sv_smartAdditionalPaks = Cvar_Get("sv_smartAdditionalPaks", "", CVAR_ARCHIVE | CVAR_LATCH);
@@ -736,8 +734,8 @@ void SV_SpawnServer( char *server, qboolean killBots ) {
 
                     if (res) {
 
-                        if (Q_stricmp(gamename, sv_clientMod->string) && !Q_stricmp(gamename, fsGame)) {
-                            gamename = sv_clientMod->string;
+                        if (Q_stricmp(gamename, sv_goldClientMod->string) && !Q_stricmp(gamename, fsGame)) {
+                            gamename = sv_goldClientMod->string;
                         }
 
                         Q_strcat(refPaks, sizeof(refPaks), va("%s%s/%s", strlen(refPaks) > 0 ? " " : "", gamename, basename));
@@ -806,7 +804,7 @@ void SV_Init (void)
     Cvar_Get ("fraglimit", "20", CVAR_SERVERINFO);
     Cvar_Get ("timelimit", "0", CVAR_SERVERINFO);
     sv_gametype = Cvar_Get ("g_gametype", "dm", CVAR_SERVERINFO | CVAR_LATCH);
-    sv_publicGametype = Cvar_Get("g_publicGametype", "dm", CVAR_ROM); // can only be set by the engine / mod, not by the user.
+    sv_publicGametype = Cvar_Get("g_publicGametype", "dm", CVAR_LATCH); // Allow setting it without mod, so legacymods can use spoofing easily without memory changes.
     sv_spoofGametype = Cvar_Get("g_spoofGametype", "0", CVAR_ARCHIVE | CVAR_LATCH);
     Cvar_Get ("sv_keywords", "", CVAR_SERVERINFO);
     sv_mapname = Cvar_Get ("mapname", "nomap", CVAR_SERVERINFO | CVAR_ROM);

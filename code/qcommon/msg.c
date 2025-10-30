@@ -1336,7 +1336,7 @@ identical, under the assumption that the in-order delta code will catch it.
 ==================
 */
 void MSG_WriteDeltaEntity( msg_t *msg, struct entityState_s *from, struct entityState_s *to,
-                           qboolean force, qboolean legacyProtocol ) {
+                           qboolean force, commProtocol_t commProto ) {
     int         i, lc;
     int         numFields;
     netField_t  *field;
@@ -1359,7 +1359,7 @@ void MSG_WriteDeltaEntity( msg_t *msg, struct entityState_s *from, struct entity
 
         ;
 
-
+    qboolean legacyProtocol = commProto == COMMPROTO_GOLD ? qfalse : qtrue; // just as stubs to test.
 
     netField_t* entityStateFields_Local = legacyProtocol ? legacyEntityStateFields : entityStateFields;
 
@@ -2030,7 +2030,7 @@ MSG_WriteDeltaPlayerstate
 
 =============
 */
-void MSG_WriteDeltaPlayerstate( msg_t *msg, struct playerState_s *from, struct playerState_s *to, qboolean legacyProtocol ) {
+void MSG_WriteDeltaPlayerstate( msg_t *msg, struct playerState_s *from, struct playerState_s *to, commProtocol_t commProto ) {
     int             i;
     playerState_t   dummy;
     int             statsbits;
@@ -2073,6 +2073,7 @@ void MSG_WriteDeltaPlayerstate( msg_t *msg, struct playerState_s *from, struct p
         toEventParm3 = -1
         ;
 
+    qboolean legacyProtocol = commProto == COMMPROTO_GOLD ? qfalse : qtrue; // just to test.
     netField_t* playerStateFields_Local = legacyProtocol ? legacyPlayerStateFields : playerStateFields;
 
     if (!from) {

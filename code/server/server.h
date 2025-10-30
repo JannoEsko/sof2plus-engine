@@ -181,7 +181,7 @@ typedef struct client_s {
     int             oldServerTime;
     qboolean        csUpdated[MAX_CONFIGSTRINGS];
 
-    qboolean        legacyProtocol;
+    commProtocol_t      commProto;
 } client_t;
 
 //=============================================================================
@@ -276,8 +276,8 @@ extern  cvar_t  *sv_mapcycle;
 extern  cvar_t  *sv_lanForceRate;
 extern  cvar_t  *sv_banFile;
 
-extern  cvar_t* sv_legacyClientMod;
-extern  cvar_t* sv_clientMod;
+extern  cvar_t* sv_silverClientMod;
+extern  cvar_t* sv_goldClientMod;
 extern  cvar_t* sv_smartDownload;
 extern  cvar_t* sv_smartAdditionalPaks;
 extern  cvar_t* sv_altmap;
@@ -323,7 +323,8 @@ void SV_RemoveOperatorCommands (void);
 void SV_MasterShutdown (void);
 int SV_RateMsec(client_t *client);
 
-
+char* SV_SpoofAvailableWeaponsFromSilverToGold(void);
+char* SV_SpoofAvailableWeaponsFromGoldToSilver(void);
 
 //
 // sv_init.c
@@ -342,9 +343,9 @@ void SV_ChangeMaxClients( void );
 //
 // sv_client.c
 //
-void SV_GetChallenge(netadr_t from, qboolean legacyProtocol);
+void SV_GetChallenge(netadr_t from, commProtocol_t commProto);
 
-void SV_DirectConnect( netadr_t from, qboolean legacyProtocol );
+void SV_DirectConnect( netadr_t from, commProtocol_t commProto );
 
 void SV_ExecuteClientMessage( client_t *cl, msg_t *msg );
 void SV_UserinfoChanged( client_t *cl );

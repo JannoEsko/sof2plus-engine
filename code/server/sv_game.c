@@ -470,9 +470,7 @@ intptr_t SV_GameSystemCalls(qboolean runningQVM, intptr_t *args ) {
 
                 
             }
-            if (mode != legacyMode) {
-                Com_Printf("Translated lmode %d to mode %d\r\n", legacyMode, mode);
-            }
+
             return FS_FOpenFileByMode(VMA(1), VMA(2), mode);
         }
             
@@ -1141,7 +1139,6 @@ intptr_t SV_GameSystemCalls(qboolean runningQVM, intptr_t *args ) {
             }
 
             return (intptr_t)SV_QVM_Alloc(args[1]);*/
-
             return (intptr_t)QVM_Local_Alloc(args[1]);
         }
         case LEGACY_G_VM_LOCALALLOCUNALIGNED:
@@ -1866,10 +1863,11 @@ intptr_t SV_GameSystemCalls(qboolean runningQVM, intptr_t *args ) {
             return 0;
 
         case G_CLIENT_ISLEGACYPROTOCOL:
+            assert(0); // FIXME - need to get rid of this from mod side, mod shouldn't care any more whether player is gold or silver.
             if (args[1] < 0 || args[1] >= sv_maxclients->integer) {
                 Com_Error(ERR_DROP, "Syscall IsLegacyProtocol: bad clientNum %i", args[1]);
             }
-            return svs.clients[args[1]].legacyProtocol;
+            return svs.clients[args[1]].commProto;
 
         case G_TRANSLATE_SILVER_WPN_TO_GOLD:
             return translateSilverWeaponToGoldWeapon(args[1]);

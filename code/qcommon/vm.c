@@ -1050,9 +1050,9 @@ void QVM_Local_TempFree( int size )
 {
 	size = ((size + 0x00000003) & 0xfffffffc);
 
-	if (currentVM->localPoolTail+size > LOCAL_POOL_SIZE)
+	if (currentVM->localPoolTail + size > LOCAL_POOL_SIZE + currentVM->localPoolStart)
 	{
-		Com_Error( ERR_DROP, "BG_TempFree: tail greater than size (%d > %d)", currentVM->localPoolTail+size, LOCAL_POOL_SIZE );
+		Com_Error( ERR_DROP, "BG_TempFree: tail greater than size (%d > %d)", currentVM->localPoolTail+size, LOCAL_POOL_SIZE + currentVM->localPoolStart );
 	}
 
 	currentVM->localPoolTail += size;

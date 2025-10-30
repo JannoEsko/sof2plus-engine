@@ -11,8 +11,15 @@
 #include "bg_weapons.h"
 #include "inv.h"
 
-#define GAME_VERSION        "sof2mp-1.03"
-#define GAME_VERSION_LEGACY "sof2mp-1.00"
+#ifndef __GAME_VER_PROTOCOLS__
+#define __GAME_VER_PROTOCOLS__
+#define GOLD_GAME_VERSION       "sof2mp-1.03"
+#define GOLD_GAME_PROTOCOL      "2004"
+#define GOLD_GAME_PROTOCOL_INT  2004
+#define SILVER_GAME_VERSION     "sof2mp-1.00"
+#define SILVER_GAME_PROTOCOL    "2002"
+#define SILVER_GAME_PROTOCOL_INT 2002
+#endif
 
 #define DEFAULT_GRAVITY     800
 #define ARMOR_PROTECTION    0.55

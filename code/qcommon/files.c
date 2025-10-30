@@ -1065,10 +1065,10 @@ qboolean FS_IsDemoExt(const char *filename, int namelen)
     {
         protocol = atoi(ext_test + ARRAY_LEN(DEMOEXT));
 
-        if(protocol == com_protocol->integer)
+        if(protocol == GOLD_GAME_PROTOCOL_INT)
             return qtrue;
 
-        if (protocol == com_legacyProtocol->integer)
+        if (protocol == SILVER_GAME_PROTOCOL_INT)
             return qtrue;
 
         for(index = 0; demo_protocols[index]; index++)
