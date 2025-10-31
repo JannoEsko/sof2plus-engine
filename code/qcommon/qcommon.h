@@ -36,6 +36,23 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 //============================================================================
 
+#ifndef __GAME_VER_PROTOCOLS__
+#define __GAME_VER_PROTOCOLS__
+#define GOLD_GAME_VERSION       "sof2mp-1.03"
+#define GOLD_GAME_PROTOCOL      "2004"
+#define GOLD_GAME_PROTOCOL_INT  2004
+#define SILVER_GAME_VERSION     "sof2mp-1.00"
+#define SILVER_GAME_PROTOCOL    "2002"
+#define SILVER_GAME_PROTOCOL_INT 2002
+#endif
+
+typedef enum commProtocol_e {
+    COMMPROTO_NONE,
+    COMMPROTO_SILVER,
+    COMMPROTO_GOLD,
+    COMMPROTO_MAX
+} commProtocol_t;
+
 //
 // msg.c
 //
@@ -99,11 +116,11 @@ void MSG_WriteDeltaUsercmdKey( msg_t *msg, int key, usercmd_t *from, usercmd_t *
 void MSG_ReadDeltaUsercmdKey( msg_t *msg, int key, usercmd_t *from, usercmd_t *to, qboolean legacyProtocol );
 
 void MSG_WriteDeltaEntity( msg_t *msg, struct entityState_s *from, struct entityState_s *to
-                           , qboolean force, qboolean legacyProtocol );
+                           , qboolean force, commProtocol_t commProto );
 void MSG_ReadDeltaEntity( msg_t *msg, entityState_t *from, entityState_t *to,
                          int number );
 
-void MSG_WriteDeltaPlayerstate( msg_t *msg, struct playerState_s *from, struct playerState_s *to, qboolean legacyProtocol );
+void MSG_WriteDeltaPlayerstate( msg_t *msg, struct playerState_s *from, struct playerState_s *to, commProtocol_t commProto );
 void MSG_ReadDeltaPlayerstate( msg_t *msg, struct playerState_s *from, struct playerState_s *to );
 
 
@@ -174,8 +191,8 @@ void        NET_Shutdown( void );
 void        NET_Restart_f( void );
 void        NET_Config( qboolean enableNetworking );
 void        NET_FlushPacketQueue(void);
-void        NET_SendPacket (netsrc_t sock, int length, const void *data, netadr_t to, qboolean legacyProtocol);
-void        QDECL NET_OutOfBandPrint( netsrc_t net_socket, netadr_t adr, qboolean legacyProtocol, const char *format, ...) __attribute__ ((format (printf, 4, 5)));
+void        NET_SendPacket (netsrc_t sock, int length, const void *data, netadr_t to, commProtocol_t commProto);
+void        QDECL NET_OutOfBandPrint( netsrc_t net_socket, netadr_t adr, commProtocol_t commProto, const char *format, ...) __attribute__ ((format (printf, 4, 5)));
 void        QDECL NET_OutOfBandData( netsrc_t sock, netadr_t adr, byte *format, int len );
 
 qboolean    NET_CompareAdr (netadr_t a, netadr_t b);
@@ -236,8 +253,8 @@ typedef struct {
 void Netchan_Init( int qport );
 void Netchan_Setup(netsrc_t sock, netchan_t *chan, netadr_t adr, int qport);
 
-void Netchan_Transmit( netchan_t *chan, int length, const byte *data, qboolean legacyProtocol );
-void Netchan_TransmitNextFragment( netchan_t *chan, qboolean legacyProtocol );
+void Netchan_Transmit( netchan_t *chan, int length, const byte *data, commProtocol_t commProto );
+void Netchan_TransmitNextFragment( netchan_t *chan, commProtocol_t commProto );
 
 qboolean Netchan_Process( netchan_t *chan, msg_t *msg );
 
@@ -316,8 +333,14 @@ VIRTUAL MACHINE
 
 typedef struct vm_s vm_t;
 
+typedef enum {
+    VMI_NATIVE,
+    VMI_BYTECODE,
+    VMI_COMPILED
+} vmInterpret_t;
+
 void    VM_Init( void );
-vm_t    *VM_Create( const char *module, intptr_t (*systemCalls)(intptr_t *) );
+vm_t    *VM_Create( const char *module, intptr_t (*systemCalls)(qboolean, intptr_t *), vmInterpret_t interpret);
 // module should be bare: "cgame", not "cgame.dll"
 
 void    VM_Free( vm_t *vm );
@@ -342,7 +365,22 @@ static ID_INLINE float _vmf(intptr_t x)
 }
 #define VMF(x)  _vmf(args[x])
 
+// VMMEM
 
+char *QVM_Local_StringAlloc ( const char *source );
+void QVM_Local_TempFree( int size );
+void *QVM_Local_TempAlloc( int size );
+void *QVM_Local_AllocUnaligned ( int size );
+void *QVM_Local_Alloc ( int size );
+
+// VM pointer marshalling shenanigans
+#define QVMPTR_MAX_PTRS 1024
+#define QVMPTR_INVALID_HANDLE 0
+void        qvmPtr_init(void);
+intptr_t    qvmPtr_register(intptr_t ptr);
+intptr_t    qvmPtr_resolve(intptr_t handle);
+intptr_t    qvmPtr_remove(intptr_t handle);
+void qvmPtr_show(void);
 /*
 ==============================================================
 
@@ -587,7 +625,7 @@ qboolean FS_FileExists( const char *file );
 
 qboolean FS_CreatePath (char *OSPath);
 
-qboolean FS_FindVM(void **startSearch, char *found, int foundlen, const char *name);
+int FS_FindVM(void **startSearch, char *found, int foundlen, const char *name, int enableDll);
 
 char   *FS_BuildOSPath( const char *base, const char *game, const char *qpath );
 qboolean FS_CompareZipChecksum(const char *zipfile);
@@ -784,7 +822,7 @@ sysEvent_t  Com_GetSystemEvent( void );
 char        *CopyString( const char *in );
 void        Info_Print( const char *s );
 
-void        Com_BeginRedirect (char *buffer, int buffersize, void (*flush)(char *, qboolean), qboolean legacyProtocol);
+void        Com_BeginRedirect (char *buffer, int buffersize, void (*flush)(char *, commProtocol_t), commProtocol_t commProto);
 void        Com_EndRedirect( void );
 void        QDECL Com_Printf( const char *fmt, ... ) __attribute__ ((format (printf, 1, 2)));
 void        QDECL Com_DPrintf( const char *fmt, ... ) __attribute__ ((format (printf, 1, 2)));
@@ -799,7 +837,7 @@ int         Com_Filter(char *filter, char *name, int casesensitive);
 int         Com_FilterPath(char *filter, char *name, int casesensitive);
 int         Com_RealTime(qtime_t *qtime);
 qboolean    Com_SafeMode( void );
-void        Com_RunAndTimeServerPacket(netadr_t *evFrom, msg_t *buf, qboolean legacyProtocol);
+void        Com_RunAndTimeServerPacket(netadr_t *evFrom, msg_t *buf, commProtocol_t commProto);
 
 void        Com_StartupVariable( const char *match );
 // checks for and removes command line "+set var arg" constructs
@@ -838,8 +876,7 @@ extern  cvar_t  *sv_paused;
 extern  cvar_t  *cl_packetdelay;
 extern  cvar_t  *sv_packetdelay;
 
-extern  cvar_t  *com_protocol;
-extern  cvar_t* com_legacyProtocol;
+extern  cvar_t  *com_gamename;
 
 #ifndef DEDICATED
 extern  cvar_t  *con_autochat;
@@ -859,6 +896,7 @@ extern  fileHandle_t    com_journalFile;
 extern  fileHandle_t    com_journalDataFile;
 
 extern  cvar_t* net_multiprotocol;
+extern  cvar_t* net_runningLegacy;
 extern  cvar_t* sv_useLegacyNades;
 
 /*
@@ -1025,7 +1063,7 @@ void SCR_DebugGraph (float value);  // FIXME: move logging to common?
 void SV_Init( void );
 void SV_Shutdown( char *finalmsg );
 void SV_Frame( int msec );
-void SV_PacketEvent( netadr_t from, msg_t *msg, qboolean legacyProtocol );
+void SV_PacketEvent( netadr_t from, msg_t *msg, commProtocol_t commProto );
 int SV_FrameMsec(void);
 qboolean SV_GameCommand( void );
 int SV_SendQueuedPackets(void);
@@ -1087,7 +1125,7 @@ cpuFeatures_t Sys_GetProcessorFeatures( void );
 
 void    Sys_SetErrorText( const char *text );
 
-void    Sys_SendPacket( int length, const void *data, netadr_t to, qboolean legacyProtocol );
+void    Sys_SendPacket( int length, const void *data, netadr_t to, commProtocol_t commProto );
 
 qboolean    Sys_StringToAdr( const char *s, netadr_t *a, netadrtype_t family );
 //Does NOT parse port numbers, only base addresses.

@@ -38,7 +38,7 @@ a system call.
 ====================
 */
 
-intptr_t SV_GametypeSystemCalls(intptr_t *args)
+intptr_t SV_GametypeSystemCalls(qboolean runningQVM, intptr_t *args)
 {
     switch(args[0]){
         case GT_PRINT:
@@ -106,7 +106,7 @@ and a map_restart.
 static void SV_InitGametypeProgs(const char *gametype)
 {
     // Load the specified gametype DLL.
-    gtvm = VM_Create(va("gt_%s", gametype), SV_GametypeSystemCalls);
+    gtvm = VM_Create(va("gt_%s", gametype), SV_GametypeSystemCalls, Cvar_VariableIntegerValue("vm_gametype"));
     if(!gtvm){
         Com_Error(ERR_FATAL, "VM_Create on gametype failed");
     }

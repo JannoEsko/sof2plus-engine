@@ -48,7 +48,7 @@ to hi-jack client connections.
 =================
 */
 
-void SV_GetChallenge(netadr_t from, qboolean legacyProtocol)
+void SV_GetChallenge(netadr_t from, commProtocol_t commProto)
 {
     int     i;
     int     oldest;
@@ -117,8 +117,17 @@ void SV_GetChallenge(netadr_t from, qboolean legacyProtocol)
     challenge->wasrefused = qfalse;
     challenge->time = svs.time;
     challenge->pingTime = svs.time;
-    NET_OutOfBandPrint(NS_SERVER, challenge->adr, legacyProtocol, "challengeResponse %d %d %d",
-               challenge->challenge, clientChallenge, legacyProtocol ? com_legacyProtocol->integer : com_protocol->integer);
+
+    int protocol = 0;
+
+    if (commProto == COMMPROTO_SILVER) {
+        protocol = SILVER_GAME_PROTOCOL;
+    } else if (commProto == COMMPROTO_GOLD) {
+        protocol = GOLD_GAME_PROTOCOL;
+    }
+
+    NET_OutOfBandPrint(NS_SERVER, challenge->adr, commProto, "challengeResponse %d %d %d",
+               challenge->challenge, clientChallenge, protocol);
 }
 
 /*
@@ -163,7 +172,7 @@ A "connect" OOB command has been received
 ==================
 */
 
-void SV_DirectConnect( netadr_t from, qboolean legacyProtocol ) {
+void SV_DirectConnect( netadr_t from, commProtocol_t commProto ) {
     char        userinfo[MAX_INFO_STRING];
     int         i;
     client_t    *cl, *newcl;
@@ -184,7 +193,7 @@ void SV_DirectConnect( netadr_t from, qboolean legacyProtocol ) {
     // Check whether this client is banned.
     if(SV_IsBanned(&from, qfalse))
     {
-        NET_OutOfBandPrint(NS_SERVER, from, legacyProtocol, "print\nYou are banned from this server.\n"); // legacyProtocol does not block this message anyhow
+        NET_OutOfBandPrint(NS_SERVER, from, commProto, "print\nYou are banned from this server.\n"); // legacyProtocol does not block this message anyhow
         return;
     }
 
@@ -192,19 +201,33 @@ void SV_DirectConnect( netadr_t from, qboolean legacyProtocol ) {
 
     version = atoi(Info_ValueForKey(userinfo, "protocol"));
 
-#ifdef LEGACY_PROTOCOL
-    if(version > 0 && com_legacyprotocol->integer == version)
-        compat = qtrue;
-    else
-#endif
-    {
-        if(version != com_protocol->integer && version != com_legacyProtocol->integer)
-        {
-            NET_OutOfBandPrint(NS_SERVER, from, legacyProtocol, "print\nServer uses protocol versions %i and %i "
-                       "(yours is %i).\n", com_protocol->integer, com_legacyProtocol->integer, version);
-            Com_DPrintf("    rejected connect from version %i\n", version);
-            return;
+    if (version != SILVER_GAME_PROTOCOL_INT && version != GOLD_GAME_PROTOCOL_INT) {
+        NET_OutOfBandPrint(NS_SERVER, from, commProto, "print\nServer uses protocol versions " SILVER_GAME_PROTOCOL " and "GOLD_GAME_PROTOCOL" "
+                   "(yours is %i).\n", version);
+        Com_DPrintf("    rejected connect from version %i\n", version);
+        return;
+    }
+
+    if (commProto == COMMPROTO_SILVER && version != SILVER_GAME_PROTOCOL_INT) {
+        if (net_multiprotocol->integer) {
+            NET_OutOfBandPrint(NS_SERVER, from, commProto, "print\nConnect to port %s, this is Silver port.\n", Cvar_VariableString("gold_net_port"));
+        } else {
+            NET_OutOfBandPrint(NS_SERVER, from, commProto, "print\nServer uses protocol version " SILVER_GAME_PROTOCOL " "
+                   "(yours is %i).\n", version);
         }
+
+        return;
+    }
+
+    if (commProto == COMMPROTO_GOLD && version != GOLD_GAME_PROTOCOL_INT) {
+        if (net_multiprotocol->integer) {
+            NET_OutOfBandPrint(NS_SERVER, from, commProto, "print\nConnect to port %s, this is Gold port.\n", Cvar_VariableString("silver_net_port"));
+        } else {
+            NET_OutOfBandPrint(NS_SERVER, from, commProto, "print\nServer uses protocol version " GOLD_GAME_PROTOCOL " "
+                   "(yours is %i).\n", version);
+        }
+
+        return;
     }
 
     challenge = atoi( Info_ValueForKey( userinfo, "challenge" ) );
@@ -233,7 +256,7 @@ void SV_DirectConnect( netadr_t from, qboolean legacyProtocol ) {
     else
         ip = (char *)NET_AdrToString( from );
     if( ( strlen( ip ) + strlen( userinfo ) + 4 ) >= MAX_INFO_STRING ) {
-        NET_OutOfBandPrint( NS_SERVER, from, legacyProtocol,
+        NET_OutOfBandPrint( NS_SERVER, from, commProto,
             "print\nUserinfo string length exceeded.  "
             "Try removing setu cvars from your config.\n" );
         return;
@@ -257,7 +280,7 @@ void SV_DirectConnect( netadr_t from, qboolean legacyProtocol ) {
 
         if (i == MAX_CHALLENGES)
         {
-            NET_OutOfBandPrint( NS_SERVER, from, legacyProtocol, "print\nNo or bad challenge for your address.\n" );
+            NET_OutOfBandPrint( NS_SERVER, from, commProto, "print\nNo or bad challenge for your address.\n" );
             return;
         }
 
@@ -274,13 +297,13 @@ void SV_DirectConnect( netadr_t from, qboolean legacyProtocol ) {
         // never reject a LAN client based on ping
         if ( !Sys_IsLANAddress( from ) ) {
             if ( sv_minPing->value && ping < sv_minPing->value ) {
-                NET_OutOfBandPrint( NS_SERVER, from, legacyProtocol, "print\nServer is for high pings only\n" );
+                NET_OutOfBandPrint( NS_SERVER, from, commProto, "print\nServer is for high pings only\n" );
                 Com_DPrintf ("Client %i rejected on a too low ping\n", i);
                 challengeptr->wasrefused = qtrue;
                 return;
             }
             if ( sv_maxPing->value && ping > sv_maxPing->value ) {
-                NET_OutOfBandPrint( NS_SERVER, from, legacyProtocol, "print\nServer is for low pings only\n" );
+                NET_OutOfBandPrint( NS_SERVER, from, commProto, "print\nServer is for low pings only\n" );
                 Com_DPrintf ("Client %i rejected on a too high ping\n", i);
                 challengeptr->wasrefused = qtrue;
                 return;
@@ -363,7 +386,7 @@ void SV_DirectConnect( netadr_t from, qboolean legacyProtocol ) {
             }
         }
         else {
-            NET_OutOfBandPrint( NS_SERVER, from, legacyProtocol, "print\nServer is full.\n" );
+            NET_OutOfBandPrint( NS_SERVER, from, commProto, "print\nServer is full.\n" );
             Com_DPrintf ("Rejected a connection.\n");
             return;
         }
@@ -386,7 +409,7 @@ gotnewcl:
     newcl->challenge = challenge;
 
     // set the client legacy information.
-    newcl->legacyProtocol = legacyProtocol;
+    newcl->commProto = commProto;
 
     // save the address
 #ifdef LEGACY_PROTOCOL
@@ -407,7 +430,7 @@ gotnewcl:
         // we can't just use VM_ArgPtr, because that is only valid inside a VM_Call
         char *str = VM_ExplicitArgPtr( gvm, denied );
 
-        NET_OutOfBandPrint( NS_SERVER, from, legacyProtocol, "print\n%s\n", str );
+        NET_OutOfBandPrint( NS_SERVER, from, commProto, "print\n%s\n", str );
         Com_DPrintf ("Game rejected a connection: %s.\n", str);
         return;
     }
@@ -415,7 +438,7 @@ gotnewcl:
     SV_UserinfoChanged( newcl );
 
     // send the connect packet to the client
-    NET_OutOfBandPrint(NS_SERVER, from, legacyProtocol, "connectResponse %d", challenge);
+    NET_OutOfBandPrint(NS_SERVER, from, commProto, "connectResponse %d", challenge);
 
     Com_DPrintf( "Going from CS_FREE to CS_CONNECTED for %s\n", newcl->name );
 
@@ -610,7 +633,7 @@ static void SV_SendClientGameState( client_t *client ) {
 
     char bigInfoString[BIG_INFO_STRING];
 
-    Com_DPrintf ("SV_SendClientGameState() for %s\nClient isLegacy: %d\n", client->name, client->legacyProtocol);
+    Com_DPrintf ("SV_SendClientGameState() for %s\nClient commProto: %d\n", client->name, client->commProto);
     Com_DPrintf( "Going from CS_CONNECTED to CS_PRIMED for %s\n", client->name );
     client->state = CS_PRIMED;
     client->pureAuthentic = 0;
@@ -641,33 +664,38 @@ static void SV_SendClientGameState( client_t *client ) {
     for ( start = 0 ; start < MAX_CONFIGSTRINGS ; start++ ) {
         if (sv.configstrings[start][0]) {
 
-            if (client->legacyProtocol && start >= CS_HUDICONS) {
+            if (client->commProto == COMMPROTO_SILVER && start >= CS_HUDICONS) {
                 continue;
             }
 
             MSG_WriteByte( &msg, svc_configstring );
             MSG_WriteShort( &msg, start );
 
-            if (client->legacyProtocol && start == CS_GAME_VERSION) {
-                MSG_WriteBigString(&msg, GAME_VERSION_LEGACY);
+            if (start == CS_GAME_VERSION) {
+                if (client->commProto == COMMPROTO_SILVER) {
+                    MSG_WriteBigString(&msg, SILVER_GAME_VERSION);
+                } else if (client->commProto == COMMPROTO_GOLD) {
+                    MSG_WriteBigString(&msg, GOLD_GAME_VERSION);
+                }
             }
+
             else if (start == CS_SYSTEMINFO) {
                 char refPaks[BIG_INFO_VALUE], refChecksums[BIG_INFO_VALUE], filteredPaks[BIG_INFO_VALUE], filteredChecksums[BIG_INFO_VALUE];
 
                 Q_strncpyz(bigInfoString, sv.configstrings[start], sizeof(bigInfoString));
-                cvar_t* legacyClmod = Cvar_FindVar("sv_legacyClientMod");
-                cvar_t* clientMod = Cvar_FindVar("sv_clientMod");
+                cvar_t* silverClientMod = Cvar_FindVar("sv_silverClientMod");
+                cvar_t* goldClientMod = Cvar_FindVar("sv_goldClientMod");
 
-                if (client->legacyProtocol && legacyClmod && legacyClmod->string && strlen(legacyClmod->string) > 0 && Q_stricmp(legacyClmod->string, "none")) {
+                if (client->commProto == COMMPROTO_SILVER && silverClientMod && silverClientMod->string && strlen(silverClientMod->string) > 0 && Q_stricmp(silverClientMod->string, "none")) {
                     
                     
-                    Info_SetValueForKey_Big(bigInfoString, "fs_game", legacyClmod->string);
+                    Info_SetValueForKey_Big(bigInfoString, "fs_game", silverClientMod->string);
                     
-                    if (clientMod && clientMod->string && strlen(clientMod->string) > 0 && Q_stricmp(clientMod->string, "none") && Q_stricmp(clientMod->string, legacyClmod->string)) {
+                    if (goldClientMod && goldClientMod->string && strlen(goldClientMod->string) > 0 && Q_stricmp(goldClientMod->string, "none") && Q_stricmp(goldClientMod->string, silverClientMod->string)) {
                         Q_strncpyz(refPaks, Info_ValueForKey(bigInfoString, "sv_referencedPakNames"), sizeof(refPaks));
                         Q_strncpyz(refChecksums, Info_ValueForKey(bigInfoString, "sv_referencedPaks"), sizeof(refChecksums));
 
-                        SV_FilterPaksAndChecksums(refPaks, refChecksums, clientMod->string, filteredPaks, sizeof(filteredPaks), filteredChecksums, sizeof(filteredChecksums));
+                        SV_FilterPaksAndChecksums(refPaks, refChecksums, goldClientMod->string, filteredPaks, sizeof(filteredPaks), filteredChecksums, sizeof(filteredChecksums));
 
                         Info_SetValueForKey_Big(bigInfoString, "sv_referencedPakNames", filteredPaks);
                         Info_SetValueForKey_Big(bigInfoString, "sv_referencedPaks", filteredChecksums);
@@ -678,14 +706,14 @@ static void SV_SendClientGameState( client_t *client ) {
                     //Z_Free(sv.configstrings[start]);
                     //sv.configstrings[start] = CopyString(legacyClmod->string);
                 }
-                else if (!client->legacyProtocol && clientMod && clientMod->string && strlen(clientMod->string) > 0 && Q_stricmp(clientMod->string, "none")) {
-                    Info_SetValueForKey_Big(bigInfoString, "fs_game", clientMod->string);
+                else if (client->commProto == COMMPROTO_GOLD && goldClientMod && goldClientMod->string && strlen(goldClientMod->string) > 0 && Q_stricmp(goldClientMod->string, "none")) {
+                    Info_SetValueForKey_Big(bigInfoString, "fs_game", goldClientMod->string);
 
-                    if (legacyClmod && legacyClmod->string && strlen(legacyClmod->string) > 0 && Q_stricmp(legacyClmod->string, "none") && Q_stricmp(legacyClmod->string, clientMod->string)) {
+                    if (silverClientMod && silverClientMod->string && strlen(silverClientMod->string) > 0 && Q_stricmp(silverClientMod->string, "none") && Q_stricmp(silverClientMod->string, goldClientMod->string)) {
                         Q_strncpyz(refPaks, Info_ValueForKey(bigInfoString, "sv_referencedPakNames"), sizeof(refPaks));
                         Q_strncpyz(refChecksums, Info_ValueForKey(bigInfoString, "sv_referencedPaks"), sizeof(refChecksums));
 
-                        SV_FilterPaksAndChecksums(refPaks, refChecksums, legacyClmod->string, filteredPaks, sizeof(filteredPaks), filteredChecksums, sizeof(filteredChecksums));
+                        SV_FilterPaksAndChecksums(refPaks, refChecksums, silverClientMod->string, filteredPaks, sizeof(filteredPaks), filteredChecksums, sizeof(filteredChecksums));
 
                         Info_SetValueForKey_Big(bigInfoString, "sv_referencedPakNames", filteredPaks);
                         Info_SetValueForKey_Big(bigInfoString, "sv_referencedPaks", filteredChecksums);
@@ -694,17 +722,22 @@ static void SV_SendClientGameState( client_t *client ) {
 
                 MSG_WriteBigString(&msg, bigInfoString);
             }
-            else if (client->legacyProtocol && start == CS_SERVERINFO) {
-                Q_strncpyz(bigInfoString, sv.configstrings[start], sizeof(bigInfoString));
 
-                char* legacyWpns = Cvar_VariableString("legacy_availableWpns");
-                Info_SetValueForKey_Big(bigInfoString, "g_availableWeapons", legacyWpns);
-                MSG_WriteBigString(&msg, bigInfoString);
-            }
-            else {
+            else if (start == CS_SERVERINFO) {
+                if (client->commProto == COMMPROTO_SILVER && !net_runningLegacy->integer) {
+                    Q_strncpyz(bigInfoString, sv.configstrings[start], sizeof(bigInfoString));
+                    Info_SetValueForKey_Big(bigInfoString, "g_availableWeapons", SV_SpoofAvailableWeaponsFromSilverToGold());
+                    MSG_WriteBigString(&msg, bigInfoString);
+                } else if (client->commProto == COMMPROTO_GOLD && net_runningLegacy->integer) {
+                    Q_strncpyz(bigInfoString, sv.configstrings[start], sizeof(bigInfoString));
+                    Info_SetValueForKey_Big(bigInfoString, "g_availableWeapons", SV_SpoofAvailableWeaponsFromGoldToSilver());
+                    MSG_WriteBigString(&msg, bigInfoString);
+                } else {
+                    MSG_WriteBigString(&msg, sv.configstrings[start]);
+                }
+            } else {
                 MSG_WriteBigString(&msg, sv.configstrings[start]);
             }
-
             
         }
     }
@@ -717,7 +750,7 @@ static void SV_SendClientGameState( client_t *client ) {
             continue;
         }
         MSG_WriteByte( &msg, svc_baseline );
-        MSG_WriteDeltaEntity( &msg, &nullstate, base, qtrue, client->legacyProtocol );
+        MSG_WriteDeltaEntity( &msg, &nullstate, base, qtrue, client->commProto );
     }
 
     MSG_WriteByte( &msg, svc_EOF );
@@ -729,7 +762,7 @@ static void SV_SendClientGameState( client_t *client ) {
 
     //rwwRMG - send info for the terrain
 
-    if (!client->legacyProtocol) {
+    if (client->commProto == COMMPROTO_GOLD) {
         MSG_WriteShort(&msg, 0);
     }
 
@@ -1716,7 +1749,7 @@ static void SV_UserMove( client_t *cl, msg_t *msg, qboolean delta ) {
     oldcmd = &nullcmd;
     for ( i = 0 ; i < cmdCount ; i++ ) {
         cmd = &cmds[i];
-        MSG_ReadDeltaUsercmdKey( msg, key, oldcmd, cmd, cl->legacyProtocol );
+        MSG_ReadDeltaUsercmdKey( msg, key, oldcmd, cmd, cl->commProto );
         oldcmd = cmd;
     }
 
@@ -1774,7 +1807,7 @@ static void SV_UserMove( client_t *cl, msg_t *msg, qboolean delta ) {
         }
 
         // expect that clients will send legacy weapon ints.
-        if (cl->legacyProtocol) {
+        if (cl->commProto == COMMPROTO_SILVER && !net_runningLegacy->integer) {
 
             if (cmds[i].weapon & WP_DELAYED_CHANGE_BIT) {
                 cmds[i].weapon = translateSilverWeaponToGoldWeapon(cmds[i].weapon & ~WP_DELAYED_CHANGE_BIT) | WP_DELAYED_CHANGE_BIT;
@@ -1784,6 +1817,13 @@ static void SV_UserMove( client_t *cl, msg_t *msg, qboolean delta ) {
             }
 
             
+        } else if (cl->commProto == COMMPROTO_GOLD && net_runningLegacy->integer) {
+            if (cmds[i].weapon & WP_DELAYED_CHANGE_BIT) {
+                cmds[i].weapon = translateGoldWeaponToSilverWeapon(cmds[i].weapon & ~WP_DELAYED_CHANGE_BIT) | WP_DELAYED_CHANGE_BIT;
+            }
+            else {
+                cmds[i].weapon = translateGoldWeaponToSilverWeapon(cmds[i].weapon);
+            }
         }
 
         SV_ClientThink (cl, &cmds[ i ]);

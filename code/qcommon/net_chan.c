@@ -101,7 +101,7 @@ Netchan_TransmitNextFragment
 Send one fragment of the current message
 =================
 */
-void Netchan_TransmitNextFragment( netchan_t *chan, qboolean legacyProtocol ) {
+void Netchan_TransmitNextFragment( netchan_t *chan, commProtocol_t commProto ) {
     msg_t       send;
     byte        send_buf[MAX_PACKETLEN];
     int         fragmentLength;
@@ -129,7 +129,7 @@ void Netchan_TransmitNextFragment( netchan_t *chan, qboolean legacyProtocol ) {
     MSG_WriteData( &send, chan->unsentBuffer + chan->unsentFragmentStart, fragmentLength );
 
     // send the datagram
-    NET_SendPacket(chan->sock, send.cursize, send.data, chan->remoteAddress, legacyProtocol);
+    NET_SendPacket(chan->sock, send.cursize, send.data, chan->remoteAddress, commProto);
 
     // Store send time and size of this packet for rate control
     chan->lastSentTime = Sys_Milliseconds();
@@ -164,7 +164,7 @@ Sends a message to a connection, fragmenting if necessary
 A 0 length will still generate a packet.
 ================
 */
-void Netchan_Transmit( netchan_t *chan, int length, const byte *data, qboolean legacyProtocol ) {
+void Netchan_Transmit( netchan_t *chan, int length, const byte *data, commProtocol_t commProto ) {
     msg_t       send;
     byte        send_buf[MAX_PACKETLEN];
 
@@ -180,7 +180,7 @@ void Netchan_Transmit( netchan_t *chan, int length, const byte *data, qboolean l
         Com_Memcpy( chan->unsentBuffer, data, length );
 
         // only send the first fragment now
-        Netchan_TransmitNextFragment( chan, legacyProtocol );
+        Netchan_TransmitNextFragment( chan, commProto );
 
         return;
     }
@@ -199,7 +199,7 @@ void Netchan_Transmit( netchan_t *chan, int length, const byte *data, qboolean l
     MSG_WriteData( &send, data, length );
 
     // send the datagram
-    NET_SendPacket( chan->sock, send.cursize, send.data, chan->remoteAddress, legacyProtocol );
+    NET_SendPacket( chan->sock, send.cursize, send.data, chan->remoteAddress, commProto );
 
     // Store send time and size of this packet for rate control
     chan->lastSentTime = Sys_Milliseconds();
@@ -454,13 +454,13 @@ typedef struct packetQueue_s {
         byte *data;
         netadr_t to;
         int release;
-        qboolean legacyProtocol;
+        commProtocol_t commProto;
 } packetQueue_t;
 
 packetQueue_t *packetQueue = NULL;
 
 static void NET_QueuePacket( int length, const void *data, netadr_t to,
-    int offset )
+    int offset, commProtocol_t commProto )
 {
     packetQueue_t *new, *next = packetQueue;
 
@@ -473,6 +473,7 @@ static void NET_QueuePacket( int length, const void *data, netadr_t to,
     new->length = length;
     new->to = to;
     new->release = Sys_Milliseconds() + (int)((float)offset / com_timescale->value);
+    new->commProto = commProto;
     new->next = NULL;
 
     if(!packetQueue) {
@@ -498,7 +499,7 @@ void NET_FlushPacketQueue(void)
         if(packetQueue->release >= now)
             break;
         Sys_SendPacket(packetQueue->length, packetQueue->data,
-            packetQueue->to, packetQueue->legacyProtocol);
+            packetQueue->to, packetQueue->commProto);
         last = packetQueue;
         packetQueue = packetQueue->next;
         Z_Free(last->data);
@@ -506,7 +507,7 @@ void NET_FlushPacketQueue(void)
     }
 }
 
-void NET_SendPacket( netsrc_t sock, int length, const void *data, netadr_t to, qboolean legacyProtocol ) {
+void NET_SendPacket( netsrc_t sock, int length, const void *data, netadr_t to, commProtocol_t commProto ) {
 
     // sequenced packets are shown in netchan, so just show oob
     if ( showpackets->integer && *(int *)data == -1 )   {
@@ -525,13 +526,13 @@ void NET_SendPacket( netsrc_t sock, int length, const void *data, netadr_t to, q
     }
 
     if ( sock == NS_CLIENT && cl_packetdelay->integer > 0 ) {
-        NET_QueuePacket( length, data, to, cl_packetdelay->integer );
+        NET_QueuePacket( length, data, to, cl_packetdelay->integer, commProto );
     }
     else if ( sock == NS_SERVER && sv_packetdelay->integer > 0 ) {
-        NET_QueuePacket( length, data, to, sv_packetdelay->integer );
+        NET_QueuePacket( length, data, to, sv_packetdelay->integer, commProto );
     }
     else {
-        Sys_SendPacket( length, data, to, legacyProtocol );
+        Sys_SendPacket( length, data, to, commProto );
     }
 }
 
@@ -542,7 +543,7 @@ NET_OutOfBandPrint
 Sends a text message in an out-of-band datagram
 ================
 */
-void QDECL NET_OutOfBandPrint( netsrc_t sock, netadr_t adr, qboolean legacyProtocol, const char *format, ... ) {
+void QDECL NET_OutOfBandPrint( netsrc_t sock, netadr_t adr, commProtocol_t commProto, const char *format, ... ) {
     va_list     argptr;
     char        string[MAX_MSGLEN];
 
@@ -558,7 +559,7 @@ void QDECL NET_OutOfBandPrint( netsrc_t sock, netadr_t adr, qboolean legacyProto
     va_end( argptr );
 
     // send the datagram
-    NET_SendPacket( sock, strlen( string ), string, adr, legacyProtocol );
+    NET_SendPacket( sock, strlen( string ), string, adr, commProto );
 }
 
 /*

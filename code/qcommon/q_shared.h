@@ -206,7 +206,7 @@ typedef int     clipHandle_t;
 #ifdef PATH_MAX
 #define MAX_OSPATH          PATH_MAX
 #else
-#define MAX_OSPATH          256     // max length of a filesystem pathname
+#define MAX_OSPATH          1024     // max length of a filesystem pathname
 #endif
 
 #define MAX_NAME_LENGTH     32      // max length of a client name
@@ -663,6 +663,17 @@ typedef enum {
     FS_APPEND,
     FS_APPEND_SYNC
 } fsMode_t;
+
+typedef enum {
+    LEGACY_FS_READ,
+    LEGACY_FS_WRITE,
+    LEGACY_FS_APPEND,
+    LEGACY_FS_APPEND_SYNC,
+    LEGACY_FS_READ_TEXT,
+    LEGACY_FS_WRITE_TEXT,
+    LEGACY_FS_APPEND_TEXT,
+    LEGACY_FS_APPEND_SYNC_TEXT
+} legacyFsMode_t;
 
 typedef enum {
     FS_SEEK_CUR,

@@ -111,6 +111,7 @@ qhandle_t RE_RegisterServerModel(const char *name)
     } buf;
 
     // Must be a valid name.
+    Com_DPrintf("RE_RegisterServerModel: name=%s\n", name);
     if(!name || !name[0]){
         Com_Printf(S_COLOR_RED "RE_RegisterServerModel: NULL name\n");
         return -1;

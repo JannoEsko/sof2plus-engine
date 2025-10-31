@@ -701,7 +701,14 @@ qboolean GPG_GetName(TGPGroup GPG, char *dest, int destSize)
         return qfalse;
     }
 
-    strncpy(dest, ((CGPGroup *)GPG)->mBase.mName, destSize);
+    if (destSize == -1) { // Allow QVM's to call the function without destSize....
+        strcpy(dest, ((CGPGroup*)GPG)->mBase.mName);
+    }
+    else {
+        strncpy(dest, ((CGPGroup*)GPG)->mBase.mName, destSize);
+        dest[destSize - 1] = '\0';
+    }
+    
     return qtrue;
 }
 
@@ -936,7 +943,16 @@ void GPG_FindPairValue(TGPGroup GPG, const char *key, const char *defaultVal, ch
     }
 
     // Copy result.
-    strncpy(dest, newVal, destSize);
+
+    if (destSize == -1) {
+        // Allow QVM's to call the function without destSize....
+        strcpy(dest, newVal);
+    }
+    else {
+        strncpy(dest, newVal, destSize);
+		dest[destSize - 1] = '\0';
+    }
+
 }
 
 //=============================================
@@ -959,7 +975,14 @@ qboolean GPV_GetName(TGPValue GPV, char *dest, int destSize)
         return qfalse;
     }
 
-    strncpy(dest, ((CGPValue *)GPV)->mBase.mName, destSize);
+    if (destSize == -1) { // Allow QVM's to call the function without destSize....
+        strcpy(dest, ((CGPValue *)GPV)->mBase.mName);
+    }
+    else {
+        strncpy(dest, ((CGPValue*)GPV)->mBase.mName, destSize);
+        dest[destSize - 1] = '\0';
+    }
+    
     return qtrue;
 }
 
@@ -1050,7 +1073,14 @@ qboolean GPV_GetTopValue(TGPValue GPV, char *dest, int destSize)
         return qfalse;
     }
 
-    strncpy(dest, ((CGPValue *)GPV)->mList->mBase.mName, destSize);
+    if (destSize == -1) { // Allow QVM's to call the function without destSize....
+        strcpy(dest, ((CGPValue *)GPV)->mList->mBase.mName);
+    }
+    else {
+        strncpy(dest, ((CGPValue*)GPV)->mList->mBase.mName, destSize);
+		dest[destSize - 1] = '\0';
+    }
+    
     return qtrue;
 }
 
