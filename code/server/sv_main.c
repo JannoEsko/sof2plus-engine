@@ -595,16 +595,21 @@ static void SVC_Status( netadr_t from, commProtocol_t commProto ) {
     // Add the game version to the status response.
     if (commProto == COMMPROTO_SILVER) {
         Info_SetValueForKey(infostring, "game_version", SILVER_GAME_VERSION);
+        Info_SetValueForKey(infostring, "protocol", SILVER_GAME_PROTOCOL);
     }
     else if (commProto == COMMPROTO_GOLD) {
         Info_SetValueForKey(infostring, "game_version", GOLD_GAME_VERSION);
+        Info_SetValueForKey(infostring, "protocol", GOLD_GAME_PROTOCOL);
     }
     
 
     // Add the player information to the status response.
     status[0] = 0;
     statusLength = 0;
+    int infoStringLength = strlen(infostring);
 
+    int maxMessageLength = 1400;
+    
     for (i=0 ; i < sv_maxclients->integer ; i++) {
         cl = &svs.clients[i];
         if ( cl->state >= CS_CONNECTED ) {
@@ -620,7 +625,7 @@ static void SVC_Status( netadr_t from, commProtocol_t commProto ) {
             }
 
             playerLength = strlen(player);
-            if (statusLength + playerLength >= sizeof(status) ) {
+            if (infoStringLength + statusLength + playerLength >= maxMessageLength) {
                 break;      // can't hold any more
             }
             strcpy (status + statusLength, player);
