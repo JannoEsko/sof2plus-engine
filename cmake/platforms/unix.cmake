@@ -10,6 +10,7 @@ list(APPEND SYSTEM_PLATFORM_SOURCES ${SOURCE_DIR}/sys/con_tty.c)
 list(APPEND COMMON_LIBRARIES
     dl  # Dynamic loader
     m   # Math library
+    $<$<CONFIG:Debug>:backtrace>
 )
 
 list(APPEND CLIENT_DEFINITIONS USE_ICON)
