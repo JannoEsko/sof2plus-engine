@@ -46,7 +46,10 @@ if(NOT PRODUCT_VERSION)
 endif()
 
 add_compile_definitions(PRODUCT_VERSION="${PRODUCT_VERSION}")
-
+add_compile_definitions(
+        $<$<CONFIG:Debug>:_DEBUG>
+        $<$<CONFIG:Release>:NDEBUG>
+)
 # For CI to read from
 file(GENERATE OUTPUT ${CMAKE_BINARY_DIR}/version.txt CONTENT ${PRODUCT_VERSION})
 

@@ -585,6 +585,11 @@ void SV_SpawnServer( char *server, qboolean killBots ) {
     sv.checksumFeedServerId = sv.serverId;
     Cvar_Set( "sv_serverid", va("%i", sv.serverId ) );
 
+    sv_publicGametype = Cvar_Get("g_publicGametype", "dm", CVAR_LATCH); // Allow setting it without mod, so legacymods can use spoofing easily without memory changes.
+    sv_spoofGametype = Cvar_Get("g_spoofGametype", "0", CVAR_ARCHIVE | CVAR_LATCH);
+    sv_goldClientMod = Cvar_Get("sv_goldClientMod", "", CVAR_ARCHIVE | CVAR_LATCH);
+    sv_silverClientMod = Cvar_Get("sv_silverClientMod", "", CVAR_ARCHIVE | CVAR_LATCH);
+    
     // clear physics interaction links
     SV_ClearWorld ();
 

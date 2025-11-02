@@ -1564,11 +1564,11 @@ void NET_OpenIP( void ) {
                         break;
                 }
             }
+
+            if(gold_ip_socket == INVALID_SOCKET)
+                Com_Printf( "WARNING: Couldn't bind to a v4 ip address.\n");
+
         }
-
-        if(gold_ip_socket == INVALID_SOCKET)
-            Com_Printf( "WARNING: Couldn't bind to a v4 ip address.\n");
-
 
         if (net_multiprotocol->integer || net_runningLegacy->integer) {
             for (i = 0; i < 10; i++) {
