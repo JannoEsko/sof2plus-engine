@@ -125,6 +125,29 @@ weaponDiff_t weaponTranslationReversed[] = {
     { L_WP_M15_GRENADE, WP_M15_GRENADE }
 };
 
+char* MSG_SpoofAvailableWeaponsFromSilverToGold(char* availableWeapons) {
+    // Gold available weapons is 24 chars
+    static char goldWpns[] = "000000000000000000000000";
+
+    for (int i = 1; i <= L_WP_M15_GRENADE; i++) { //M15 is the last weapon on Silver. Skip WP_NONE
+        weaponDiff_t dif = weaponTranslationReversed[i];
+        goldWpns[dif.translatedWeapon - 1] = availableWeapons[dif.weapon - 1];
+    }
+
+    return goldWpns;
+}
+char* MSG_SpoofAvailableWeaponsFromGoldToSilver(char* availableWeapons) {
+    // Silver available weapons is 21 chars
+    static char silverWpns[] = "000000000000000000000";
+
+    for (int i = 1; i < WP_NUM_WEAPONS; i++) { //M15 is the last weapon on Silver. Skip WP_NONE
+        weaponDiff_t dif = weaponTranslations[i];
+        silverWpns[dif.translatedWeapon - 1] = availableWeapons[dif.weapon - 1];
+    }
+
+    return silverWpns;
+}
+
 ammoDiff_t ammoTranslations[] = {
     { AMMO_KNIFE, L_AMMO_KNIFE},
     { AMMO_045, L_AMMO_045 },
@@ -223,12 +246,12 @@ int translateSilverAmmoToGoldAmmo(int input) {
 }
 
 int translateGoldAmmoToSilverAmmo(int input) {
-    assert(0); // todo
-    ammoDiff_t* useAmmoDif = ammoTranslationsReversed;
-    int sizeofDif = sizeof(ammoTranslationsReversed) / sizeof(ammoTranslationsReversed[0]);
+
+    ammoDiff_t* useAmmoDif = ammoTranslations;
+    int sizeofDif = sizeof(ammoTranslations) / sizeof(ammoTranslations[0]);
     if (sv_useLegacyNades->integer) {
-        useAmmoDif = ammoTranslationsReversedClAdd;
-        sizeofDif = sizeof(ammoTranslationsReversedClAdd) / sizeof(ammoTranslationsReversedClAdd[0]);
+        useAmmoDif = ammoTranslationsClAdd;
+        sizeofDif = sizeof(ammoTranslationsClAdd) / sizeof(ammoTranslationsClAdd[0]);
     }
 
     if (input < 0 || input >= sizeofDif) {
@@ -415,6 +438,93 @@ entTypeDiff_t entTypeTranslations[] = {
 
 };
 
+entTypeDiff_t entTypeTranslationsReversed[] = {
+    { LEGACY_ET_GENERAL, ET_GENERAL },
+    { LEGACY_ET_PLAYER, ET_PLAYER },
+    { LEGACY_ET_ITEM, ET_ITEM },
+    { LEGACY_ET_MISSILE, ET_MISSILE },
+    { LEGACY_ET_MOVER, ET_MOVER },
+    { LEGACY_ET_BEAM, ET_BEAM },
+    { LEGACY_ET_PORTAL, ET_PORTAL },
+    { LEGACY_ET_SPEAKER, ET_SPEAKER },
+    { LEGACY_ET_PUSH_TRIGGER, ET_PUSH_TRIGGER },
+    { LEGACY_ET_TELEPORT_TRIGGER, ET_TELEPORT_TRIGGER },
+    { LEGACY_ET_INVISIBLE, ET_INVISIBLE },
+    { LEGACY_ET_GRAPPLE, ET_GRAPPLE },
+    { LEGACY_ET_BODY, ET_BODY },
+    { LEGACY_ET_DAMAGEAREA, ET_DAMAGEAREA },
+    { LEGACY_ET_TERRAIN, ET_TERRAIN },
+    { LEGACY_ET_DEBUG_CYLINDER, ET_DEBUG_CYLINDER },
+    { LEGACY_ET_EVENTS + LEGACY_EV_NONE, ET_EVENTS + EV_NONE },
+    { LEGACY_ET_EVENTS + LEGACY_EV_FOOTSTEP, ET_EVENTS + EV_FOOTSTEP },
+    { LEGACY_ET_EVENTS + LEGACY_EV_FOOTWADE, ET_EVENTS + EV_FOOTWADE },
+    { LEGACY_ET_EVENTS + LEGACY_EV_SWIM, ET_EVENTS + EV_SWIM },
+    { LEGACY_ET_EVENTS + LEGACY_EV_STEP_4, ET_EVENTS + EV_STEP_4 },
+    { LEGACY_ET_EVENTS + LEGACY_EV_STEP_8, ET_EVENTS + EV_STEP_8 },
+    { LEGACY_ET_EVENTS + LEGACY_EV_STEP_12, ET_EVENTS + EV_STEP_12 },
+    { LEGACY_ET_EVENTS + LEGACY_EV_STEP_16, ET_EVENTS + EV_STEP_16 },
+    { LEGACY_ET_EVENTS + LEGACY_EV_FALL_SHORT, ET_EVENTS + EV_FALL_SHORT },
+    { LEGACY_ET_EVENTS + LEGACY_EV_FALL_MEDIUM, ET_EVENTS + EV_FALL_MEDIUM },
+    { LEGACY_ET_EVENTS + LEGACY_EV_FALL_FAR, ET_EVENTS + EV_FALL_FAR },
+    { LEGACY_ET_EVENTS + LEGACY_EV_JUMP, ET_EVENTS + EV_JUMP },
+    { LEGACY_ET_EVENTS + LEGACY_EV_WATER_FOOTSTEP, ET_EVENTS + EV_WATER_FOOTSTEP },
+    { LEGACY_ET_EVENTS + LEGACY_EV_WATER_TOUCH, ET_EVENTS + EV_WATER_TOUCH },
+    { LEGACY_ET_EVENTS + LEGACY_EV_WATER_LAND, ET_EVENTS + EV_WATER_LAND },
+    { LEGACY_ET_EVENTS + LEGACY_EV_WATER_CLEAR, ET_EVENTS + EV_WATER_CLEAR },
+    { LEGACY_ET_EVENTS + LEGACY_EV_ITEM_PICKUP, ET_EVENTS + EV_ITEM_PICKUP },
+    { LEGACY_ET_EVENTS + LEGACY_EV_NOAMMO, ET_EVENTS + EV_NOAMMO },
+    { LEGACY_ET_EVENTS + LEGACY_EV_CHANGE_WEAPON, ET_EVENTS + EV_CHANGE_WEAPON },
+    { LEGACY_ET_EVENTS + LEGACY_EV_CHANGE_WEAPON_CANCELLED, ET_EVENTS + EV_CHANGE_WEAPON_CANCELLED },
+    { LEGACY_ET_EVENTS + LEGACY_EV_READY_WEAPON, ET_EVENTS + EV_READY_WEAPON },
+    { LEGACY_ET_EVENTS + LEGACY_EV_FIRE_WEAPON, ET_EVENTS + EV_FIRE_WEAPON },
+    { LEGACY_ET_EVENTS + LEGACY_EV_ALT_FIRE, ET_EVENTS + EV_ALT_FIRE },
+    { LEGACY_ET_EVENTS + LEGACY_EV_USE, ET_EVENTS + EV_USE },
+    { LEGACY_ET_EVENTS + LEGACY_EV_ITEM_RESPAWN, ET_EVENTS + EV_ITEM_RESPAWN },
+    { LEGACY_ET_EVENTS + LEGACY_EV_ITEM_POP, ET_EVENTS + EV_ITEM_POP },
+    { LEGACY_ET_EVENTS + LEGACY_EV_PLAYER_TELEPORT_IN, ET_EVENTS + EV_PLAYER_TELEPORT_IN },
+    { LEGACY_ET_EVENTS + LEGACY_EV_PLAYER_TELEPORT_OUT, ET_EVENTS + EV_PLAYER_TELEPORT_OUT },
+    { LEGACY_ET_EVENTS + LEGACY_EV_GRENADE_BOUNCE, ET_EVENTS + EV_GRENADE_BOUNCE },
+    { LEGACY_ET_EVENTS + LEGACY_EV_PLAY_EFFECT, ET_EVENTS + EV_PLAY_EFFECT },
+    { LEGACY_ET_EVENTS + LEGACY_EV_GENERAL_SOUND, ET_EVENTS + EV_GENERAL_SOUND },
+    { LEGACY_ET_EVENTS + LEGACY_EV_GLOBAL_SOUND, ET_EVENTS + EV_GLOBAL_SOUND },
+    { LEGACY_ET_EVENTS + LEGACY_EV_ENTITY_SOUND, ET_EVENTS + EV_ENTITY_SOUND },
+    { LEGACY_ET_EVENTS + LEGACY_EV_GLASS_SHATTER, ET_EVENTS + EV_GLASS_SHATTER },
+    { LEGACY_ET_EVENTS + LEGACY_EV_MISSILE_HIT, ET_EVENTS + EV_MISSILE_HIT },
+    { LEGACY_ET_EVENTS + LEGACY_EV_MISSILE_MISS, ET_EVENTS + EV_MISSILE_MISS },
+    { LEGACY_ET_EVENTS + LEGACY_EV_BULLET_HIT_WALL, ET_EVENTS + EV_BULLET_HIT_WALL },
+    { LEGACY_ET_EVENTS + LEGACY_EV_BULLET_HIT_FLESH, ET_EVENTS + EV_BULLET_HIT_FLESH },
+    { LEGACY_ET_EVENTS + LEGACY_EV_BULLET, ET_EVENTS + EV_BULLET },
+    { LEGACY_ET_EVENTS + LEGACY_EV_EXPLOSION_HIT_FLESH, ET_EVENTS + EV_EXPLOSION_HIT_FLESH },
+    { LEGACY_ET_EVENTS + LEGACY_EV_PAIN, ET_EVENTS + EV_PAIN },
+    { LEGACY_ET_EVENTS + LEGACY_EV_PAIN_WATER, ET_EVENTS + EV_PAIN_WATER },
+    { LEGACY_ET_EVENTS + LEGACY_EV_OBITUARY, ET_EVENTS + EV_OBITUARY },
+    { LEGACY_ET_EVENTS + LEGACY_EV_DESTROY_GHOUL2_INSTANCE, ET_EVENTS + EV_DESTROY_GHOUL2_INSTANCE },
+    { LEGACY_ET_EVENTS + LEGACY_EV_WEAPON_CHARGE, ET_EVENTS + EV_WEAPON_CHARGE },
+    { LEGACY_ET_EVENTS + LEGACY_EV_WEAPON_CHARGE_ALT, ET_EVENTS + EV_WEAPON_CHARGE_ALT },
+    { LEGACY_ET_EVENTS + LEGACY_EV_DEBUG_LINE, ET_EVENTS + EV_DEBUG_LINE },
+    { LEGACY_ET_EVENTS + LEGACY_EV_TESTLINE, ET_EVENTS + EV_TESTLINE },
+    { LEGACY_ET_EVENTS + LEGACY_EV_STOPLOOPINGSOUND, ET_EVENTS + EV_STOPLOOPINGSOUND },
+    { LEGACY_ET_EVENTS + LEGACY_EV_BODY_QUEUE_COPY, ET_EVENTS + EV_BODY_QUEUE_COPY },
+    { LEGACY_ET_EVENTS + LEGACY_EV_BOTWAYPOINT, ET_EVENTS + EV_BOTWAYPOINT },
+    { LEGACY_ET_EVENTS + LEGACY_EV_PROC_GORE, ET_EVENTS + EV_PROC_GORE },
+    { LEGACY_ET_EVENTS + LEGACY_EV_GAMETYPE_RESTART, ET_EVENTS + EV_GAMETYPE_RESTART },
+    { LEGACY_ET_EVENTS + LEGACY_EV_GAME_OVER, ET_EVENTS + EV_GAME_OVER },
+    { LEGACY_ET_EVENTS + LEGACY_EV_GOGGLES, ET_EVENTS + EV_GOGGLES },
+    { LEGACY_ET_EVENTS + LEGACY_EV_WEAPON_CALLBACK, ET_EVENTS + EV_WEAPON_CALLBACK },
+
+};
+
+int translateSilverEntityTypeToGoldEntityType(int input) {
+    int sizeofEntType = sizeof(entTypeTranslationsReversed) / sizeof(entTypeTranslationsReversed[0]);
+    int base = input & ~EV_EVENT_BITS;
+    int eventBits = input & EV_EVENT_BITS;
+
+    if (base < 0 || base >= sizeofEntType) {
+        return input;
+    }
+
+    return entTypeTranslationsReversed[base].translatedEntityType | eventBits;
+}
 
 int translateGoldEntityTypeToSilverEntityType(int input) {
 
@@ -486,12 +596,11 @@ static int translateGoldStatWpnsToSilver(int input) {
 }
 
 static int translateSilverStatWpnsToGold(int input) {
-    assert(0); // IMPLEMENT
     // assume valid input.
     int newStats = 0;
 
-    for (int i = 0; i < sizeof(weaponTranslations) / sizeof(weaponTranslations[0]); i++) {
-        weaponDiff_t dif = weaponTranslations[i];
+    for (int i = 0; i < sizeof(weaponTranslationReversed) / sizeof(weaponTranslationReversed[0]); i++) {
+        weaponDiff_t dif = weaponTranslationReversed[i];
 
         if (input & (1 << dif.weapon)) {
             newStats |= 1 << dif.translatedWeapon;
@@ -509,6 +618,55 @@ static int translateGoldModToSilver(int input) {
         return input;
     }
     return (input & ~0xFF) | meansOfDeathTranslations[mod].translatedMod;
+}
+
+meansOfDeathDiff_t meansOfDeathTranslationsReversed[] = {
+    { L_MOD_UNKNOWN, MOD_UNKNOWN },
+{ L_MOD_KNIFE, MOD_KNIFE },
+{ L_MOD_M1911A1_PISTOL, MOD_M1911A1_PISTOL },
+{ L_MOD_USSOCOM_PISTOL, MOD_USSOCOM_PISTOL },
+{ L_MOD_M590_SHOTGUN, MOD_M590_SHOTGUN },
+{ L_MOD_MICRO_UZI_SUBMACHINEGUN, MOD_MICRO_UZI_SUBMACHINEGUN },
+{ L_MOD_M3A1_SUBMACHINEGUN, MOD_M3A1_SUBMACHINEGUN },
+{ L_MOD_USAS_12_SHOTGUN, MOD_USAS_12_SHOTGUN },
+{ L_MOD_M4_ASSAULT_RIFLE, MOD_M4_ASSAULT_RIFLE },
+{ L_MOD_AK74_ASSAULT_RIFLE, MOD_AK74_ASSAULT_RIFLE },
+{ L_MOD_MSG90A1_SNIPER_RIFLE, MOD_MSG90A1_SNIPER_RIFLE },
+{ L_MOD_M60_MACHINEGUN, MOD_M60_MACHINEGUN },
+{ L_MOD_MM1_GRENADE_LAUNCHER, MOD_MM1_GRENADE_LAUNCHER },
+{ L_MOD_RPG7_LAUNCHER, MOD_RPG7_LAUNCHER },
+{ L_MOD_M67_GRENADE, MOD_M67_GRENADE },
+{ L_MOD_M84_GRENADE, MOD_M84_GRENADE },
+{ L_MOD_F1_GRENADE, MOD_F1_GRENADE },
+{ L_MOD_L2A2_GRENADE, MOD_L2A2_GRENADE },
+{ L_MOD_MDN11_GRENADE, MOD_MDN11_GRENADE },
+{ L_MOD_SMOHG92_GRENADE, MOD_SMOHG92_GRENADE },
+{ L_MOD_ANM14_GRENADE, MOD_ANM14_GRENADE },
+{ L_MOD_M15_GRENADE, MOD_M15_GRENADE },
+{ L_MOD_WATER, MOD_WATER },
+{ L_MOD_CRUSH, MOD_CRUSH },
+{ L_MOD_TELEFRAG, MOD_TELEFRAG },
+{ L_MOD_FALLING, MOD_FALLING },
+{ L_MOD_SUICIDE, MOD_SUICIDE },
+{ L_MOD_TEAMCHANGE, MOD_TEAMCHANGE },
+{ L_MOD_TARGET_LASER, MOD_TARGET_LASER },
+{ L_MOD_TRIGGER_HURT, MOD_TRIGGER_HURT },
+{ L_MOD_TRIGGER_HURT_NOSUICIDE, MOD_TRIGGER_HURT_NOSUICIDE },
+{ L_MOD_CAR, MOD_CAR },
+{ L_MOD_POP, MOD_POP },
+{ L_MOD_REFRESH, MOD_REFRESH },
+{ L_MOD_DUGUP, MOD_DUGUP },
+{ L_MOD_BURN, MOD_BURN },
+
+};
+
+static int translateSilverModToGold(int input) {
+    int mod = input & 0xFF;
+
+    if (mod < 0 || mod > sizeof(meansOfDeathTranslationsReversed) / sizeof(meansOfDeathTranslationsReversed[0])) {
+        return input;
+    }
+    return (input & ~0xFF) | meansOfDeathTranslationsReversed[mod].translatedMod;
 }
 
 /*
@@ -1592,24 +1750,24 @@ void MSG_WriteDeltaEntity( msg_t *msg, struct entityState_s *from, struct entity
 
 
 
-            if ((from->eType == ET_EVENTS + EV_ITEM_PICKUP || from->eType == ET_EVENTS + EV_ITEM_PICKUP_QUIET) && from->eType != to->eType) {
+            if (from->eType == LEGACY_ET_EVENTS + LEGACY_EV_ITEM_PICKUP && from->eType != to->eType) {
 
                 fromEventParm = from->eventParm;
 
                 qboolean autoSwitch = (from->eventParm & ITEM_AUTOSWITCHBIT) ? qtrue : qfalse;
-                from->eventParm = translateGoldWeaponToSilverWeapon(from->eventParm & ~ITEM_AUTOSWITCHBIT);
+                from->eventParm = translateSilverWeaponToGoldWeapon(from->eventParm & ~ITEM_AUTOSWITCHBIT);
 
                 if (autoSwitch) {
                     from->eventParm |= ITEM_AUTOSWITCHBIT;
                 }
             }
 
-            if ((to->eType == ET_EVENTS + EV_ITEM_PICKUP || to->eType == ET_EVENTS + EV_ITEM_PICKUP_QUIET) && from->eType != to->eType) {
+            if (to->eType == LEGACY_ET_EVENTS + LEGACY_EV_ITEM_PICKUP && from->eType != to->eType) {
 
                 toEventParm = to->eventParm;
 
                 qboolean autoSwitch = (to->eventParm & ITEM_AUTOSWITCHBIT) ? qtrue : qfalse;
-                to->eventParm = translateGoldWeaponToSilverWeapon(to->eventParm & ~ITEM_AUTOSWITCHBIT);
+                to->eventParm = translateSilverWeaponToGoldWeapon(to->eventParm & ~ITEM_AUTOSWITCHBIT);
 
                 if (autoSwitch) {
                     to->eventParm |= ITEM_AUTOSWITCHBIT;
@@ -1617,25 +1775,25 @@ void MSG_WriteDeltaEntity( msg_t *msg, struct entityState_s *from, struct entity
 
             }
 
-            if (from->eType != to->eType && (from->eType == ET_EVENTS + EV_WEAPON_CALLBACK || to->eType == ET_EVENTS + EV_WEAPON_CALLBACK)) {
+            if (from->eType != to->eType && (from->eType == LEGACY_ET_EVENTS + LEGACY_EV_WEAPON_CALLBACK || to->eType == LEGACY_ET_EVENTS + LEGACY_EV_WEAPON_CALLBACK)) {
 
                 fromEventParm = from->eventParm;
                 toEventParm = to->eventParm;
 
                 int wpn = -1;
 
-                if (from->eType == ET_EVENTS + EV_WEAPON_CALLBACK) {
+                if (from->eType == LEGACY_ET_EVENTS + LEGACY_EV_WEAPON_CALLBACK) {
                     int wpn = from->eventParm & 0xFF;
-                    wpn = translateGoldWeaponToSilverWeapon(wpn);
+                    wpn = translateSilverWeaponToGoldWeapon(wpn);
 
                     if (wpn == 0) wpn++; // Don't send an animation without any weapon.
 
                     from->eventParm = (from->eventParm & ~0xFF) | (wpn & 0xFF);
                 }
 
-                if (to->eType == ET_EVENTS + EV_WEAPON_CALLBACK) {
+                if (to->eType == LEGACY_ET_EVENTS + LEGACY_EV_WEAPON_CALLBACK) {
                     int wpn = to->eventParm & 0xFF;
-                    wpn = translateGoldWeaponToSilverWeapon(wpn);
+                    wpn = translateSilverWeaponToGoldWeapon(wpn);
 
                     if (wpn == 0) wpn++; // Don't send an animation without any weapon.
 
@@ -1645,15 +1803,15 @@ void MSG_WriteDeltaEntity( msg_t *msg, struct entityState_s *from, struct entity
             }
 
 
-            if (to->eType == (ET_EVENTS + EV_OBITUARY) && from->eType != to->eType) {
+            if (to->eType == (LEGACY_ET_EVENTS + LEGACY_EV_OBITUARY) && from->eType != to->eType) {
                 fromEventParm = from->eventParm;
                 toEventParm = to->eventParm;
 
-                to->eventParm = translateGoldModToSilver(toEventParm);
+                to->eventParm = translateSilverModToGold(toEventParm);
 
             }
 
-            if ((to->eType == ET_EVENTS + EV_BULLET_HIT_FLESH || to->eType == ET_EVENTS + EV_BULLET_HIT_WALL || to->eType == ET_EVENTS + EV_BULLET || to->eType == ET_EVENTS + EV_EXPLOSION_HIT_FLESH) && from->time != to->time) {
+            if ((to->eType == LEGACY_ET_EVENTS + LEGACY_EV_BULLET_HIT_FLESH || to->eType == LEGACY_ET_EVENTS + LEGACY_EV_BULLET_HIT_WALL || to->eType == LEGACY_ET_EVENTS + LEGACY_EV_BULLET || to->eType == LEGACY_ET_EVENTS + LEGACY_EV_EXPLOSION_HIT_FLESH) && from->time != to->time) {
                 // I honestly question the sanity of the developers on this. Weapon + attack type is inside entity time...???? :)))))))))))
                 toTime = to->time;
                 //tent->s.time = weapon + ((attack&0xFF)<<8);
@@ -1661,7 +1819,7 @@ void MSG_WriteDeltaEntity( msg_t *msg, struct entityState_s *from, struct entity
                 int originalAttack = (to->time >> 8) & 0xFF;
                 int originalYaw = (to->time >> 16) & 0xFFFF;
 
-                int silverWpn = translateGoldWeaponToSilverWeapon(originalWeapon);
+                int silverWpn = translateSilverWeaponToGoldWeapon(originalWeapon);
 
                 to->time = (silverWpn & 0xFF)
                     | ((originalAttack & 0xFF) << 8)
@@ -1670,21 +1828,24 @@ void MSG_WriteDeltaEntity( msg_t *msg, struct entityState_s *from, struct entity
             }
 
 
-            if ((to->event & ~EV_EVENT_BITS) > EV_ITEM_PICKUP_QUIET && from->event != to->event) {
+            if ((to->event & ~EV_EVENT_BITS) > LEGACY_EV_ITEM_PICKUP && from->event != to->event) {
+                if ((to->event & ~EV_EVENT_BITS) > LEGACY_EV_WEAPON_CALLBACK) {
+                    Com_Printf("!!!!!!!!!!!!!!!!!!! BIGGER BTW\r\n");
+                }
                 toEvent = to->event;
-                to->event--;
+                to->event++;
             }
 
-            if (to->modelindex > 0 && to->modelindex < sizeof(modelIndexTranslations) / sizeof(modelIndexTranslations[0]) && to->eType == ET_ITEM && from->modelindex != to->modelindex) {
+            if (to->modelindex > 0 && to->modelindex < sizeof(modelIndexTranslations) / sizeof(modelIndexTranslations[0]) && to->eType == LEGACY_ET_ITEM && from->modelindex != to->modelindex) {
                 toModelIdx = to->modelindex;
-                to->modelindex = translateGoldModelIdxToSilverModelIdx(to->modelindex);
+                to->modelindex = translateSilverModelIdxToGoldModelIdx(to->modelindex);
             }
 
 
 
 
 
-            if ((from->eType == ET_EVENTS + EV_BULLET_HIT_FLESH || from->eType == ET_EVENTS + EV_BULLET_HIT_WALL || from->eType == ET_EVENTS + EV_BULLET || from->eType == ET_EVENTS + EV_EXPLOSION_HIT_FLESH) && from->time != to->time) {
+            if ((from->eType == LEGACY_ET_EVENTS + LEGACY_EV_BULLET_HIT_FLESH || from->eType == LEGACY_ET_EVENTS + LEGACY_EV_BULLET_HIT_WALL || from->eType == LEGACY_ET_EVENTS + LEGACY_EV_BULLET || from->eType == LEGACY_ET_EVENTS + LEGACY_EV_EXPLOSION_HIT_FLESH) && from->time != to->time) {
                 // I honestly question the sanity of the developers on this. Weapon + attack type is inside entity time...???? :)))))))))))
                 fromTime = from->time;
                 //tent->s.time = weapon + ((attack&0xFF)<<8);
@@ -1692,7 +1853,7 @@ void MSG_WriteDeltaEntity( msg_t *msg, struct entityState_s *from, struct entity
                 int originalAttack = (from->time >> 8) & 0xFF;
                 int originalYaw = (from->time >> 16) & 0xFFFF;
 
-                int silverWpn = translateGoldWeaponToSilverWeapon(originalWeapon);
+                int silverWpn = translateSilverWeaponToGoldWeapon(originalWeapon);
 
                 from->time = (silverWpn & 0xFF)
                     | ((originalAttack & 0xFF) << 8)
@@ -1701,30 +1862,30 @@ void MSG_WriteDeltaEntity( msg_t *msg, struct entityState_s *from, struct entity
             }
 
 
-            if ((from->event & ~EV_EVENT_BITS) > EV_ITEM_PICKUP_QUIET && from->event != to->event) {
+            if ((from->event & ~EV_EVENT_BITS) > LEGACY_EV_ITEM_PICKUP && from->event != to->event) {
                 fromEvent = from->event;
-                from->event--;
+                from->event++;
             }
 
-            if (from->modelindex > 0 && from->modelindex < sizeof(modelIndexTranslations) / sizeof(modelIndexTranslations[0]) && from->eType == ET_ITEM && from->modelindex != to->modelindex) {
+            if (from->modelindex > 0 && from->modelindex < sizeof(modelIndexTranslations) / sizeof(modelIndexTranslations[0]) && from->eType == LEGACY_ET_ITEM && from->modelindex != to->modelindex) {
                 fromModelIdx = from->modelindex;
-                from->modelindex = translateGoldModelIdxToSilverModelIdx(from->modelindex);
+                from->modelindex = translateSilverModelIdxToGoldModelIdx(from->modelindex);
             }
 
             if (from->weapon != to->weapon) {
                 fromWpn = from->weapon;
                 toWpn = to->weapon;
 
-                from->weapon = translateGoldWeaponToSilverWeapon(from->weapon);
-                to->weapon = translateGoldWeaponToSilverWeapon(to->weapon);
+                from->weapon = translateSilverWeaponToGoldWeapon(from->weapon);
+                to->weapon = translateSilverWeaponToGoldWeapon(to->weapon);
             }
 
             //if (from->eType != to->eType) {
                 fromEType = from->eType;
                 toEType = to->eType;
 
-                from->eType = translateGoldEntityTypeToSilverEntityType(fromEType);
-                to->eType = translateGoldEntityTypeToSilverEntityType(toEType);
+                from->eType = translateSilverEntityTypeToGoldEntityType(fromEType);
+                to->eType = translateSilverEntityTypeToGoldEntityType(toEType);
             //}
 
 
@@ -2512,131 +2673,131 @@ void MSG_WriteDeltaPlayerstate( msg_t *msg, struct playerState_s *from, struct p
 
             */
 
-            if (from->events[0] >= EV_ITEM_PICKUP_QUIET) {
+            if (from->events[0] > LEGACY_EV_ITEM_PICKUP) {
 
-                if (from->events[0] == EV_WEAPON_CALLBACK) {
+                if (from->events[0] == LEGACY_EV_WEAPON_CALLBACK) {
                     fromEventParm0 = from->eventParms[0];
                     int wpn = from->eventParms[0] & 0xFF;
-                    wpn = translateGoldWeaponToSilverWeapon(wpn);
+                    wpn = translateSilverWeaponToGoldWeapon(wpn);
                     from->eventParms[0] = (from->eventParms[0] & ~0xFF) | (wpn & 0xFF);
                 }
 
                 fromEvents0 = from->events[0];
-                from->events[0]--;
+                from->events[0]++;
 
             }
 
-            if (to->events[0] >= EV_ITEM_PICKUP_QUIET) {
+            if (to->events[0] > LEGACY_EV_ITEM_PICKUP) {
 
-                if (to->events[0] == EV_WEAPON_CALLBACK) {
+                if (to->events[0] == LEGACY_EV_WEAPON_CALLBACK) {
                     toEventParm0 = to->eventParms[0];
                     int wpn = to->eventParms[0] & 0xFF;
-                    wpn = translateGoldWeaponToSilverWeapon(wpn);
+                    wpn = translateSilverWeaponToGoldWeapon(wpn);
                     to->eventParms[0] = (to->eventParms[0] & ~0xFF) | (wpn & 0xFF);
                 }
 
                 toEvents0 = to->events[0];
-                to->events[0]--;
+                to->events[0]++;
             }
 
-            if (from->events[1] >= EV_ITEM_PICKUP_QUIET) {
+            if (from->events[1] > LEGACY_EV_ITEM_PICKUP) {
 
-                if (from->events[1] == EV_WEAPON_CALLBACK) {
+                if (from->events[1] == LEGACY_EV_WEAPON_CALLBACK) {
                     fromEventParm1 = from->eventParms[1];
                     int wpn = from->eventParms[1] & 0xFF;
-                    wpn = translateGoldWeaponToSilverWeapon(wpn);
+                    wpn = translateSilverWeaponToGoldWeapon(wpn);
                     from->eventParms[1] = (from->eventParms[1] & ~0xFF) | (wpn & 0xFF);
                 }
 
                 fromEvents1 = from->events[1];
-                from->events[1]--;
+                from->events[1]++;
             }
 
-            if (to->events[1] >= EV_ITEM_PICKUP_QUIET) {
+            if (to->events[1] > LEGACY_EV_ITEM_PICKUP) {
 
-                if (to->events[1] == EV_WEAPON_CALLBACK) {
+                if (to->events[1] == LEGACY_EV_WEAPON_CALLBACK) {
                     toEventParm1 = to->eventParms[1];
                     int wpn = to->eventParms[1] & 0xFF;
-                    wpn = translateGoldWeaponToSilverWeapon(wpn);
+                    wpn = translateSilverWeaponToGoldWeapon(wpn);
                     to->eventParms[1] = (to->eventParms[1] & ~0xFF) | (wpn & 0xFF);
                 }
 
                 toEvents1 = to->events[1];
-                to->events[1]--;
+                to->events[1]++;
             }
 
-            if (from->events[2] >= EV_ITEM_PICKUP_QUIET) {
+            if (from->events[2] > LEGACY_EV_ITEM_PICKUP) {
 
-                if (from->events[2] == EV_WEAPON_CALLBACK) {
+                if (from->events[2] == LEGACY_EV_WEAPON_CALLBACK) {
                     fromEventParm2 = from->eventParms[2];
                     int wpn = from->eventParms[2] & 0xFF;
-                    wpn = translateGoldWeaponToSilverWeapon(wpn);
+                    wpn = translateSilverWeaponToGoldWeapon(wpn);
                     from->eventParms[2] = (from->eventParms[2] & ~0xFF) | (wpn & 0xFF);
                 }
 
                 fromEvents2 = from->events[2];
-                from->events[2]--;
+                from->events[2]++;
             }
 
-            if (to->events[2] >= EV_ITEM_PICKUP_QUIET) {
+            if (to->events[2] > LEGACY_EV_ITEM_PICKUP) {
 
-                if (to->events[2] == EV_WEAPON_CALLBACK) {
+                if (to->events[2] == LEGACY_EV_WEAPON_CALLBACK) {
                     toEventParm2 = to->eventParms[2];
                     int wpn = to->eventParms[2] & 0xFF;
-                    wpn = translateGoldWeaponToSilverWeapon(wpn);
+                    wpn = translateSilverWeaponToGoldWeapon(wpn);
                     to->eventParms[2] = (to->eventParms[2] & ~0xFF) | (wpn & 0xFF);
                 }
 
                 toEvents2 = to->events[2];
-                to->events[2]--;
+                to->events[2]++;
             }
 
-            if (from->events[3] >= EV_ITEM_PICKUP_QUIET) {
+            if (from->events[3] > LEGACY_EV_ITEM_PICKUP) {
 
-                if (from->events[3] == EV_WEAPON_CALLBACK) {
+                if (from->events[3] == LEGACY_EV_WEAPON_CALLBACK) {
                     fromEventParm3 = from->eventParms[3];
                     int wpn = from->eventParms[3] & 0xFF;
-                    wpn = translateGoldWeaponToSilverWeapon(wpn);
+                    wpn = translateSilverWeaponToGoldWeapon(wpn);
                     from->eventParms[3] = (from->eventParms[3] & ~0xFF) | (wpn & 0xFF);
                 }
 
                 fromEvents3 = from->events[3];
-                from->events[3]--;
+                from->events[3]++;
             }
 
-            if (to->events[3] >= EV_ITEM_PICKUP_QUIET) {
+            if (to->events[3] > LEGACY_EV_ITEM_PICKUP) {
 
-                if (to->events[3] == EV_WEAPON_CALLBACK) {
+                if (to->events[3] == LEGACY_EV_WEAPON_CALLBACK) {
                     toEventParm3 = to->eventParms[3];
                     int wpn = to->eventParms[3] & 0xFF;
-                    wpn = translateGoldWeaponToSilverWeapon(wpn);
+                    wpn = translateSilverWeaponToGoldWeapon(wpn);
                     to->eventParms[3] = (to->eventParms[3] & ~0xFF) | (wpn & 0xFF);
                 }
 
                 toEvents3 = to->events[3];
-                to->events[3]--;
+                to->events[3]++;
             }
 
-            if (((from->externalEvent & ~EV_EVENT_BITS) == EV_ITEM_PICKUP || (from->externalEvent & ~EV_EVENT_BITS) == EV_ITEM_PICKUP_QUIET)) {
+            if (((from->externalEvent & ~EV_EVENT_BITS) == LEGACY_EV_ITEM_PICKUP)) {
                 fromExternalEventParm = from->externalEventParm;
-                from->externalEventParm = translateGoldModelIdxToSilverModelIdx(from->externalEventParm);
+                from->externalEventParm = translateSilverModelIdxToGoldModelIdx(from->externalEventParm);
 
             }
 
-            if ((from->externalEvent & ~EV_EVENT_BITS) >= EV_ITEM_PICKUP_QUIET) {
+            if ((from->externalEvent & ~EV_EVENT_BITS) > LEGACY_EV_ITEM_PICKUP) {
                 fromExternalEvent = from->externalEvent;
-                from->externalEvent--;
+                from->externalEvent++;
             }
 
 
-            if (((to->externalEvent & ~EV_EVENT_BITS) == EV_ITEM_PICKUP || (to->externalEvent & ~EV_EVENT_BITS) == EV_ITEM_PICKUP_QUIET)) {
+            if ((to->externalEvent & ~EV_EVENT_BITS) == LEGACY_EV_ITEM_PICKUP) {
                 toExternalEventParm = to->externalEventParm;
-                to->externalEventParm = translateGoldModelIdxToSilverModelIdx(to->externalEventParm);
+                to->externalEventParm = translateSilverModelIdxToGoldModelIdx(to->externalEventParm); // Was this really modelidx being sent wwith EV_ITEM_PICKUP?
             }
 
-            if ((to->externalEvent & ~EV_EVENT_BITS) >= EV_ITEM_PICKUP_QUIET) {
+            if ((to->externalEvent & ~EV_EVENT_BITS) > LEGACY_EV_ITEM_PICKUP) {
                 toExternalEvent = to->externalEvent;
-                to->externalEvent--;
+                to->externalEvent++;
             }
 
             if (from->weapon != to->weapon) {
@@ -2644,44 +2805,42 @@ void MSG_WriteDeltaPlayerstate( msg_t *msg, struct playerState_s *from, struct p
                 fromWpn = from->weapon;
                 toWpn = to->weapon;
 
-                from->weapon = translateGoldWeaponToSilverWeapon(from->weapon); // this should be the cause of M4 issue. M4 is the same as sniper, so there's no delta if this is not translated.
-                to->weapon = translateGoldWeaponToSilverWeapon(to->weapon);
+                from->weapon = translateSilverWeaponToGoldWeapon(from->weapon); // this should be the cause of M4 issue. M4 is the same as sniper, so there's no delta if this is not translated.
+                to->weapon = translateSilverWeaponToGoldWeapon(to->weapon);
             }
 
+            // JANFIXME - if zooming is bugged on GOld for runninglegacy - this is just doing a reverse map currently, might not be correct!
             if ((!(from->pm_flags & PMF_ZOOMED) && to->pm_flags & PMF_ZOOMED) || (from->zoomFov != to->zoomFov)) {
                 fromZoomFov = from->zoomFov;
                 toZoomFov = to->zoomFov;
 
                 if (!(from->pm_flags & PMF_ZOOMED) && to->pm_flags & PMF_ZOOMED) {
-                    from->zoomFov = 0;
-                    to->zoomFov = 20;
+                    from->zoomFov = 2;
+                    to->zoomFov = 0;
                 }
                 else {
                     switch (fromZoomFov) {
-                    case 0:
-                        from->zoomFov = 20;
-                        break;
-                    case 1:
-                        from->zoomFov = 10;
-                        break;
-                    case 2:
-                        from->zoomFov = 5;
-                        break;
-
+                        case 20:
+                            from->zoomFov = 0;
+                            break;
+                        case 10:
+                            from->zoomFov = 1;
+                            break;
+                        case 5:
+                            from->zoomFov = 2;
+                            break;
                     }
 
-
                     switch (toZoomFov) {
-                    case 0:
-                        to->zoomFov = 20;
-                        break;
-                    case 1:
-                        to->zoomFov = 10;
-                        break;
-                    case 2:
-                        to->zoomFov = 5;
-                        break;
-
+                        case 20:
+                            to->zoomFov = 0;
+                            break;
+                        case 10:
+                            to->zoomFov = 1;
+                            break;
+                        case 5:
+                            to->zoomFov = 2;
+                            break;
                     }
 
                 }

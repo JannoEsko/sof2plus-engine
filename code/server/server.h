@@ -323,9 +323,6 @@ void SV_RemoveOperatorCommands (void);
 void SV_MasterShutdown (void);
 int SV_RateMsec(client_t *client);
 
-char* SV_SpoofAvailableWeaponsFromSilverToGold(void);
-char* SV_SpoofAvailableWeaponsFromGoldToSilver(void);
-
 //
 // sv_init.c
 //

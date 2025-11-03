@@ -1331,15 +1331,3 @@ int SV_SendQueuedPackets()
 
     return timeVal;
 }
-
-static char* SV_SpoofAvailableWeapons(void) {
-    assert(0); // Needs to be done
-}
-
-char* SV_SpoofAvailableWeaponsFromSilverToGold(void) {
-    return SV_SpoofAvailableWeapons();
-}
-
-char* SV_SpoofAvailableWeaponsFromGoldToSilver(void) {
-    return SV_SpoofAvailableWeapons();
-}

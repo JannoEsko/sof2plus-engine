@@ -107,13 +107,14 @@ static void SV_SendConfigstring(client_t *client, int index)
         } else if (index == CS_SERVERINFO) {
             if (client->commProto == COMMPROTO_SILVER && !net_runningLegacy->integer) {
                 Q_strncpyz(bigInfoString, sv.configstrings[index], sizeof(bigInfoString));
-                Info_SetValueForKey_Big(bigInfoString, "g_availableWeapons", SV_SpoofAvailableWeaponsFromGoldToSilver());
+                Info_SetValueForKey_Big(bigInfoString, "g_availableWeapons", MSG_SpoofAvailableWeaponsFromGoldToSilver(Info_ValueForKey(bigInfoString, "g_availableWeapons")));
 
                 SV_SendServerCommand(client, "cs %i \"%s\"\n", index,
                     bigInfoString);
             } else if (client->commProto == COMMPROTO_GOLD && net_runningLegacy->integer) {
                 Q_strncpyz(bigInfoString, sv.configstrings[index], sizeof(bigInfoString));
-                Info_SetValueForKey_Big(bigInfoString, "g_availableWeapons", SV_SpoofAvailableWeaponsFromSilverToGold());
+                Info_SetValueForKey_Big(bigInfoString, "g_availableWeapons", MSG_SpoofAvailableWeaponsFromSilverToGold(Info_ValueForKey(bigInfoString, "g_availableWeapons")));
+                Info_SetValueForKey_Big(bigInfoString, "g_available", Info_ValueForKey(bigInfoString, "g_availableWeapons"));
 
                 SV_SendServerCommand(client, "cs %i \"%s\"\n", index,
                     bigInfoString);

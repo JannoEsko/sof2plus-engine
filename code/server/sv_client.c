@@ -726,11 +726,13 @@ static void SV_SendClientGameState( client_t *client ) {
             else if (start == CS_SERVERINFO) {
                 if (client->commProto == COMMPROTO_SILVER && !net_runningLegacy->integer) {
                     Q_strncpyz(bigInfoString, sv.configstrings[start], sizeof(bigInfoString));
-                    Info_SetValueForKey_Big(bigInfoString, "g_availableWeapons", SV_SpoofAvailableWeaponsFromSilverToGold());
+                    Info_SetValueForKey_Big(bigInfoString, "g_availableWeapons", MSG_SpoofAvailableWeaponsFromGoldToSilver(Info_ValueForKey(bigInfoString, "g_availableWeapons")));
                     MSG_WriteBigString(&msg, bigInfoString);
                 } else if (client->commProto == COMMPROTO_GOLD && net_runningLegacy->integer) {
                     Q_strncpyz(bigInfoString, sv.configstrings[start], sizeof(bigInfoString));
-                    Info_SetValueForKey_Big(bigInfoString, "g_availableWeapons", SV_SpoofAvailableWeaponsFromGoldToSilver());
+                    Info_SetValueForKey_Big(bigInfoString, "g_availableWeapons", MSG_SpoofAvailableWeaponsFromSilverToGold(Info_ValueForKey(bigInfoString, "g_availableWeapons")));
+                    // Gold mods should already be using g_available, so this spoof is only necessary on silver2gold.
+                    Info_SetValueForKey_Big(bigInfoString, "g_available", Info_ValueForKey(bigInfoString, "g_availableWeapons"));
                     MSG_WriteBigString(&msg, bigInfoString);
                 } else {
                     MSG_WriteBigString(&msg, sv.configstrings[start]);
@@ -1593,6 +1595,19 @@ void SV_ExecuteClientCommand( client_t *cl, const char *s, qboolean clientOK ) {
         // pass unknown strings to the game
         if (!u->name && sv.state == SS_GAME && (cl->state == CS_ACTIVE || cl->state == CS_PRIMED)) {
             Cmd_Args_Sanitize();
+
+            // We do need to check if the command is "dropweapon".
+            // The client, when using +drop, sends over a dropweapon x command to the server, where x denotes the weapon the CLIENT thinks they got.
+            // That means, if the client is currently having AK in his hands, we're running 1.00 Game module, but client is 1.03, the ints will be different.
+
+            if (!Q_stricmp(Cmd_Argv(0), "dropweapon") && net_multiprotocol->integer && Cmd_Argc() > 1) {
+                if (cl->commProto == COMMPROTO_GOLD && net_runningLegacy->integer) {
+                    Cmd_OverwriteArg(1, va("%d", translateGoldWeaponToSilverWeapon(atoi(Cmd_Argv(1)))));
+                } else if (cl->commProto == COMMPROTO_SILVER && !net_runningLegacy->integer) {
+                    Cmd_OverwriteArg(1, va("%d", translateSilverWeaponToGoldWeapon(atoi(Cmd_Argv(1)))));
+                }
+            }
+
             VM_Call( gvm, GAME_CLIENT_COMMAND, cl - svs.clients );
         }
     }

@@ -869,3 +869,27 @@ void Cmd_Init (void) {
     Cmd_AddCommand ("wait", Cmd_Wait_f);
 }
 
+void Cmd_OverwriteArg(int argNum, const char* newArg) {
+    static char overwriteBuf[MAX_STRING_TOKENS];
+    static int bufPos = 0;
+
+    if (!newArg || argNum < 0 || argNum >= MAX_STRING_TOKENS)
+        return;
+
+    int len = strlen(newArg) + 1;
+
+    if (len > MAX_STRING_TOKENS)
+        len = MAX_STRING_TOKENS;
+
+    // Wrap around if we reach the buffer end
+    if (bufPos + len >= MAX_STRING_TOKENS)
+        bufPos = 0;
+
+    char* dst = &overwriteBuf[bufPos];
+    Q_strncpyz(dst, newArg, len);
+    bufPos += len;
+
+    // Overwrite argv to point to our own local buf with the new arg.
+    cmd_argv[argNum] = dst;
+}
+

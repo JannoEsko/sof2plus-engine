@@ -128,6 +128,8 @@ void MSG_ReportChangeVectors_f( void );
 
 int translateSilverWeaponToGoldWeapon(int input);
 int translateGoldWeaponToSilverWeapon(int input);
+char* MSG_SpoofAvailableWeaponsFromSilverToGold(char* availableWeapons);
+char* MSG_SpoofAvailableWeaponsFromGoldToSilver(char* availableWeapons);
 
 //============================================================================
 
@@ -468,6 +470,9 @@ void    Cmd_TokenizeStringIgnoreQuotes( const char *text_in );
 void    Cmd_ExecuteString( const char *text );
 // Parses a single line of text into arguments and tries to execute it
 // as if it was typed at the console
+
+void    Cmd_OverwriteArg( int argNum, const char* newArg );
+// Overwrites an argument at a specific argc
 
 
 /*
