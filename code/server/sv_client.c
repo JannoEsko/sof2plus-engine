@@ -164,6 +164,64 @@ static qboolean SV_IsBanned(netadr_t *from, qboolean isexception)
     return qfalse;
 }
 
+
+/**
+ * Translates outfitting to internal game version
+ *
+ * The outfitting is a packed string, like AAAAA. The character points to a position in bg_outfittingGroups matrix.
+ * Outfitting is packed on the client side and sent over to the server as a part of userinfo.
+ * First char points to Primary group, second to Secondary, third to Pistols, fourth to nades and fifth to accessories.
+ * When you subtract 'A' from the character, you get the position in the outfitting group, e.g. if the string is BAAAA
+ * then B - 'A' = 1, 1st pos in the primary group points to M4.
+ * The differences between Gold and Silver thankfully aren't huge. There are 2 more weapons in the Primary group (SIG551 and MP5) and 1 more in the Pistols group (Silver Talon)
+ * These weapons sit at [0][2] (SIG551), [0][6] (MP5), [2][2] (Silver Talon)
+ * Those values are instead then "discarded". All in all, the client shouldn't be able at all to select these weapons anyhow, but they're used to shift the outfitting to the correct direction.
+ *
+ * @param commProto The communication protocol of the client
+ * @param in outfitting string from userinfo
+ * @return translated outfitting
+ */
+static char* SV_TranslateOutfitting(commProtocol_t commProto, char* in) {
+
+    if (!in || strlen(in) < OUTFITTING_GROUP_MAX) {
+        return in;
+    }
+
+    Com_DPrintf("SV_TranslateOutfitting - Proto: %d, input: %s, output: ", commProto == COMMPROTO_SILVER ? 2002 : 2004, in);
+    static char out[OUTFITTING_GROUP_MAX + 1];
+    Q_strncpyz(out, in, sizeof(out));
+    if (net_multiprotocol->integer) {
+
+        int group0 = out[0] - 'A';
+        int group2 = out[2] - 'A';
+
+        if (net_runningLegacy->integer && commProto == COMMPROTO_GOLD) {
+            // Game module running Silver, client Gold.
+            if (group0 >= 2) group0--; // Above SIG551, so have to subtract 1
+            if (group0 >= 6) group0--; // Above MP5 as well, so have to subtract 1 more.
+            if (group2 == 2) group2--; // Silver Talon, just remove 1.
+
+            out[0] = group0 + 'A';
+            out[2] = group2 + 'A';
+        } else if (!net_runningLegacy->integer && commProto == COMMPROTO_SILVER) {
+            // Game module running Gold, client Silver
+            if (group0 >= 2) group0++; // Above SIG551, so add 1
+            if (group0 >= 6) group0++; // Above MP5 as well, so add 1 more.
+
+            if (group0 >= MAX_OUTFITTING_GROUPITEM) group0 = MAX_OUTFITTING_GROUPITEM - 1; // Edge case which shouldn't happen but just in case.
+
+            if (group2 >= 2)  group2++; // Just point it to -1 if we go to Silver Talon or above.
+
+            out[0] = group0 + 'A';
+            out[2] = group2 + 'A';
+        }
+
+    }
+
+    Com_DPrintf("%s\n", out);
+    return out;
+}
+
 /*
 ==================
 SV_DirectConnect
@@ -198,7 +256,7 @@ void SV_DirectConnect( netadr_t from, commProtocol_t commProto ) {
     }
 
     Q_strncpyz( userinfo, Cmd_Argv(1), sizeof(userinfo) );
-
+    Info_SetValueForKey(userinfo, "outfitting", SV_TranslateOutfitting(commProto, Info_ValueForKey(userinfo, "outfitting")));
     version = atoi(Info_ValueForKey(userinfo, "protocol"));
 
     if (version != SILVER_GAME_PROTOCOL_INT && version != GOLD_GAME_PROTOCOL_INT) {
@@ -1544,7 +1602,7 @@ SV_UpdateUserinfo_f
 */
 static void SV_UpdateUserinfo_f( client_t *cl ) {
     Q_strncpyz( cl->userinfo, Cmd_Argv(1), sizeof(cl->userinfo) );
-
+    Info_SetValueForKey(cl->userinfo, "outfitting", SV_TranslateOutfitting(cl->commProto, Info_ValueForKey(cl->userinfo, "outfitting")));
     SV_UserinfoChanged( cl );
     // call prog code to allow overrides
     VM_Call( gvm, GAME_CLIENT_USERINFO_CHANGED, cl - svs.clients );
@@ -1596,11 +1654,11 @@ void SV_ExecuteClientCommand( client_t *cl, const char *s, qboolean clientOK ) {
         if (!u->name && sv.state == SS_GAME && (cl->state == CS_ACTIVE || cl->state == CS_PRIMED)) {
             Cmd_Args_Sanitize();
 
-            // We do need to check if the command is "dropweapon".
-            // The client, when using +drop, sends over a dropweapon x command to the server, where x denotes the weapon the CLIENT thinks they got.
+            // We do need to check if the command is "drop".
+            // The client, when using +drop, sends over a drop x command to the server, where x denotes the weapon the CLIENT thinks they got.
             // That means, if the client is currently having AK in his hands, we're running 1.00 Game module, but client is 1.03, the ints will be different.
 
-            if (!Q_stricmp(Cmd_Argv(0), "dropweapon") && net_multiprotocol->integer && Cmd_Argc() > 1) {
+            if (!Q_stricmp(Cmd_Argv(0), "drop") && net_multiprotocol->integer && Cmd_Argc() > 1) {
                 if (cl->commProto == COMMPROTO_GOLD && net_runningLegacy->integer) {
                     Cmd_OverwriteArg(1, va("%d", translateGoldWeaponToSilverWeapon(atoi(Cmd_Argv(1)))));
                 } else if (cl->commProto == COMMPROTO_SILVER && !net_runningLegacy->integer) {

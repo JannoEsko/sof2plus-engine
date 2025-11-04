@@ -131,6 +131,11 @@ char* MSG_SpoofAvailableWeaponsFromSilverToGold(char* availableWeapons) {
 
     for (int i = 1; i <= L_WP_M15_GRENADE; i++) { //M15 is the last weapon on Silver. Skip WP_NONE
         weaponDiff_t dif = weaponTranslationReversed[i];
+
+        if (dif.weapon == WP_NONE) {
+            continue;
+        }
+
         goldWpns[dif.translatedWeapon - 1] = availableWeapons[dif.weapon - 1];
     }
 
@@ -142,6 +147,9 @@ char* MSG_SpoofAvailableWeaponsFromGoldToSilver(char* availableWeapons) {
 
     for (int i = 1; i < WP_NUM_WEAPONS; i++) { //M15 is the last weapon on Silver. Skip WP_NONE
         weaponDiff_t dif = weaponTranslations[i];
+        if (dif.translatedWeapon == L_WP_NONE) {
+            continue;
+        }
         silverWpns[dif.translatedWeapon - 1] = availableWeapons[dif.weapon - 1];
     }
 
