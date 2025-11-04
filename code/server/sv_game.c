@@ -402,10 +402,8 @@ The module is making a system call
 ====================
 */
 intptr_t SV_GameSystemCalls(qboolean runningQVM, intptr_t *args ) {
-    // TEMPORARY
-#if !defined(_WIN64) && !defined(__x86_64__) && !defined(__amd64__) && !defined(__LP64__)
 
-
+    if (!sv_gameModernABI->integer) {
         switch (args[0]) {
         case LEGACY_G_PRINT:
             Com_Printf("%s", (const char*)VMA(1));
@@ -437,7 +435,7 @@ intptr_t SV_GameSystemCalls(qboolean runningQVM, intptr_t *args ) {
         case LEGACY_G_FS_FOPEN_FILE:
         {
             fsMode_t mode = 0;
-			legacyFsMode_t legacyMode = (legacyFsMode_t)args[3];
+            legacyFsMode_t legacyMode = (legacyFsMode_t)args[3];
 
             switch (legacyMode) {
 
@@ -468,12 +466,12 @@ intptr_t SV_GameSystemCalls(qboolean runningQVM, intptr_t *args ) {
             default:
                 Com_Error(ERR_DROP, "SV_GameSystemCalls: LEGACY_G_FS_FOPEN_FILE: bad mode %d", legacyMode);
 
-                
+
             }
 
             return FS_FOpenFileByMode(VMA(1), VMA(2), mode);
         }
-            
+
         case LEGACY_G_FS_READ:
             FS_Read(VMA(1), args[2], args[3]);
             return 0;
@@ -493,7 +491,7 @@ intptr_t SV_GameSystemCalls(qboolean runningQVM, intptr_t *args ) {
             CM_ModelBounds(0, VMA(1), VMA(2));
             return 0;
         case LEGACY_G_RMG_INIT:
-			// SoF2Plus currently lacks RMG support.
+            // SoF2Plus currently lacks RMG support.
             return 0;
         case LEGACY_G_DROP_CLIENT:
             SV_GameDropClient(args[1], VMA(2));
@@ -585,7 +583,7 @@ intptr_t SV_GameSystemCalls(qboolean runningQVM, intptr_t *args ) {
         case LEGACY_G_BOT_GET_MEMORY:
             return (intptr_t)Z_TagMalloc(TAG_BOTLIB, args[1]);
         case LEGACY_G_BOT_FREE_MEMORY:
-			Z_Free((intptr_t*)args[1]);
+            Z_Free((intptr_t*)args[1]);
             return 0;
         case LEGACY_G_DEBUG_POLYGON_CREATE:
             return BotImport_DebugPolygonCreate(args[1], args[2], VMA(3));
@@ -645,261 +643,261 @@ intptr_t SV_GameSystemCalls(qboolean runningQVM, intptr_t *args ) {
             return 0;
 
 
-		// Botlib calls
+            // Botlib calls
         case LEGACY_BOTLIB_SETUP:
-                return SV_BotLibSetup();
+            return SV_BotLibSetup();
         case LEGACY_BOTLIB_SHUTDOWN:
-                return SV_BotLibShutdown();
+            return SV_BotLibShutdown();
         case LEGACY_BOTLIB_LIBVAR_SET:
-                return botlib_export->BotLibVarSet( VMA(1), VMA(2) );
+            return botlib_export->BotLibVarSet(VMA(1), VMA(2));
         case LEGACY_BOTLIB_LIBVAR_GET:
-                return botlib_export->BotLibVarGet( VMA(1), VMA(2), args[3] );
+            return botlib_export->BotLibVarGet(VMA(1), VMA(2), args[3]);
         case LEGACY_BOTLIB_PC_ADD_GLOBAL_DEFINE:
-                return botlib_export->PC_AddGlobalDefine( VMA(1) );
+            return botlib_export->PC_AddGlobalDefine(VMA(1));
         case LEGACY_BOTLIB_START_FRAME:
-                return botlib_export->BotLibStartFrame( VMF(1) );
+            return botlib_export->BotLibStartFrame(VMF(1));
         case LEGACY_BOTLIB_LOAD_MAP:
-                return botlib_export->BotLibLoadMap( VMA(1) );
+            return botlib_export->BotLibLoadMap(VMA(1));
         case LEGACY_BOTLIB_UPDATENTITY:
-                return botlib_export->BotLibUpdateEntity( args[1], VMA(2) );
+            return botlib_export->BotLibUpdateEntity(args[1], VMA(2));
         case LEGACY_BOTLIB_TEST:
-            return botlib_export->Test( args[1], VMA(2), VMA(3), VMA(4) );;
+            return botlib_export->Test(args[1], VMA(2), VMA(3), VMA(4));;
         case LEGACY_BOTLIB_GET_SNAPSHOT_ENTITY:
-            return SV_BotGetSnapshotEntity( args[1], args[2] );
+            return SV_BotGetSnapshotEntity(args[1], args[2]);
         case LEGACY_BOTLIB_GET_CONSOLE_MESSAGE:
-            return SV_BotGetConsoleMessage( args[1], VMA(2), args[3] );
+            return SV_BotGetConsoleMessage(args[1], VMA(2), args[3]);
         case LEGACY_BOTLIB_USER_COMMAND:
-            {
-                int clientNum = args[1];
+        {
+            int clientNum = args[1];
 
-                if ( clientNum >= 0 && clientNum < sv_maxclients->integer ) {
-                    SV_ClientThink( &svs.clients[clientNum], VMA(2) );
-                }
+            if (clientNum >= 0 && clientNum < sv_maxclients->integer) {
+                SV_ClientThink(&svs.clients[clientNum], VMA(2));
             }
-            return 0;
+        }
+        return 0;
         case LEGACY_BOTLIB_AAS_ENABLE_ROUTING_AREA:
-            return botlib_export->aas.AAS_EnableRoutingArea( args[1], args[2] );
+            return botlib_export->aas.AAS_EnableRoutingArea(args[1], args[2]);
         case LEGACY_BOTLIB_AAS_BBOX_AREAS:
-            return botlib_export->aas.AAS_BBoxAreas( VMA(1), VMA(2), VMA(3), args[4] );
+            return botlib_export->aas.AAS_BBoxAreas(VMA(1), VMA(2), VMA(3), args[4]);
         case LEGACY_BOTLIB_AAS_AREA_INFO:
-            return botlib_export->aas.AAS_AreaInfo( args[1], VMA(2) );
+            return botlib_export->aas.AAS_AreaInfo(args[1], VMA(2));
         case LEGACY_BOTLIB_AAS_ENTITY_INFO:
-            botlib_export->aas.AAS_EntityInfo( args[1], VMA(2) );
+            botlib_export->aas.AAS_EntityInfo(args[1], VMA(2));
             return 0;
         case LEGACY_BOTLIB_AAS_INITIALIZED:
             return botlib_export->aas.AAS_Initialized();
         case LEGACY_BOTLIB_AAS_PRESENCE_TYPE_BOUNDING_BOX:
-            botlib_export->aas.AAS_PresenceTypeBoundingBox( args[1], VMA(2), VMA(3) );
+            botlib_export->aas.AAS_PresenceTypeBoundingBox(args[1], VMA(2), VMA(3));
             return 0;
         case LEGACY_BOTLIB_AAS_TIME:
-            return FloatAsInt( botlib_export->aas.AAS_Time() );
+            return FloatAsInt(botlib_export->aas.AAS_Time());
         case LEGACY_BOTLIB_AAS_POINT_AREA_NUM:
-            return botlib_export->aas.AAS_PointAreaNum( VMA(1) );
+            return botlib_export->aas.AAS_PointAreaNum(VMA(1));
         case LEGACY_BOTLIB_AAS_TRACE_AREAS:
-            return botlib_export->aas.AAS_TraceAreas( VMA(1), VMA(2), VMA(3), VMA(4), args[5] );
+            return botlib_export->aas.AAS_TraceAreas(VMA(1), VMA(2), VMA(3), VMA(4), args[5]);
         case LEGACY_BOTLIB_AAS_POINT_CONTENTS:
-            return botlib_export->aas.AAS_PointContents( VMA(1) );
+            return botlib_export->aas.AAS_PointContents(VMA(1));
         case LEGACY_BOTLIB_AAS_NEXT_BSP_ENTITY:
-            return botlib_export->aas.AAS_NextBSPEntity( args[1] );
+            return botlib_export->aas.AAS_NextBSPEntity(args[1]);
         case LEGACY_BOTLIB_AAS_VALUE_FOR_BSP_EPAIR_KEY:
-            return botlib_export->aas.AAS_ValueForBSPEpairKey( args[1], VMA(2), VMA(3), args[4] );
+            return botlib_export->aas.AAS_ValueForBSPEpairKey(args[1], VMA(2), VMA(3), args[4]);
         case LEGACY_BOTLIB_AAS_VECTOR_FOR_BSP_EPAIR_KEY:
-            return botlib_export->aas.AAS_VectorForBSPEpairKey( args[1], VMA(2), VMA(3) );
+            return botlib_export->aas.AAS_VectorForBSPEpairKey(args[1], VMA(2), VMA(3));
         case LEGACY_BOTLIB_AAS_FLOAT_FOR_BSP_EPAIR_KEY:
-            return botlib_export->aas.AAS_FloatForBSPEpairKey( args[1], VMA(2), VMA(3) );
+            return botlib_export->aas.AAS_FloatForBSPEpairKey(args[1], VMA(2), VMA(3));
         case LEGACY_BOTLIB_AAS_INT_FOR_BSP_EPAIR_KEY:
-            return botlib_export->aas.AAS_IntForBSPEpairKey( args[1], VMA(2), VMA(3) );
+            return botlib_export->aas.AAS_IntForBSPEpairKey(args[1], VMA(2), VMA(3));
         case LEGACY_BOTLIB_AAS_AREA_REACHABILITY:
-            return botlib_export->aas.AAS_AreaReachability( args[1] );
+            return botlib_export->aas.AAS_AreaReachability(args[1]);
         case LEGACY_BOTLIB_AAS_AREA_TRAVEL_TIME_TO_GOAL_AREA:
-            return botlib_export->aas.AAS_AreaTravelTimeToGoalArea( args[1], VMA(2), args[3], args[4] );
+            return botlib_export->aas.AAS_AreaTravelTimeToGoalArea(args[1], VMA(2), args[3], args[4]);
         case LEGACY_BOTLIB_AAS_SWIMMING:
-            return botlib_export->aas.AAS_Swimming( VMA(1) );
+            return botlib_export->aas.AAS_Swimming(VMA(1));
         case LEGACY_BOTLIB_AAS_PREDICT_CLIENT_MOVEMENT:
-            return botlib_export->aas.AAS_PredictClientMovement( VMA(1), args[2], VMA(3), args[4], args[5],
-                VMA(6), VMA(7), args[8], args[9], VMF(10), args[11], args[12], args[13] );
+            return botlib_export->aas.AAS_PredictClientMovement(VMA(1), args[2], VMA(3), args[4], args[5],
+                VMA(6), VMA(7), args[8], args[9], VMF(10), args[11], args[12], args[13]);
 
         case LEGACY_BOTLIB_EA_SAY:
-            botlib_export->ea.EA_Say( args[1], VMA(2) );
+            botlib_export->ea.EA_Say(args[1], VMA(2));
             return 0;
         case LEGACY_BOTLIB_EA_SAY_TEAM:
-            botlib_export->ea.EA_SayTeam( args[1], VMA(2) );
+            botlib_export->ea.EA_SayTeam(args[1], VMA(2));
             return 0;
         case LEGACY_BOTLIB_EA_COMMAND:
-            botlib_export->ea.EA_Command( args[1], VMA(2) );
+            botlib_export->ea.EA_Command(args[1], VMA(2));
             return 0;
         case LEGACY_BOTLIB_EA_ACTION:
-            botlib_export->ea.EA_Action( args[1], args[2] );
+            botlib_export->ea.EA_Action(args[1], args[2]);
             return 0;
         case LEGACY_BOTLIB_EA_GESTURE:
-            botlib_export->ea.EA_Gesture( args[1] );
+            botlib_export->ea.EA_Gesture(args[1]);
             return 0;
         case LEGACY_BOTLIB_EA_TALK:
-            botlib_export->ea.EA_Talk( args[1] );
+            botlib_export->ea.EA_Talk(args[1]);
             return 0;
         case LEGACY_BOTLIB_EA_ATTACK:
-            botlib_export->ea.EA_Attack( args[1] );
+            botlib_export->ea.EA_Attack(args[1]);
             return 0;
         case LEGACY_BOTLIB_EA_ALT_ATTACK:
-            botlib_export->ea.EA_AltAttack( args[1] );
+            botlib_export->ea.EA_AltAttack(args[1]);
             return 0;
         case LEGACY_BOTLIB_EA_FORCEPOWER:
             // Pretty sure this was just "left" here from JK or smth - what "force power" should've exist in SoF?
-            botlib_export->ea.EA_ForcePower( args[1] );
+            botlib_export->ea.EA_ForcePower(args[1]);
             return 0;
         case LEGACY_BOTLIB_EA_USE:
-            botlib_export->ea.EA_Use( args[1] );
+            botlib_export->ea.EA_Use(args[1]);
             return 0;
         case LEGACY_BOTLIB_EA_RESPAWN:
-            botlib_export->ea.EA_Respawn( args[1] );
+            botlib_export->ea.EA_Respawn(args[1]);
             return 0;
         case LEGACY_BOTLIB_EA_CROUCH:
-            botlib_export->ea.EA_Crouch( args[1] );
+            botlib_export->ea.EA_Crouch(args[1]);
             return 0;
         case LEGACY_BOTLIB_EA_MOVE_UP:
-            botlib_export->ea.EA_MoveUp( args[1] );
+            botlib_export->ea.EA_MoveUp(args[1]);
             return 0;
         case LEGACY_BOTLIB_EA_MOVE_DOWN:
-            botlib_export->ea.EA_MoveDown( args[1] );
+            botlib_export->ea.EA_MoveDown(args[1]);
             return 0;
         case LEGACY_BOTLIB_EA_MOVE_FORWARD:
-            botlib_export->ea.EA_MoveForward( args[1] );
+            botlib_export->ea.EA_MoveForward(args[1]);
             return 0;
         case LEGACY_BOTLIB_EA_MOVE_BACK:
-            botlib_export->ea.EA_MoveBack( args[1] );
+            botlib_export->ea.EA_MoveBack(args[1]);
             return 0;
         case LEGACY_BOTLIB_EA_MOVE_LEFT:
-            botlib_export->ea.EA_MoveLeft( args[1] );
+            botlib_export->ea.EA_MoveLeft(args[1]);
             return 0;
         case LEGACY_BOTLIB_EA_MOVE_RIGHT:
-            botlib_export->ea.EA_MoveRight( args[1] );
+            botlib_export->ea.EA_MoveRight(args[1]);
             return 0;
         case LEGACY_BOTLIB_EA_SELECT_WEAPON:
-            botlib_export->ea.EA_SelectWeapon( args[1], args[2] );
+            botlib_export->ea.EA_SelectWeapon(args[1], args[2]);
             return 0;
         case LEGACY_BOTLIB_EA_JUMP:
-            botlib_export->ea.EA_Jump( args[1] );
+            botlib_export->ea.EA_Jump(args[1]);
             return 0;
         case LEGACY_BOTLIB_EA_DELAYED_JUMP:
-            botlib_export->ea.EA_DelayedJump( args[1] );
+            botlib_export->ea.EA_DelayedJump(args[1]);
             return 0;
         case LEGACY_BOTLIB_EA_MOVE:
-            botlib_export->ea.EA_Move( args[1], VMA(2), VMF(3) );
+            botlib_export->ea.EA_Move(args[1], VMA(2), VMF(3));
             return 0;
         case LEGACY_BOTLIB_EA_VIEW:
-            botlib_export->ea.EA_View( args[1], VMA(2) );
+            botlib_export->ea.EA_View(args[1], VMA(2));
             return 0;
         case LEGACY_BOTLIB_EA_END_REGULAR:
-            botlib_export->ea.EA_EndRegular( args[1], VMF(2) );
+            botlib_export->ea.EA_EndRegular(args[1], VMF(2));
             return 0;
         case LEGACY_BOTLIB_EA_GET_INPUT:
-            botlib_export->ea.EA_GetInput( args[1], VMF(2), VMA(3) );
+            botlib_export->ea.EA_GetInput(args[1], VMF(2), VMA(3));
             return 0;
         case LEGACY_BOTLIB_EA_RESET_INPUT:
-            botlib_export->ea.EA_ResetInput( args[1] );
+            botlib_export->ea.EA_ResetInput(args[1]);
             return 0;
         case LEGACY_BOTLIB_AI_LOAD_CHARACTER:
-            return botlib_export->ai.BotLoadCharacter( VMA(1), VMF(2) );
+            return botlib_export->ai.BotLoadCharacter(VMA(1), VMF(2));
         case LEGACY_BOTLIB_AI_FREE_CHARACTER:
-            botlib_export->ai.BotFreeCharacter( args[1] );
+            botlib_export->ai.BotFreeCharacter(args[1]);
             return 0;
         case LEGACY_BOTLIB_AI_CHARACTERISTIC_FLOAT:
-            return FloatAsInt( botlib_export->ai.Characteristic_Float( args[1], args[2] ) );
+            return FloatAsInt(botlib_export->ai.Characteristic_Float(args[1], args[2]));
         case LEGACY_BOTLIB_AI_CHARACTERISTIC_BFLOAT:
-            return FloatAsInt( botlib_export->ai.Characteristic_BFloat( args[1], args[2], VMF(3), VMF(4) ) );
+            return FloatAsInt(botlib_export->ai.Characteristic_BFloat(args[1], args[2], VMF(3), VMF(4)));
         case LEGACY_BOTLIB_AI_CHARACTERISTIC_INTEGER:
-            return botlib_export->ai.Characteristic_Integer( args[1], args[2] );
+            return botlib_export->ai.Characteristic_Integer(args[1], args[2]);
         case LEGACY_BOTLIB_AI_CHARACTERISTIC_BINTEGER:
-            return botlib_export->ai.Characteristic_BInteger( args[1], args[2], args[3], args[4] );
+            return botlib_export->ai.Characteristic_BInteger(args[1], args[2], args[3], args[4]);
         case LEGACY_BOTLIB_AI_CHARACTERISTIC_STRING:
-            botlib_export->ai.Characteristic_String( args[1], args[2], VMA(3), args[4] );
+            botlib_export->ai.Characteristic_String(args[1], args[2], VMA(3), args[4]);
             return 0;
         case LEGACY_BOTLIB_AI_ALLOC_CHAT_STATE:
             return botlib_export->ai.BotAllocChatState();
         case LEGACY_BOTLIB_AI_FREE_CHAT_STATE:
-            botlib_export->ai.BotFreeChatState( args[1] );
+            botlib_export->ai.BotFreeChatState(args[1]);
             return 0;
         case LEGACY_BOTLIB_AI_QUEUE_CONSOLE_MESSAGE:
-            botlib_export->ai.BotQueueConsoleMessage( args[1], args[2], VMA(3) );
+            botlib_export->ai.BotQueueConsoleMessage(args[1], args[2], VMA(3));
             return 0;
         case LEGACY_BOTLIB_AI_REMOVE_CONSOLE_MESSAGE:
-            botlib_export->ai.BotRemoveConsoleMessage( args[1], args[2] );
+            botlib_export->ai.BotRemoveConsoleMessage(args[1], args[2]);
             return 0;
         case LEGACY_BOTLIB_AI_NEXT_CONSOLE_MESSAGE:
-            return botlib_export->ai.BotNextConsoleMessage( args[1], VMA(2) );
+            return botlib_export->ai.BotNextConsoleMessage(args[1], VMA(2));
         case LEGACY_BOTLIB_AI_NUM_CONSOLE_MESSAGE:
-            return botlib_export->ai.BotNumConsoleMessages( args[1] );
+            return botlib_export->ai.BotNumConsoleMessages(args[1]);
         case LEGACY_BOTLIB_AI_INITIAL_CHAT:
-            botlib_export->ai.BotInitialChat( args[1], VMA(2), args[3], VMA(4), VMA(5), VMA(6), VMA(7), VMA(8), VMA(9), VMA(10), VMA(11) );
+            botlib_export->ai.BotInitialChat(args[1], VMA(2), args[3], VMA(4), VMA(5), VMA(6), VMA(7), VMA(8), VMA(9), VMA(10), VMA(11));
             return 0;
         case LEGACY_BOTLIB_AI_REPLY_CHAT:
-            return botlib_export->ai.BotReplyChat( args[1], VMA(2), args[3], args[4], VMA(5), VMA(6), VMA(7), VMA(8), VMA(9), VMA(10), VMA(11), VMA(12) );
+            return botlib_export->ai.BotReplyChat(args[1], VMA(2), args[3], args[4], VMA(5), VMA(6), VMA(7), VMA(8), VMA(9), VMA(10), VMA(11), VMA(12));
         case LEGACY_BOTLIB_AI_CHAT_LENGTH:
-            return botlib_export->ai.BotChatLength( args[1] );
+            return botlib_export->ai.BotChatLength(args[1]);
         case LEGACY_BOTLIB_AI_ENTER_CHAT:
-            botlib_export->ai.BotEnterChat( args[1], args[2], args[3] );
+            botlib_export->ai.BotEnterChat(args[1], args[2], args[3]);
             return 0;
         case LEGACY_BOTLIB_AI_STRING_CONTAINS:
-            return botlib_export->ai.StringContains( VMA(1), VMA(2), args[3] );
+            return botlib_export->ai.StringContains(VMA(1), VMA(2), args[3]);
         case LEGACY_BOTLIB_AI_FIND_MATCH:
-            return botlib_export->ai.BotFindMatch( VMA(1), VMA(2), args[3] );
+            return botlib_export->ai.BotFindMatch(VMA(1), VMA(2), args[3]);
         case LEGACY_BOTLIB_AI_MATCH_VARIABLE:
-            botlib_export->ai.BotMatchVariable( VMA(1), args[2], VMA(3), args[4] );
+            botlib_export->ai.BotMatchVariable(VMA(1), args[2], VMA(3), args[4]);
             return 0;
         case LEGACY_BOTLIB_AI_UNIFY_WHITE_SPACES:
-            botlib_export->ai.UnifyWhiteSpaces( VMA(1) );
+            botlib_export->ai.UnifyWhiteSpaces(VMA(1));
             return 0;
         case LEGACY_BOTLIB_AI_REPLACE_SYNONYMS:
-            botlib_export->ai.BotReplaceSynonyms( VMA(1), args[2] );
+            botlib_export->ai.BotReplaceSynonyms(VMA(1), args[2]);
             return 0;
         case LEGACY_BOTLIB_AI_LOAD_CHAT_FILE:
-            return botlib_export->ai.BotLoadChatFile( args[1], VMA(2), VMA(3) );
+            return botlib_export->ai.BotLoadChatFile(args[1], VMA(2), VMA(3));
         case LEGACY_BOTLIB_AI_SET_CHAT_GENDER:
-            botlib_export->ai.BotSetChatGender( args[1], args[2] );
+            botlib_export->ai.BotSetChatGender(args[1], args[2]);
             return 0;
         case LEGACY_BOTLIB_AI_SET_CHAT_NAME:
-            botlib_export->ai.BotSetChatName( args[1], VMA(2), args[3] );
+            botlib_export->ai.BotSetChatName(args[1], VMA(2), args[3]);
             return 0;
         case LEGACY_BOTLIB_AI_RESET_GOAL_STATE:
-            botlib_export->ai.BotResetGoalState( args[1] );
+            botlib_export->ai.BotResetGoalState(args[1]);
             return 0;
         case LEGACY_BOTLIB_AI_RESET_AVOID_GOALS:
-            botlib_export->ai.BotResetAvoidGoals( args[1] );
+            botlib_export->ai.BotResetAvoidGoals(args[1]);
             return 0;
         case LEGACY_BOTLIB_AI_PUSH_GOAL:
-            botlib_export->ai.BotPushGoal( args[1], VMA(2) );
+            botlib_export->ai.BotPushGoal(args[1], VMA(2));
             return 0;
         case LEGACY_BOTLIB_AI_POP_GOAL:
-            botlib_export->ai.BotPopGoal( args[1] );
+            botlib_export->ai.BotPopGoal(args[1]);
             return 0;
         case LEGACY_BOTLIB_AI_EMPTY_GOAL_STACK:
-            botlib_export->ai.BotEmptyGoalStack( args[1] );
+            botlib_export->ai.BotEmptyGoalStack(args[1]);
             return 0;
         case LEGACY_BOTLIB_AI_DUMP_AVOID_GOALS:
-            botlib_export->ai.BotDumpAvoidGoals( args[1] );
+            botlib_export->ai.BotDumpAvoidGoals(args[1]);
             return 0;
         case LEGACY_BOTLIB_AI_DUMP_GOAL_STACK:
-            botlib_export->ai.BotDumpGoalStack( args[1] );
+            botlib_export->ai.BotDumpGoalStack(args[1]);
             return 0;
         case LEGACY_BOTLIB_AI_GOAL_NAME:
-            botlib_export->ai.BotGoalName( args[1], VMA(2), args[3] );
+            botlib_export->ai.BotGoalName(args[1], VMA(2), args[3]);
             return 0;
         case LEGACY_BOTLIB_AI_GET_TOP_GOAL:
-            return botlib_export->ai.BotGetTopGoal( args[1], VMA(2) );
+            return botlib_export->ai.BotGetTopGoal(args[1], VMA(2));
         case LEGACY_BOTLIB_AI_GET_SECOND_GOAL:
-            return botlib_export->ai.BotGetSecondGoal( args[1], VMA(2) );
+            return botlib_export->ai.BotGetSecondGoal(args[1], VMA(2));
         case LEGACY_BOTLIB_AI_CHOOSE_LTG_ITEM:
-            return botlib_export->ai.BotChooseLTGItem( args[1], VMA(2), VMA(3), args[4] );
+            return botlib_export->ai.BotChooseLTGItem(args[1], VMA(2), VMA(3), args[4]);
         case LEGACY_BOTLIB_AI_CHOOSE_NBG_ITEM:
-            return botlib_export->ai.BotChooseNBGItem( args[1], VMA(2), VMA(3), args[4], VMA(5), VMF(6) );
+            return botlib_export->ai.BotChooseNBGItem(args[1], VMA(2), VMA(3), args[4], VMA(5), VMF(6));
         case LEGACY_BOTLIB_AI_TOUCHING_GOAL:
-            return botlib_export->ai.BotTouchingGoal( VMA(1), VMA(2) );
+            return botlib_export->ai.BotTouchingGoal(VMA(1), VMA(2));
         case LEGACY_BOTLIB_AI_ITEM_GOAL_IN_VIS_BUT_NOT_VISIBLE:
-            return botlib_export->ai.BotItemGoalInVisButNotVisible( args[1], VMA(2), VMA(3), VMA(4) );
+            return botlib_export->ai.BotItemGoalInVisButNotVisible(args[1], VMA(2), VMA(3), VMA(4));
         case LEGACY_BOTLIB_AI_GET_LEVEL_ITEM_GOAL:
-            return botlib_export->ai.BotGetLevelItemGoal( args[1], VMA(2), VMA(3) );
+            return botlib_export->ai.BotGetLevelItemGoal(args[1], VMA(2), VMA(3));
         case LEGACY_BOTLIB_AI_AVOID_GOAL_TIME:
-            return FloatAsInt( botlib_export->ai.BotAvoidGoalTime( args[1], args[2] ) );
+            return FloatAsInt(botlib_export->ai.BotAvoidGoalTime(args[1], args[2]));
         case LEGACY_BOTLIB_AI_INIT_LEVEL_ITEMS:
             botlib_export->ai.BotInitLevelItems();
             return 0;
@@ -907,111 +905,111 @@ intptr_t SV_GameSystemCalls(qboolean runningQVM, intptr_t *args ) {
             botlib_export->ai.BotUpdateEntityItems();
             return 0;
         case LEGACY_BOTLIB_AI_LOAD_ITEM_WEIGHTS:
-            return botlib_export->ai.BotLoadItemWeights( args[1], VMA(2) );
+            return botlib_export->ai.BotLoadItemWeights(args[1], VMA(2));
         case LEGACY_BOTLIB_AI_FREE_ITEM_WEIGHTS:
-            botlib_export->ai.BotFreeItemWeights( args[1] );
+            botlib_export->ai.BotFreeItemWeights(args[1]);
             return 0;
         case LEGACY_BOTLIB_AI_SAVE_GOAL_FUZZY_LOGIC:
-            botlib_export->ai.BotSaveGoalFuzzyLogic( args[1], VMA(2) );
+            botlib_export->ai.BotSaveGoalFuzzyLogic(args[1], VMA(2));
             return 0;
         case LEGACY_BOTLIB_AI_ALLOC_GOAL_STATE:
-            return botlib_export->ai.BotAllocGoalState( args[1] );
+            return botlib_export->ai.BotAllocGoalState(args[1]);
         case LEGACY_BOTLIB_AI_FREE_GOAL_STATE:
-            botlib_export->ai.BotFreeGoalState( args[1] );
+            botlib_export->ai.BotFreeGoalState(args[1]);
             return 0;
         case LEGACY_BOTLIB_AI_RESET_MOVE_STATE:
-            botlib_export->ai.BotResetMoveState( args[1] );
+            botlib_export->ai.BotResetMoveState(args[1]);
             return 0;
         case LEGACY_BOTLIB_AI_MOVE_TO_GOAL:
-            botlib_export->ai.BotMoveToGoal( VMA(1), args[2], VMA(3), args[4] );
+            botlib_export->ai.BotMoveToGoal(VMA(1), args[2], VMA(3), args[4]);
             return 0;
         case LEGACY_BOTLIB_AI_MOVE_IN_DIRECTION:
-            return botlib_export->ai.BotMoveInDirection( args[1], VMA(2), VMF(3), args[4] );
+            return botlib_export->ai.BotMoveInDirection(args[1], VMA(2), VMF(3), args[4]);
         case LEGACY_BOTLIB_AI_RESET_AVOID_REACH:
-            botlib_export->ai.BotResetAvoidReach( args[1] );
+            botlib_export->ai.BotResetAvoidReach(args[1]);
             return 0;
         case LEGACY_BOTLIB_AI_RESET_LAST_AVOID_REACH:
-            botlib_export->ai.BotResetLastAvoidReach( args[1] );
+            botlib_export->ai.BotResetLastAvoidReach(args[1]);
             return 0;
         case LEGACY_BOTLIB_AI_REACHABILITY_AREA:
-            return botlib_export->ai.BotReachabilityArea( VMA(1), args[2] );
+            return botlib_export->ai.BotReachabilityArea(VMA(1), args[2]);
         case LEGACY_BOTLIB_AI_MOVEMENT_VIEW_TARGET:
-            return botlib_export->ai.BotMovementViewTarget( args[1], VMA(2), args[3], VMF(4), VMA(5) );
+            return botlib_export->ai.BotMovementViewTarget(args[1], VMA(2), args[3], VMF(4), VMA(5));
         case LEGACY_BOTLIB_AI_ALLOC_MOVE_STATE:
             return botlib_export->ai.BotAllocMoveState();
         case LEGACY_BOTLIB_AI_FREE_MOVE_STATE:
-            botlib_export->ai.BotFreeMoveState( args[1] );
+            botlib_export->ai.BotFreeMoveState(args[1]);
             return 0;
         case LEGACY_BOTLIB_AI_INIT_MOVE_STATE:
-            botlib_export->ai.BotInitMoveState( args[1], VMA(2) );
+            botlib_export->ai.BotInitMoveState(args[1], VMA(2));
             return 0;
         case LEGACY_BOTLIB_AI_CHOOSE_BEST_FIGHT_WEAPON:
-            return botlib_export->ai.BotChooseBestFightWeapon( args[1], VMA(2) );
+            return botlib_export->ai.BotChooseBestFightWeapon(args[1], VMA(2));
         case LEGACY_BOTLIB_AI_GET_WEAPON_INFO:
-            botlib_export->ai.BotGetWeaponInfo( args[1], args[2], VMA(3) );
+            botlib_export->ai.BotGetWeaponInfo(args[1], args[2], VMA(3));
             return 0;
         case LEGACY_BOTLIB_AI_LOAD_WEAPON_WEIGHTS:
-            return botlib_export->ai.BotLoadWeaponWeights( args[1], VMA(2) );
+            return botlib_export->ai.BotLoadWeaponWeights(args[1], VMA(2));
         case LEGACY_BOTLIB_AI_ALLOC_WEAPON_STATE:
             return botlib_export->ai.BotAllocWeaponState();
         case LEGACY_BOTLIB_AI_FREE_WEAPON_STATE:
-            botlib_export->ai.BotFreeWeaponState( args[1] );
+            botlib_export->ai.BotFreeWeaponState(args[1]);
             return 0;
         case LEGACY_BOTLIB_AI_RESET_WEAPON_STATE:
-            botlib_export->ai.BotResetWeaponState( args[1] );
+            botlib_export->ai.BotResetWeaponState(args[1]);
             return 0;
         case LEGACY_BOTLIB_AI_GENETIC_PARENTS_AND_CHILD_SELECTION:
             return botlib_export->ai.GeneticParentsAndChildSelection(args[1], VMA(2), VMA(3), VMA(4), VMA(5));
         case LEGACY_BOTLIB_AI_INTERBREED_GOAL_FUZZY_LOGIC:
-            botlib_export->ai.BotInterbreedGoalFuzzyLogic( args[1], args[2], args[3] );
+            botlib_export->ai.BotInterbreedGoalFuzzyLogic(args[1], args[2], args[3]);
             return 0;
         case LEGACY_BOTLIB_AI_MUTATE_GOAL_FUZZY_LOGIC:
-            botlib_export->ai.BotMutateGoalFuzzyLogic( args[1], VMF(2) );
+            botlib_export->ai.BotMutateGoalFuzzyLogic(args[1], VMF(2));
             return 0;
         case LEGACY_BOTLIB_AI_GET_NEXT_CAMP_SPOT_GOAL:
-            return botlib_export->ai.BotGetNextCampSpotGoal( args[1], VMA(2) );
+            return botlib_export->ai.BotGetNextCampSpotGoal(args[1], VMA(2));
         case LEGACY_BOTLIB_AI_GET_MAP_LOCATION_GOAL:
-            return botlib_export->ai.BotGetMapLocationGoal( VMA(1), VMA(2) );
+            return botlib_export->ai.BotGetMapLocationGoal(VMA(1), VMA(2));
         case LEGACY_BOTLIB_AI_NUM_INITIAL_CHATS:
-            return botlib_export->ai.BotNumInitialChats( args[1], VMA(2) );
+            return botlib_export->ai.BotNumInitialChats(args[1], VMA(2));
         case LEGACY_BOTLIB_AI_GET_CHAT_MESSAGE:
-            botlib_export->ai.BotGetChatMessage( args[1], VMA(2), args[3] );
+            botlib_export->ai.BotGetChatMessage(args[1], VMA(2), args[3]);
             return 0;
         case LEGACY_BOTLIB_AI_REMOVE_FROM_AVOID_GOALS:
-            botlib_export->ai.BotRemoveFromAvoidGoals( args[1], args[2] );
+            botlib_export->ai.BotRemoveFromAvoidGoals(args[1], args[2]);
             return 0;
         case LEGACY_BOTLIB_AI_PREDICT_VISIBLE_POSITION:
-            return botlib_export->ai.BotPredictVisiblePosition( VMA(1), args[2], VMA(3), args[4], VMA(5) );
+            return botlib_export->ai.BotPredictVisiblePosition(VMA(1), args[2], VMA(3), args[4], VMA(5));
         case LEGACY_BOTLIB_AI_SET_AVOID_GOAL_TIME:
-            botlib_export->ai.BotSetAvoidGoalTime( args[1], args[2], VMF(3));
+            botlib_export->ai.BotSetAvoidGoalTime(args[1], args[2], VMF(3));
             return 0;
         case LEGACY_BOTLIB_AI_ADD_AVOID_SPOT:
-            botlib_export->ai.BotAddAvoidSpot( args[1], VMA(2), VMF(3), args[4] );
+            botlib_export->ai.BotAddAvoidSpot(args[1], VMA(2), VMF(3), args[4]);
             return 0;
         case LEGACY_BOTLIB_AAS_ALTERNATIVE_ROUTE_GOAL:
-            return botlib_export->aas.AAS_AlternativeRouteGoals( VMA(1), args[2], VMA(3), args[4], args[5], VMA(6), args[7], args[8] );
+            return botlib_export->aas.AAS_AlternativeRouteGoals(VMA(1), args[2], VMA(3), args[4], args[5], VMA(6), args[7], args[8]);
 
         case LEGACY_BOTLIB_AAS_PREDICT_ROUTE:
-            return botlib_export->aas.AAS_PredictRoute( VMA(1), args[2], VMA(3), args[4], args[5], args[6], args[7], args[8], args[9], args[10], args[11] );
+            return botlib_export->aas.AAS_PredictRoute(VMA(1), args[2], VMA(3), args[4], args[5], args[6], args[7], args[8], args[9], args[10], args[11]);
 
         case LEGACY_BOTLIB_AAS_POINT_REACHABILITY_AREA_INDEX:
-            return botlib_export->aas.AAS_PointReachabilityAreaIndex( VMA(1) );
+            return botlib_export->aas.AAS_PointReachabilityAreaIndex(VMA(1));
         case LEGACY_BOTLIB_PC_LOAD_SOURCE:
-                return botlib_export->PC_LoadSourceHandle( VMA(1) );
+            return botlib_export->PC_LoadSourceHandle(VMA(1));
         case LEGACY_BOTLIB_PC_FREE_SOURCE:
-                return botlib_export->PC_FreeSourceHandle( args[1] );
+            return botlib_export->PC_FreeSourceHandle(args[1]);
         case LEGACY_BOTLIB_PC_READ_TOKEN:
-                return botlib_export->PC_ReadTokenHandle( args[1], VMA(2) );
+            return botlib_export->PC_ReadTokenHandle(args[1], VMA(2));
         case LEGACY_BOTLIB_PC_SOURCE_FILE_AND_LINE:
-                return botlib_export->PC_SourceFileAndLine( args[1], VMA(2), VMA(3) );
+            return botlib_export->PC_SourceFileAndLine(args[1], VMA(2), VMA(3));
         case LEGACY_BOTLIB_PC_LOAD_GLOBAL_DEFINES:
             return botlib_export->PC_LoadGlobalDefines(VMA(1));
         case LEGACY_BOTLIB_PC_REMOVE_ALL_GLOBAL_DEFINES:
             botlib_export->PC_RemoveAllGlobalDefines();
             return 0;
 
-		// Ghoul2 Insert Start
-        // NB - Ghoul2 calls are most likely different to vanilla SoF2.
+            // Ghoul2 Insert Start
+            // NB - Ghoul2 calls are most likely different to vanilla SoF2.
         case LEGACY_G_G2_LISTBONES:
             G2API_ListBones(VMA(1)); // arg2 frame ignored, but also NB - vanilla SDK does not call this function.
             return 0;
@@ -1019,50 +1017,50 @@ intptr_t SV_GameSystemCalls(qboolean runningQVM, intptr_t *args ) {
             G2API_ListSurfaces(VMA(1));
             return 0;
         case LEGACY_G_G2_HAVEWEGHOULMODELS:
-			// CGame syscall, not used in the server.
+            // CGame syscall, not used in the server.
             Com_Printf("LEGACY_G_G2_HAVEWEGHOULMODELS - Not implemented\r\n");
             return 0;
         case LEGACY_G_G2_SETMODELS:
-			// CGame syscall, not used in the server.
-                Com_Printf("LEGACY_G_G2_SETMODELS - not implemented\r\n");
+            // CGame syscall, not used in the server.
+            Com_Printf("LEGACY_G_G2_SETMODELS - not implemented\r\n");
             return 0;
         case LEGACY_G_G2_GETBOLT:
-			// CGame syscall, not used in the server.
-                Com_Printf("LEGACY_G_G2_GETBOLT - Not implemented\r\n");
+            // CGame syscall, not used in the server.
+            Com_Printf("LEGACY_G_G2_GETBOLT - Not implemented\r\n");
             return 0;
         case LEGACY_G_G2_INITGHOUL2MODEL: {
             CGhoul2Model_t** test = VMA(1);
-            G2API_InitGhoul2Model(test, (const char *)VMA(2), args[4], args[7]);
+            G2API_InitGhoul2Model(test, (const char*)VMA(2), args[4], args[7]);
             return 0;
         }
         case LEGACY_G_G2_ADDBOLT:
-			// CGame / UI syscall, not used in the server.
-                Com_Printf("LEGACY_G_G2_ADDBOLT: Not implemented!\r\n");
+            // CGame / UI syscall, not used in the server.
+            Com_Printf("LEGACY_G_G2_ADDBOLT: Not implemented!\r\n");
             return 0;
         case LEGACY_G_G2_SETBOLTINFO:
-			// Cgame / UI syscall, not used in the server.
-                Com_Printf("LEGACY_G_G2_SETBOLTINFO - not implemented\r\n");
+            // Cgame / UI syscall, not used in the server.
+            Com_Printf("LEGACY_G_G2_SETBOLTINFO - not implemented\r\n");
             return 0;
         case LEGACY_G_G2_ANGLEOVERRIDE:
 
-			return G2API_SetBoneAngles(VMA(1), VMA(3), VMA(4), args[5], args[6], args[7], args[8]); // has 3 more args which are ignored.
+            return G2API_SetBoneAngles(VMA(1), VMA(3), VMA(4), args[5], args[6], args[7], args[8]); // has 3 more args which are ignored.
         case LEGACY_G_G2_PLAYANIM:
-			    return G2API_SetBoneAnim(VMA(1), VMA(3), args[4], args[5], args[6], VMF(7), VMF(9)); // arg2 and arg8 are ignored.
+            return G2API_SetBoneAnim(VMA(1), VMA(3), args[4], args[5], args[6], VMF(7), VMF(9)); // arg2 and arg8 are ignored.
         case LEGACY_G_G2_GETGLANAME:
-                Com_Printf("LEGACY_G_G2_GETGLANAME - not implemented\r\n");
+            Com_Printf("LEGACY_G_G2_GETGLANAME - not implemented\r\n");
             // Not used.
             return 0;
         case LEGACY_G_G2_COPYGHOUL2INSTANCE:
-                Com_Printf("LEGACY_G_G2_COPYGHOUL2INSTANCE - not implemented\r\n");
+            Com_Printf("LEGACY_G_G2_COPYGHOUL2INSTANCE - not implemented\r\n");
             // Not used.
             return 0;
         case LEGACY_G_G2_COPYSPECIFICGHOUL2MODEL:
-			// CGame syscall, not used in the server.
-                Com_Printf("LEGACY_G_G2_COPYSPECIFICGHOUL2MODEL - Not implemented\r\n");
+            // CGame syscall, not used in the server.
+            Com_Printf("LEGACY_G_G2_COPYSPECIFICGHOUL2MODEL - Not implemented\r\n");
             return 0;
         case LEGACY_G_G2_DUPLICATEGHOUL2INSTANCE:
-			// CGame syscall, not used in the server.
-                Com_Printf("LEGACY_G_G2_DUPLICATEGHOUL2INSTANCE - not implemented.\r\n");
+            // CGame syscall, not used in the server.
+            Com_Printf("LEGACY_G_G2_DUPLICATEGHOUL2INSTANCE - not implemented.\r\n");
             return 0;
         case LEGACY_G_G2_REMOVEGHOUL2MODEL:
         case LEGACY_G_G2_CLEANMODELS:
@@ -1070,7 +1068,7 @@ intptr_t SV_GameSystemCalls(qboolean runningQVM, intptr_t *args ) {
         case LEGACY_G_GP_PARSE: {
             return (intptr_t)GP_Parse(VMA(1));
         }
-            
+
         case LEGACY_G_GP_PARSE_FILE:
             return (intptr_t)GP_ParseFile(VMA(1));
         case LEGACY_G_GP_CLEAN:
@@ -1126,12 +1124,12 @@ intptr_t SV_GameSystemCalls(qboolean runningQVM, intptr_t *args ) {
             return CM_RegisterTerrain((const char*)VMA(1));
 
         case LEGACY_G_GET_MODEL_FORMALNAME:
-                Com_Printf("LEGACY_G_GET_MODEL_FORMALNAME - not implemented\r\n");
+            Com_Printf("LEGACY_G_GET_MODEL_FORMALNAME - not implemented\r\n");
             // Doesn't seem to be used.
             return 0;
 
-        // Memory management
-        // In SoF2Plus, memory management is actually handled by the game module, but QVM expects them to be managed by the engine module.
+            // Memory management
+            // In SoF2Plus, memory management is actually handled by the game module, but QVM expects them to be managed by the engine module.
         case LEGACY_G_VM_LOCALALLOC:
         {
             /*if (!qvmMemoryInitialized) {
@@ -1147,7 +1145,7 @@ intptr_t SV_GameSystemCalls(qboolean runningQVM, intptr_t *args ) {
                 SV_InitQvmMemory();
             }
 
-			return (intptr_t)SV_QVM_AllocUnaligned(args[1]);*/
+            return (intptr_t)SV_QVM_AllocUnaligned(args[1]);*/
             return (intptr_t)QVM_Local_AllocUnaligned(args[1]);
         }
         case LEGACY_G_VM_LOCALTEMPALLOC:
@@ -1156,7 +1154,7 @@ intptr_t SV_GameSystemCalls(qboolean runningQVM, intptr_t *args ) {
                 SV_InitQvmMemory();
             }
 
-			return (intptr_t)SV_QVM_TempAlloc(args[1]);*/
+            return (intptr_t)SV_QVM_TempAlloc(args[1]);*/
             return (intptr_t)QVM_Local_TempAlloc(args[1]);
         }
         case LEGACY_G_VM_LOCALTEMPFREE:
@@ -1165,7 +1163,7 @@ intptr_t SV_GameSystemCalls(qboolean runningQVM, intptr_t *args ) {
                 SV_InitQvmMemory();
             }
 
-			SV_QVM_TempFree(args[1]);*/
+            SV_QVM_TempFree(args[1]);*/
             QVM_Local_TempFree(args[1]);
             return 0;
         }
@@ -1175,11 +1173,11 @@ intptr_t SV_GameSystemCalls(qboolean runningQVM, intptr_t *args ) {
                 SV_InitQvmMemory();
             }
 
-			return SV_QVM_StringAlloc((const char*)VMA(1));*/
+            return SV_QVM_StringAlloc((const char*)VMA(1));*/
             return QVM_Local_StringAlloc((const char*)VMA(1));
         }
 
-		// End memory management
+        // End memory management
 
         case LEGACY_G_G2_COLLISIONDETECT:
             G2API_CollisionDetect(VMA(1), VMA(2), (const float*)VMA(3), (const float*)VMA(4), args[5], args[6],
@@ -1188,16 +1186,11 @@ intptr_t SV_GameSystemCalls(qboolean runningQVM, intptr_t *args ) {
         case LEGACY_G_G2_REGISTERSKIN:
             return G2API_RegisterSkin((const char*)VMA(1), args[2], (const char*)VMA(3));
         case LEGACY_G_G2_SETSKIN: {
-            CGhoul2Model_t* test = args[1];
-            CGhoul2Model_t* test2 = VMA(1);
             return (intptr_t)G2API_SetSkin(args[1], args[3]);
         }
 
         case LEGACY_G_G2_GETANIMFILENAMEINDEX:
-            qboolean ok = G2API_GetAnimFileName(args[1], VMA(3), -1);
-            char* test = VMA(3);
-                //L;OL
-                return ok;
+            return G2API_GetAnimFileName(args[1], VMA(3), -1);
         case LEGACY_G_GT_INIT:
             SV_GT_Init((const char*)VMA(1), args[2]);
             return 0;
@@ -1213,7 +1206,7 @@ intptr_t SV_GameSystemCalls(qboolean runningQVM, intptr_t *args ) {
         default:
             Com_Error(ERR_DROP, "Bad game system trap: %ld", (long int)args[0]);
         }
-#else
+    } else {
         switch (args[0]) {
         case G_PRINT:
             Com_Printf("%s", (const char*)VMA(1));
@@ -1862,8 +1855,8 @@ intptr_t SV_GameSystemCalls(qboolean runningQVM, intptr_t *args ) {
             SV_GT_Shutdown();
             return 0;
 
-        case G_CLIENT_ISLEGACYPROTOCOL:
-            assert(0); // FIXME - need to get rid of this from mod side, mod shouldn't care any more whether player is gold or silver.
+        case G_CLIENT_GETPROTOCOL:
+            // Most likely will not introduce pmove to the Engine module. Therefore this is still a relevant syscall.
             if (args[1] < 0 || args[1] >= sv_maxclients->integer) {
                 Com_Error(ERR_DROP, "Syscall IsLegacyProtocol: bad clientNum %i", args[1]);
             }
@@ -1885,11 +1878,12 @@ intptr_t SV_GameSystemCalls(qboolean runningQVM, intptr_t *args ) {
             SV_SkipToMap(args[1]);
             return 0;
 
-        //=======================================================
+            //=======================================================
         default:
             Com_Error(ERR_DROP, "Bad game system trap: %ld", (long int)args[0]);
         }
-#endif
+
+    }
 
     
     return 0;

@@ -63,6 +63,7 @@ cvar_t* sv_silverClientMod;
 cvar_t* sv_smartDownload;
 cvar_t* sv_smartAdditionalPaks;
 cvar_t* sv_altmap;
+cvar_t* sv_gameModernABI;
 serverBan_t serverBans[SERVER_MAXBANS];
 int serverBansCount = 0;
 
@@ -836,7 +837,7 @@ static void SV_ConnectionlessPacket( netadr_t from, msg_t *msg, commProtocol_t c
     Cmd_TokenizeString( s );
 
     c = Cmd_Argv(0);
-    Com_DPrintf ("SV packet %s (prot %d) : %s\n", NET_AdrToString(from), (commProto == COMMPROTO_GOLD ? 2004 : (commProto == COMMPROTO_SILVER ? 2002 : 0)), c);
+    Com_DPrintf ("SV packet %s (prot %d) : %s\n", NET_AdrToString(from), (commProto == COMMPROTO_GOLD ? 2004 : (commProto == COMMPROTO_SILVER ? 2002 : commProto)), c);
 
     if (!Q_stricmp(c, "getstatus")) {
         SVC_Status( from, commProto );

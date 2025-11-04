@@ -2778,6 +2778,14 @@ void Com_Init( char *commandLine ) {
     Cvar_Get("protocol", GOLD_GAME_PROTOCOL, CVAR_SERVERINFO);
     sv_useLegacyNades = Cvar_Get("sv_useLegacyNades", "0", CVAR_ARCHIVE | CVAR_LATCH);
 
+    // Add below variables so that they are recognized already after Com_Init.
+	// That way, the user can set them from the command line without set* commands.
+    sv_publicGametype = Cvar_Get("g_publicGametype", "dm", CVAR_LATCH); // Allow setting it without mod, so legacymods can use spoofing easily without memory changes.
+    sv_spoofGametype = Cvar_Get("g_spoofGametype", "0", CVAR_ARCHIVE | CVAR_LATCH);
+    sv_goldClientMod = Cvar_Get("sv_goldClientMod", "", CVAR_ARCHIVE | CVAR_LATCH);
+    sv_silverClientMod = Cvar_Get("sv_silverClientMod", "", CVAR_ARCHIVE | CVAR_LATCH);
+    sv_gameModernABI = Cvar_Get("sv_gameModernABI", "1", CVAR_ARCHIVE | CVAR_LATCH);
+
 #ifndef DEDICATED
     con_autochat = Cvar_Get("con_autochat", "1", CVAR_ARCHIVE);
 #endif

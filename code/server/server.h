@@ -268,16 +268,12 @@ extern  cvar_t  *sv_dlRate;
 extern  cvar_t  *sv_minPing;
 extern  cvar_t  *sv_maxPing;
 extern  cvar_t  *sv_gametype;
-extern  cvar_t  *sv_publicGametype;
-extern  cvar_t  *sv_spoofGametype;
 extern  cvar_t  *sv_pure;
 extern  cvar_t  *sv_floodProtect;
 extern  cvar_t  *sv_mapcycle;
 extern  cvar_t  *sv_lanForceRate;
 extern  cvar_t  *sv_banFile;
 
-extern  cvar_t* sv_silverClientMod;
-extern  cvar_t* sv_goldClientMod;
 extern  cvar_t* sv_smartDownload;
 extern  cvar_t* sv_smartAdditionalPaks;
 extern  cvar_t* sv_altmap;

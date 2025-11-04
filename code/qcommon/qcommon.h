@@ -903,6 +903,11 @@ extern  fileHandle_t    com_journalDataFile;
 extern  cvar_t* net_multiprotocol;
 extern  cvar_t* net_runningLegacy;
 extern  cvar_t* sv_useLegacyNades;
+extern  cvar_t* sv_silverClientMod;
+extern  cvar_t* sv_goldClientMod;
+extern  cvar_t* sv_gameModernABI;
+extern  cvar_t* sv_publicGametype;
+extern  cvar_t* sv_spoofGametype;
 
 /*
 ==============================================================

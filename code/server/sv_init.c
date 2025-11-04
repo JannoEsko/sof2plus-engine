@@ -590,6 +590,7 @@ void SV_SpawnServer( char *server, qboolean killBots ) {
     sv_spoofGametype = Cvar_Get("g_spoofGametype", "0", CVAR_ARCHIVE | CVAR_LATCH);
     sv_goldClientMod = Cvar_Get("sv_goldClientMod", "", CVAR_ARCHIVE | CVAR_LATCH);
     sv_silverClientMod = Cvar_Get("sv_silverClientMod", "", CVAR_ARCHIVE | CVAR_LATCH);
+    sv_gameModernABI = Cvar_Get("sv_gameModernABI", "1", CVAR_ARCHIVE | CVAR_LATCH);
     
     // clear physics interaction links
     SV_ClearWorld ();
@@ -692,9 +693,6 @@ void SV_SpawnServer( char *server, qboolean killBots ) {
     }
     // the server sends these to the clients so they can figure
     // out which pk3s should be auto-downloaded
-
-    sv_goldClientMod = Cvar_Get("sv_goldClientMod", "", CVAR_ARCHIVE | CVAR_LATCH);
-    sv_silverClientMod = Cvar_Get("sv_silverClientMod", "", CVAR_ARCHIVE | CVAR_LATCH);
 
     sv_smartDownload = Cvar_Get("sv_smartDownload", "1", CVAR_ARCHIVE | CVAR_LATCH);
     sv_smartAdditionalPaks = Cvar_Get("sv_smartAdditionalPaks", "", CVAR_ARCHIVE | CVAR_LATCH);
