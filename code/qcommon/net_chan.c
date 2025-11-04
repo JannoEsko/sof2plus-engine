@@ -404,15 +404,15 @@ typedef struct {
     int         get, send;
 } loopback_t;
 
-loopback_t  loopbacks[2];
+loopback_t  loopbacks[COMMPROTO_MAX][2];
 
 
-qboolean    NET_GetLoopPacket (netsrc_t sock, netadr_t *net_from, msg_t *net_message)
+qboolean    NET_GetLoopPacket (netsrc_t sock, netadr_t *net_from, msg_t *net_message, commProtocol_t commProto)
 {
     int     i;
     loopback_t  *loop;
-
-    loop = &loopbacks[sock];
+	
+    loop = &loopbacks[commProto][sock];
 
     if (loop->send - loop->get > MAX_LOOPBACK)
         loop->get = loop->send - MAX_LOOPBACK;
@@ -432,12 +432,12 @@ qboolean    NET_GetLoopPacket (netsrc_t sock, netadr_t *net_from, msg_t *net_mes
 }
 
 
-void NET_SendLoopPacket (netsrc_t sock, int length, const void *data, netadr_t to)
+void NET_SendLoopPacket (netsrc_t sock, int length, const void *data, netadr_t to, commProtocol_t commProto)
 {
     int     i;
     loopback_t  *loop;
-
-    loop = &loopbacks[sock^1];
+	
+    loop = &loopbacks[commProto][sock^1];
 
     i = loop->send & (MAX_LOOPBACK-1);
     loop->send++;
@@ -515,7 +515,7 @@ void NET_SendPacket( netsrc_t sock, int length, const void *data, netadr_t to, c
     }
 
     if ( to.type == NA_LOOPBACK ) {
-        NET_SendLoopPacket (sock, length, data, to);
+        NET_SendLoopPacket (sock, length, data, to, commProto);
         return;
     }
     if ( to.type == NA_BOT ) {

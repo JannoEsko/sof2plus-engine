@@ -204,7 +204,7 @@ qboolean    NET_IsLocalAddress (netadr_t adr);
 const char  *NET_AdrToString (netadr_t a);
 const char  *NET_AdrToStringwPort (netadr_t a);
 int     NET_StringToAdr ( const char *s, netadr_t *a, netadrtype_t family);
-qboolean    NET_GetLoopPacket (netsrc_t sock, netadr_t *net_from, msg_t *net_message);
+qboolean    NET_GetLoopPacket (netsrc_t sock, netadr_t *net_from, msg_t *net_message, commProtocol_t commProto);
 void        NET_JoinMulticast6(void);
 void        NET_LeaveMulticast6(void);
 void        NET_Sleep(int msec);

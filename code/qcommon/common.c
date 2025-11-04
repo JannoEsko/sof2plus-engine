@@ -2302,14 +2302,21 @@ int Com_EventLoop( void ) {
         // if no more events are available
         if ( ev.evType == SE_NONE ) {
             // manually send packet events for the loopback channel
-            while ( NET_GetLoopPacket( NS_CLIENT, &evFrom, &buf ) ) {
+            while ( NET_GetLoopPacket( NS_CLIENT, &evFrom, &buf, COMMPROTO_NONE ) ) {
                 CL_PacketEvent( evFrom, &buf );
             }
 
-            while ( NET_GetLoopPacket( NS_SERVER, &evFrom, &buf ) ) {
+            while ( NET_GetLoopPacket( NS_SERVER, &evFrom, &buf, COMMPROTO_SILVER ) ) {
                 // if the server just shut down, flush the events
                 if ( com_sv_running->integer ) {
-                    Com_RunAndTimeServerPacket( &evFrom, &buf, qfalse ); // NB - no multiprotocol support for loopback connections.
+                    Com_RunAndTimeServerPacket( &evFrom, &buf, COMMPROTO_SILVER); 
+                }
+            }
+
+            while (NET_GetLoopPacket(NS_SERVER, &evFrom, &buf, COMMPROTO_GOLD)) {
+                // if the server just shut down, flush the events
+                if (com_sv_running->integer) {
+                    Com_RunAndTimeServerPacket(&evFrom, &buf, COMMPROTO_GOLD); 
                 }
             }
 
@@ -3229,7 +3236,6 @@ void Com_Frame( void ) {
     }
 
     Com_ReadFromPipe( );
-
     com_frameNumber++;
 }
 
