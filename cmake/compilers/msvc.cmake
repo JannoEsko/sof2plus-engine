@@ -20,6 +20,10 @@ if(ARCH MATCHES "x86_64")
         PROPERTIES COMPILE_DEFINITIONS "idx64")
 endif()
 
+list(APPEND COMMON_LIBRARIES
+    $<$<CONFIG:Debug>:dbghelp> # MSVC backtrace support. Only in Debug builds
+)
+
 # Baseline warnings
 add_compile_options("$<$<COMPILE_LANGUAGE:C>:/W4>")
 

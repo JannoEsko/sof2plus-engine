@@ -14,11 +14,13 @@ list(APPEND COMMON_LIBRARIES
     ws2_32 # Windows Sockets 2
     winmm  # timeBeginPeriod/timeEndPeriod
     psapi  # EnumProcesses
-    $<$<CONFIG:Debug>:dbghelp> # Backtrace support. Only in Debug builds
 )
 
 if(MINGW)
-    list(APPEND COMMON_LIBRARIES mingw32)
+    list(APPEND COMMON_LIBRARIES
+        mingw32
+        $<$<CONFIG:Debug>:backtrace> # MinGW will rely on libbacktrace for backtrace support
+    )
 endif()
 
 list(APPEND CLIENT_DEFINITIONS USE_ICON)
