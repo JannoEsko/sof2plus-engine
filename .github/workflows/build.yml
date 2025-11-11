@@ -266,7 +266,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: Latest
-          name: "Latest Build — ${{ env.DATE }}"
+          name: "Latest Build — ${{ env.RELEASE_DATE }}"
           body: |
             This release contains all the latest builds for each platform and configuration.
             Updated automatically from **master**.
