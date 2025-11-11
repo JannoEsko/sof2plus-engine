@@ -75,7 +75,7 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
-    <OutDir>..\..\..\..\..\..\..\Games\sof2plus</OutDir>
+    <OutDir>..\..\build\debug-msvc14-x86</OutDir>
     <IntDir>..\..\build\debug-msvc14-x86\ded\</IntDir>
     <TargetName>sof2plus.x86</TargetName>
     <GenerateManifest>false</GenerateManifest>
@@ -83,20 +83,20 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
     <GenerateManifest>false</GenerateManifest>
-    <OutDir>..\..\..\..\..\..\..\Games\sof2plus</OutDir>
+    <OutDir>..\..\build\debug-msvc14-x86_64</OutDir>
     <IntDir>..\..\build\debug-msvc14-x86_64\ded\</IntDir>
     <TargetName>sof2plus.x86_64</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
-    <OutDir>..\..\build\release-msvc14-x86\</OutDir>
+    <OutDir>..\..\build\release-msvc14-x86</OutDir>
     <IntDir>..\..\build\release-msvc14-x86\ded\</IntDir>
     <TargetName>sof2plus.x86</TargetName>
     <GenerateManifest>false</GenerateManifest>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <OutDir>..\..\build\release-msvc14-x86_64\</OutDir>
+    <OutDir>..\..\build\release-msvc14-x86_64</OutDir>
     <IntDir>..\..\build\release-msvc14-x86_64\ded\</IntDir>
     <TargetName>sof2plus.x86_64</TargetName>
     <GenerateManifest>false</GenerateManifest>
@@ -447,10 +447,10 @@
   <ItemGroup>
     <CustomBuild Include="..\..\code\asm\vm_x86_64.asm">
       <FileType>Document</FileType>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">ml64 /Didx64 /c /Zi /Fo"$(IntDir)%(Filename).asm.obj" "%(FullPath)"
+      <Command Condition="'$(Platform)'=='x64'">ml64 /Didx64 /c /Zi /Fo"$(IntDir)%(Filename).asm.obj" "%(FullPath)"
 </Command>
-      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Assembling...</Message>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)%(Filename).asm.obj;%(Outputs)</Outputs>
+      <Message Condition="'$(Platform)'=='x64'">Assembling...</Message>
+      <Outputs Condition="'$(Platform)'=='x64'">$(IntDir)%(Filename).asm.obj;%(Outputs)</Outputs>
     </CustomBuild>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

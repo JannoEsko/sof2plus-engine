@@ -1,0 +1,229 @@
+name: SoF2Plus Build
+
+on:
+  push:
+    branches: [ master, autobuild ]
+  pull_request:
+    branches: [ master, autobuild ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        arch: [x86, x86_64]
+        build_type: [Debug, Release]
+        compiler: [gcc, mingw, msvc]
+        exclude:
+          - os: ubuntu-latest
+            compiler: mingw
+          - os: ubuntu-latest
+            compiler: msvc
+          - os: windows-latest
+            compiler: gcc
+
+    runs-on: ${{ matrix.os }}
+
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set Env Vars
+        id: env
+        run: |
+          echo "BUILD_TYPE_LOWER=${{ matrix.build_type == 'Debug' && 'debug' || 'release' }}" >> $GITHUB_ENV
+          echo "BUILD_DIR=build/$BUILD_TYPE_LOWER-${{ matrix.compiler }}-${{ matrix.arch }}" >> $GITHUB_ENV
+          echo "BIN_NAME=sof2plus.${{ matrix.arch }}${{ matrix.os == 'windows-latest' && '.exe' || '' }}" >> $GITHUB_ENV
+
+      # ==================================================================
+      # MSVC Build
+      # ==================================================================
+      - name: Setup MSBuild
+        if: matrix.compiler == 'msvc'
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Build MSVC
+        if: matrix.compiler == 'msvc'
+        shell: pwsh
+        run: |
+          msbuild misc/msvc14/sof2plus-engine.sln /p:Configuration='${{ matrix.build_type }}' /p:Platform='${{ matrix.arch == 'x86_64' && 'x64' || 'Win32' }}' /m
+
+      # ==================================================================
+      # MinGW via MSYS2
+      # ==================================================================
+      - name: Setup MSYS2
+        if: matrix.compiler == 'mingw'
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: ${{ matrix.arch == 'x86_64' && 'MINGW64' || 'MINGW32' }}
+          update: true
+          install: >-
+            base
+            git
+            make
+            ${{ matrix.arch == 'x86_64' && 'mingw-w64-x86_64' || 'mingw-w64-i686' }}-toolchain 
+            ${{ matrix.arch == 'x86_64' && 'mingw-w64-x86_64' || 'mingw-w64-i686' }}-cmake 
+            ${{ matrix.arch == 'x86_64' && 'mingw-w64-x86_64' || 'mingw-w64-i686' }}-ninja 
+            ${{ matrix.arch == 'x86_64' && 'mingw-w64-x86_64' || 'mingw-w64-i686' }}-libwinpthread 
+
+      - name: Install libbacktrace (MinGW Debug only)
+        if: matrix.compiler == 'mingw' && matrix.build_type == 'Debug'
+        shell: msys2 {0}
+        run: |
+          export MINGW_PREFIX="/${{ matrix.arch == 'x86_64' && 'mingw64' || 'mingw32' }}"
+          export PATH="$MINGW_PREFIX/bin:$PATH"
+          if ! [ -f "$MINGW_PREFIX/lib/libbacktrace.a" ]; then
+            git clone https://github.com/ianlancetaylor/libbacktrace.git
+            cd libbacktrace
+            ./configure --prefix=$MINGW_PREFIX --enable-static --disable-shared
+            make -j$(nproc)
+            make install
+            rm -f $MINGW_PREFIX/bin/libbacktrace.dll
+            rm -f $MINGW_PREFIX/lib/libbacktrace.dll.a
+          fi
+          ls -la $MINGW_PREFIX/lib/libbacktrace.a
+          ls -la $MINGW_PREFIX/bin/libbacktrace* 2>/dev/null || echo "No DLL"
+      - name: Build MinGW
+        if: matrix.compiler == 'mingw'
+        shell: msys2 {0}
+        run: |
+          export PATH="/${{ matrix.arch == 'x86_64' && 'mingw64' || 'mingw32' }}/bin:$PATH"
+          mkdir -p $BUILD_DIR
+          cd $BUILD_DIR
+          EXTRA=""
+          if [[ "${{ matrix.arch }}" == "x86" ]]; then
+            EXTRA="-DFORCE_32BIT=On -DCMAKE_C_FLAGS=-m32 -DCMAKE_CXX_FLAGS=-m32 -DCMAKE_EXE_LINKER_FLAGS=-m32"
+          fi
+          cmake ../../ -G Ninja -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} $EXTRA $STATIC_FLAGS
+          cmake --build . --parallel
+
+      # ==================================================================
+      # Linux
+      # ==================================================================
+      - name: Install Linux deps
+        if: matrix.compiler == 'gcc'
+        run: sudo apt-get update -qq && sudo apt-get install -y build-essential cmake ninja-build libsdl2-dev libjpeg-dev libpng-dev zlib1g-dev gcc-multilib g++-multilib libcurl4-openssl-dev
+
+      - name: Build libbacktrace (Linux Debug only)
+        if: matrix.compiler == 'gcc' && matrix.build_type == 'Debug'
+        run: |
+          if ! dpkg -l | grep libbacktrace; then
+            git clone https://github.com/ianlancetaylor/libbacktrace.git
+            cd libbacktrace
+            ./configure --prefix=/usr --enable-static --disable-shared
+            make -j$(nproc)
+            sudo make install
+          fi
+
+      - name: Build Linux
+        if: matrix.compiler == 'gcc'
+        run: |
+          mkdir -p $BUILD_DIR
+          cd $BUILD_DIR
+          EXTRA=""
+          if [[ "${{ matrix.arch }}" == "x86" ]]; then
+            EXTRA="-DFORCE_32BIT=On -DCMAKE_C_FLAGS=-m32 -DCMAKE_CXX_FLAGS=-m32 -DCMAKE_EXE_LINKER_FLAGS=-m32"
+          fi
+          cmake ../../ -G Ninja -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} $EXTRA
+          cmake --build . --parallel
+
+      # ==================================================================
+      # Artifacts (Binary + PDB) - MSVC
+      # ==================================================================
+      - name: Collect Artifacts (MSVC)
+        if: always() && matrix.compiler == 'msvc'
+        shell: pwsh
+        run: |
+          mkdir -p artifacts
+          $MSVC_DIR = "build/${{ matrix.build_type == 'Debug' && 'debug' || 'release' }}-msvc14-${{ matrix.arch }}"
+          Copy-Item "$MSVC_DIR/sof2plus.${{ matrix.arch }}.exe" artifacts/
+          if ('${{ matrix.build_type }}' -eq 'Debug') {
+            Copy-Item "$MSVC_DIR/sof2plus.${{ matrix.arch }}.pdb" artifacts/
+            Copy-Item "$MSVC_DIR/sof2plus.${{ matrix.arch }}.ilk" artifacts/ -ErrorAction SilentlyContinue
+          }
+          Write-Host "Collected:"
+          Get-ChildItem artifacts/ | Format-Table -AutoSize
+
+      # ==================================================================
+      # Artifacts (Binary + PDB + DLLs) - MinGW
+      # ==================================================================
+      - name: Collect Artifacts (MinGW)
+        if: always() && matrix.compiler == 'mingw'
+        shell: msys2 {0}
+        run: |
+          mkdir -p artifacts
+
+          SUBDIR=$([[ "${{ matrix.build_type }}" == "Debug" ]] && echo "Debug" || echo "Release")
+          cp "$BUILD_DIR/$SUBDIR/$BIN_NAME" artifacts/
+          # =========================================================
+          # Ship libwinpthread-1.dll for MinGW Debug - needed for x86 build
+          # =========================================================
+          if [[ "${{ matrix.build_type }}" == "Debug" && "${{ matrix.arch }}" == "x86" ]]; then
+            MINGW_ROOT="/mingw32"
+            PTHREAD_DLL="$MINGW_ROOT/bin/libwinpthread-1.dll"
+            if [[ -f "$PTHREAD_DLL" ]]; then
+              cp "$PTHREAD_DLL" artifacts/
+              echo "Copied: $PTHREAD_DLL"
+            else
+              echo "Missing: $PTHREAD_DLL — listing bin/ for debug:"
+              ls -la "$MINGW_ROOT/bin/libwinpt*" || echo "No match"
+              # exit 1
+            fi
+          fi
+
+          echo "Collected:"
+          ls -la artifacts/
+
+      # ==================================================================
+      # Artifacts (Binary) - GCC
+      # ==================================================================
+      - name: Collect Artifacts (GCC)
+        if: always() && matrix.compiler == 'gcc'
+        shell: bash
+        run: |
+          mkdir -p artifacts
+
+          SUBDIR=$([[ "${{ matrix.build_type }}" == "Debug" ]] && echo "Debug" || echo "Release")
+          cp "$BUILD_DIR/$SUBDIR/$BIN_NAME" artifacts/
+          # No libs needed for Linux - dynamic linking
+
+          echo "Collected:"
+          ls -la artifacts/
+
+      - name: Archive Artifacts
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          cd artifacts
+          tar -czf "../sof2plus-${{ matrix.os }}-${{ matrix.arch }}-${{ matrix.build_type }}-${{ matrix.compiler }}.tar.gz" *
+          echo "Created tar.gz"
+
+      - name: Archive Artifacts (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          Set-Location artifacts
+          $name = "sof2plus-${{ matrix.os }}-${{ matrix.arch }}-${{ matrix.build_type }}-${{ matrix.compiler }}.zip"
+          Compress-Archive -Path * -DestinationPath "../$name" -Force
+          Write-Host "Created $name"
+
+      - name: Upload Artifact (.tar.gz)
+        if: matrix.os == 'ubuntu-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: "sof2plus-${{ matrix.os }}-${{ matrix.arch }}-${{ matrix.build_type }}-${{ matrix.compiler }}"
+          path: "*.tar.gz"
+
+      - name: Upload Artifact (.zip)
+        if: matrix.os == 'windows-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: "sof2plus-${{ matrix.os }}-${{ matrix.arch }}-${{ matrix.build_type }}-${{ matrix.compiler }}"
+          path: "*.zip"

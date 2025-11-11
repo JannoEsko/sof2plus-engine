@@ -48,9 +48,9 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "../qcommon/qcommon.h"
 
 #ifdef _DEBUG
-#ifdef __linux__
+#if defined(__linux__) || defined(__MINGW32__) || defined(__MINGW64__) || defined(__MSYS__)
 #include <backtrace.h>
-#elif defined _WIN32
+#elif defined _MSC_VER
 #include <dbghelp.h>
 #endif
 #endif
@@ -651,7 +651,7 @@ void Sys_ParseArgs( int argc, char **argv )
 #endif
 
 #ifdef _DEBUG
-#ifdef __linux__
+#if defined(__linux__) || defined(__MINGW32__) || defined(__MINGW64__) || defined(__MSYS__)
 
 static struct backtrace_state* bt_state = NULL;
 
@@ -666,13 +666,44 @@ static int custom_backtrace_full_callback(void* data, uintptr_t pc, const char* 
     char fileNameWithLine[256];
     Q_strncpyz(fileNameWithLine, va("%s:%d", filename ? filename : "Unknown", filename ? lineno : 0), sizeof(fileNameWithLine));
 
-    FS_Printf(logFile, "  Frame %3d at [0x%016lx] => %-100.100s [%s]\n", traceRow, (unsigned long)pc, fileNameWithLine, function ? function : "Unknown");
+    uintptr_t adjusted_pc = pc;
+#if defined(__MINGW32__) || defined(__MINGW64__) || defined(__MSYS__)
+    HMODULE base = GetModuleHandle(NULL);
+    if (base) {
+        adjusted_pc -= (uintptr_t)base;
+    }
+#endif
+
+    FS_Printf(logFile, "  Frame %3d at [0x%016lx] => %-100.100s [%s]\n", traceRow, (unsigned long)adjusted_pc, fileNameWithLine, function ? function : "Unknown");
     traceRow++;
     return 0; // Continue capturing
 }
 
-#elif defined _WIN32
+#elif defined _MSC_VER
 #define MAX_BACKTRACE_DEPTH 64
+
+#ifdef _M_IX86
+
+// On x86 MSVC, the original code for stack trace capturing didn't capture almost anything except the "crash" function itself.
+// To improve this, a minimal VEH was added for x86 only, so that we can unwind the stack early enough before SEH kicks in.
+static uintptr_t VEH_ContextEip = 0;
+static LONG CALLBACK VEH_SignalHandler(PEXCEPTION_POINTERS ExceptionInfo) {
+
+    // If there is an error happening in e.g. Sys_SigHandler during logging for whatever reason, or if VEH and SEH start competing, we get into an infinite loop.
+    // This is here to prevent that.
+    static volatile LONG VEHSignalCaught = 0;
+    VEH_ContextEip = ExceptionInfo->ContextRecord->Eip;
+    if (InterlockedCompareExchange(&VEHSignalCaught, 1, 0) != 0) {
+        return EXCEPTION_CONTINUE_SEARCH;
+    }
+
+    Sys_SigHandler(SIGSEGV);
+
+    return EXCEPTION_CONTINUE_SEARCH;
+}
+
+#endif 
+
 // Initialize the symbol handler
 static void InitSymbolHandler() {
     static BOOL initialized = FALSE;
@@ -698,23 +729,59 @@ static void WriteBacktrace(fileHandle_t logFile) {
 
     FS_Printf(logFile, "Backtrace\n-----------------------------------------------------------\n");
 
+    qboolean prevWasKiUser = qfalse; // If KiUserExceptionDispatcher is called, that is done just after the exception-producing function is called in VEH context. So we use the qboolean to append the crash data after that to get a correct stack trace.
+    int frameIndex = 1;
+
     for (USHORT i = 0; i < frames; i++) {
-        if (SymFromAddr(process, (DWORD64)(stack[i]), 0, symbol)) {
+
+        uintptr_t addr = (uintptr_t)stack[i];
+
+        if (SymFromAddr(process, (DWORD64)addr, 0, symbol)) {
             FS_Printf(logFile, "  Frame %3d at [0x%016llx] => %-100.100s [%s]\n",
-                i + 1, (unsigned long long)symbol->Address,
+                frameIndex, (unsigned long long)symbol->Address,
                 symbol->Name,
                 symbol->Name);
+#ifdef _M_IX86
+            prevWasKiUser = (strcmp(symbol->Name, "KiUserExceptionDispatcher") == 0);
+#endif
         }
         else {
             FS_Printf(logFile, "  Frame %3d at [0x%016llx] => [Unknown function]\n",
-                i + 1, (unsigned long long)stack[i]);
+                frameIndex, (unsigned long long)addr);
+            prevWasKiUser = qfalse;
         }
 
         // Resolve file and line information
         line.SizeOfStruct = sizeof(IMAGEHLP_LINE64);
-        if (SymGetLineFromAddr64(process, (DWORD64)(stack[i]), &displacement, &line)) {
+        if (SymGetLineFromAddr64(process, (DWORD64) addr, &displacement, &line)) {
             FS_Printf(logFile, "      at %s:%d\n", line.FileName, line.LineNumber);
         }
+
+        frameIndex++;
+
+#ifdef _M_IX86
+        // Write VEH captured EIP if the previous frame was KiUserExceptionDispatcher to have a more correct stack trace
+        if (VEH_ContextEip && prevWasKiUser) {
+            uintptr_t crashAddr = (uintptr_t)VEH_ContextEip;
+            if (SymFromAddr(process, (DWORD64)crashAddr, 0, symbol)) {
+                FS_Printf(logFile, "  Frame %3d at [0x%016llx] => %-100.100s [%s]\n",
+                    frameIndex, (unsigned long long)symbol->Address, symbol->Name, symbol->Name);
+            }
+            else {
+                FS_Printf(logFile, "  Frame %3d at [0x%016llx] => [Unknown function]\n",
+                    frameIndex, (unsigned long long)crashAddr);
+            }
+
+            line.SizeOfStruct = sizeof(IMAGEHLP_LINE64);
+            if (SymGetLineFromAddr64(process, (DWORD64)crashAddr, &displacement, &line)) {
+                FS_Printf(logFile, "      at %s:%d\n", line.FileName, line.LineNumber);
+            }
+
+            frameIndex++;
+            VEH_ContextEip = 0;
+            prevWasKiUser = qfalse;
+        }
+#endif
     }
 
     free(symbol);
@@ -742,7 +809,7 @@ void Sys_SigHandler( int signal )
     {
 
 #ifdef _DEBUG
-#ifdef __linux__
+#if defined(__linux__) || defined(__MINGW32__) || defined(__MINGW64__) || defined(__MSYS__)
 
         // Initialize `libbacktrace` if not already done
         if (!bt_state) {
@@ -774,7 +841,7 @@ void Sys_SigHandler( int signal )
             Com_Printf("^1LOGGING CRASH INTO FILE FAILED!\n");
         }
 
-#elif defined _WIN32
+#elif defined _MSC_VER
         InitSymbolHandler();
 
         char filename[MAX_QPATH];
@@ -821,6 +888,10 @@ int main( int argc, char **argv )
 {
     int   i;
     char  commandLine[ MAX_STRING_CHARS ] = { 0 };
+
+#if defined(_DEBUG) && defined(_MSC_VER) && defined(_M_IX86)
+    AddVectoredExceptionHandler(1, VEH_SignalHandler);
+#endif
 
     Sys_PlatformInit( );
 
