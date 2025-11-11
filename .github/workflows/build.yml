@@ -1,11 +1,14 @@
-name: SoF2Plus Build
+name: SoF2Plus Latest Build
 
 on:
   push:
-    branches: [ master, autobuild ]
+    branches: [ master ]
   pull_request:
-    branches: [ master, autobuild ]
+    branches: [ master ]
   workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   build:
@@ -220,10 +223,54 @@ jobs:
         with:
           name: "sof2plus-${{ matrix.os }}-${{ matrix.arch }}-${{ matrix.build_type }}-${{ matrix.compiler }}"
           path: "*.tar.gz"
-
+          
       - name: Upload Artifact (.zip)
         if: matrix.os == 'windows-latest'
         uses: actions/upload-artifact@v4
         with:
           name: "sof2plus-${{ matrix.os }}-${{ matrix.arch }}-${{ matrix.build_type }}-${{ matrix.compiler }}"
           path: "*.zip"
+
+  # ==================================================================
+  # Create or Update "Latest" Release (only once per workflow run)
+  # ==================================================================
+  release:
+    needs: build
+    if: github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release_artifacts
+
+      - name: Prepare release tag
+        run: |
+          DATE=$(date -u +"%Y-%m-%d")
+          echo "RELEASE_DATE=$DATE" >> $GITHUB_ENV
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+
+          # Delete old Latest tag if exists
+          git tag -d Latest || true
+          git push origin :refs/tags/Latest || true
+
+          # Recreate Latest tag at current commit
+          git tag -a Latest -m "Latest automated build ($DATE)"
+          git push origin Latest
+
+      - name: Create GitHub Release (Latest)
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: Latest
+          name: "Latest Build — ${{ env.DATE }}"
+          body: |
+            This release contains all the latest builds for each platform and configuration.
+            Updated automatically from **master**.
+          files: |
+            release_artifacts/**/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
