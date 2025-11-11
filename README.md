@@ -1,6 +1,6 @@
 ## SoF2Plus MP-MV
 
-**SoF2Plus MP-MV** (Multiprotocol-Multiversion) is an enhanced engine based on [→ sof2plus-engine on GitHub](https://github.com/sof2plus/sof2plus-engine) for *Soldier of Fortune II: Double Helix* that enables seamless interoperability between the **Silver (1.00)** and **Gold (1.03)** protocol versions.  
+**SoF2Plus MP-MV** (Multiprotocol-Multiversion) is an enhanced engine based on [sof2plus-engine on GitHub](https://github.com/sof2plus/sof2plus-engine) for *Soldier of Fortune II: Double Helix* that enables seamless interoperability between the **Silver (1.00)** and **Gold (1.03)** protocol versions.  
 
 Originally designed to support one-way Gold → Silver communication and only being compatible with the modern ABI from SoF2Plus, the project has since evolved into a fully bidirectional and modular multiprotocol engine with modern and legacy mods compatibility.
 
@@ -50,7 +50,7 @@ sv_gameModernABI 0   # Use legacy ABI (for older mods)
   ```
 
 #### 🧠 QVM Support
-QVM (Quake Virtual Machine) loading is now **fully supported**, restoring compatibility with original QVM's built for SoF2.
+QVM (Quake Virtual Machine) loading is now **fully supported on x86 executables**, restoring compatibility with original QVM's built for SoF2.
 
 ---
 
@@ -96,10 +96,11 @@ This does make `sv_pure` usage useless, but running pure server in a multiprotoc
 
 ### 🪳 Debug Builds and Crash Logging
 
-When building a **Debug** release, SoF2Plus provides **automatic stack trace logging** on crashes.
+When running a **Debug** release, SoF2Plus provides **automatic stack trace logging** on crashes. Crash logs are dumped into `fs_game/crashdumps/`, fs_game will depend on the cvar you set it to. If `fs_game` is not set, it is defaulted to `fs_homepath`.
 
+For libraries, if your game module includes debug symbols, you’ll get a detailed trace from engine startup to the crash event. For QVM's, no such functionality is yet implemented.
 #### Linux
-Requires `libbacktrace`:
+Requires `libbacktrace` - included internally on modern GCC toolchains. If you're missing it, you can build it as per below:
 ```bash
 git clone https://github.com/ianlancetaylor/libbacktrace.git
 cd libbacktrace
@@ -110,22 +111,16 @@ sudo make install
 
 #### Windows
 Debug builds for MSVC are linked with **WinDbg**, for MinGW they're linked with **libbacktrace** 
-Crash logs are saved automatically under:
-```
-fs_game/crashdumps/
-```
-
-For libraries, if your game module includes debug symbols, you’ll get a detailed trace from engine startup to the crash event. For QVM's, no such functionality is yet implemented.
 
 ---
 
 ### 🔧 Making Your Mod Compatible with Multiprotocol
 
-If your intention is to develop a new mod, then a good starting base is the SDK for SoF2Plus - [→ sof2plus-game on GitHub](https://github.com/sof2plus/sof2plus-game)
+If your intention is to develop a new mod, then a good starting base is the [SDK for SoF2Plus, available on GitHub](https://github.com/sof2plus/sof2plus-game)
 
-If you want to add new features to a mod which already has a lot of features, then feel free to use 1fxplus - [→ 1fxplus on GitHub](https://github.com/JannoEsko/1fxplus)
+If you want to add new features to a mod which already has a lot of features, then feel free to use [1fxplus, available on GitHub](https://github.com/JannoEsko/1fxplus)
 
-If you want to use the original 1fxmod for your server, then I've put together a 1fxmod version which removes the workarounds done for the original `sof2ded` here - [→ 1fxmod-sof2plus on GitHub](https://github.com/JannoEsko/1fxmod-sof2plus)
+If you want to use the original 1fxmod for your server, then I've put together a 1fxmod version which removes the workarounds done for the original `sof2ded` here - [1fxmod-sof2plus on GitHub](https://github.com/JannoEsko/1fxmod-sof2plus)
 
 If you want to use your own QVM mod, then check out the details on `net_runningLegacy` and `sv_gameModernABI` above.
 
@@ -135,7 +130,7 @@ If you want to use your own shared library mod, if it was built on an old GCC, y
 * Ensure that you disable the weapons which do not exist in either mod (e.g. Silver Talon, SIG551 and MP5 do not exist in Silver; M67, F1, L2A2 and MDN11 do not exist in Gold).
 * Ensure that you've set up gametype spoofing if needed
 * Ensure that `sv_pure` is set to 0
-* Ensure that sv_goldClientMod and sv_silverClientMod is set up properly.
+* Ensure that `sv_goldClientMod` and `sv_silverClientMod` is set up properly.
 
 Your own mod should then also take care of serving scoreboards properly to the clients. 1fxplus has code available how to make scoreboards work on RPM and ROCmod.
 
