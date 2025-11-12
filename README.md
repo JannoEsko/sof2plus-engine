@@ -41,16 +41,28 @@ sv_gameModernABI 1   # Use new ABI (1fxplus-compatible)
 sv_gameModernABI 0   # Use legacy ABI (for older mods)
 ```
 
-#### 🎮 Gametype Compatibility
-- Supports both Silver and Gold gametype environments.
+#### 🎮 Game Compatibility
+- Supports both Silver and Gold game environments.
 - Runtime detection via:
   ```
   net_runningLegacy 1   # Running Silver/1.00 game module
   net_runningLegacy 0   # Running Gold/1.03 game module
   ```
 
-#### 🧠 QVM Support
-QVM (Quake Virtual Machine) loading is now **fully supported on x86 executables**, restoring compatibility with original QVM's built for SoF2.
+##### Compatibility table for SoF2Plus engine
+| Engine architecture | ABI | Mod type | Compatibility | Comment |
+|:--------------------:|:---:|:---------:|:-------------:|:--------:|
+| x86 | Original | QVM | ✅ | |
+| x86 | Original | Shared Library | ✅ | Runtime patches must be removed if present |
+| x86 | Modern | QVM | ✅ | Requires modern ABI usage in the Game module |
+| x86 | Modern | Shared Library | ✅ | Requires modern ABI usage in the Game module |
+| x86_64 | Original | QVM | ❌ | QVMs are 32-bit; pointer values shared between the Game and Engine become invalid due to pointer size mismatch |
+| x86_64 | Original | Shared Library | ✅ | Runtime patches must be removed if present |
+| x86_64 | Modern | QVM | ❌ | QVMs are 32-bit; pointer values shared between the Game and Engine become invalid due to pointer size mismatch |
+| x86_64 | Modern | Shared Library | ✅ | Requires modern ABI usage in the Game module |
+
+The known issues from the original SoF2 executable (for example `q3dirtrav`, `q3infoboom`, `update` query, etc.) have been fixed within the engine.  
+For any additional needs, it is recommended to modify the engine source code directly rather than applying runtime patches in the game module.
 
 ---
 
