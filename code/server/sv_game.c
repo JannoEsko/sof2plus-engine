@@ -393,6 +393,7 @@ static int  FloatAsInt( float f ) {
 }
 
 static qboolean qvmPointerMarshallingInitialized = qfalse;
+static CGhoul2Model_t* gameLevelGhoul2Model = NULL;
 
 /*
 ====================
@@ -402,6 +403,13 @@ The module is making a system call
 ====================
 */
 intptr_t SV_GameSystemCalls(qboolean runningQVM, intptr_t *args ) {
+
+#if defined(__x86_64__) || defined(_M_X64) || defined(_M_AMD64)
+    if (runningQVM && !qvmPointerMarshallingInitialized) {
+        qvmPtr_init();
+        qvmPointerMarshallingInitialized = qtrue;
+    }
+#endif
 
     if (!sv_gameModernABI->integer) {
         switch (args[0]) {
@@ -1010,15 +1018,19 @@ intptr_t SV_GameSystemCalls(qboolean runningQVM, intptr_t *args ) {
 
             // Ghoul2 Insert Start
             // NB - Ghoul2 calls are most likely different to vanilla SoF2.
-        case LEGACY_G_G2_LISTBONES:
-            G2API_ListBones(VMA(1)); // arg2 frame ignored, but also NB - vanilla SDK does not call this function.
+        case LEGACY_G_G2_LISTBONES: {
+            G2API_ListBones(gameLevelGhoul2Model); // arg2 frame ignored, but also NB - vanilla SDK does not call this function.
             return 0;
-        case LEGACY_G_G2_LISTSURFACES:
-            G2API_ListSurfaces(VMA(1));
+        }
+            
+        case LEGACY_G_G2_LISTSURFACES: {
+            G2API_ListSurfaces(gameLevelGhoul2Model);
             return 0;
+        }
+            
         case LEGACY_G_G2_HAVEWEGHOULMODELS:
             // CGame syscall, not used in the server.
-            Com_Printf("LEGACY_G_G2_HAVEWEGHOULMODELS - Not implemented\r\n");
+            Com_Printf("LEGACY_G_G2_HAsVEWEGHOULMODELS - Not implemented\r\n");
             return 0;
         case LEGACY_G_G2_SETMODELS:
             // CGame syscall, not used in the server.
@@ -1029,9 +1041,17 @@ intptr_t SV_GameSystemCalls(qboolean runningQVM, intptr_t *args ) {
             Com_Printf("LEGACY_G_G2_GETBOLT - Not implemented\r\n");
             return 0;
         case LEGACY_G_G2_INITGHOUL2MODEL: {
-            CGhoul2Model_t** test = VMA(1);
-            G2API_InitGhoul2Model(test, (const char*)VMA(2), args[4], args[7]);
-            return 0;
+            // At least based on the source codes available, this function is called only once per game lifecycle and that's to set the level struct serverGhoul2.
+            // So instead of trying to do marshalling shenanigans here, we:
+            // 1. Init the model like normal.
+            // 2. Push it into a variable on the engine
+            // 3. Write back trash into QVM (something has to be written, otherwise QVM will be sad and will break out early due to receiving NULL ghoul2).
+            // 4. For every call, we just take the ghoul model pointer from our local pool.
+
+            intptr_t* vmhandle = VMA(1);
+            qboolean ok = G2API_InitGhoul2Model(&gameLevelGhoul2Model, (const char*)VMA(2), args[4], args[7]);
+            *vmhandle = 123456;
+            return ok;
         }
         case LEGACY_G_G2_ADDBOLT:
             // CGame / UI syscall, not used in the server.
@@ -1041,11 +1061,15 @@ intptr_t SV_GameSystemCalls(qboolean runningQVM, intptr_t *args ) {
             // Cgame / UI syscall, not used in the server.
             Com_Printf("LEGACY_G_G2_SETBOLTINFO - not implemented\r\n");
             return 0;
-        case LEGACY_G_G2_ANGLEOVERRIDE:
+        case LEGACY_G_G2_ANGLEOVERRIDE: {
+            return G2API_SetBoneAngles(gameLevelGhoul2Model, VMA(3), VMA(4), args[5], args[6], args[7], args[8]); // has 3 more args which are ignored.
+        }
 
-            return G2API_SetBoneAngles(VMA(1), VMA(3), VMA(4), args[5], args[6], args[7], args[8]); // has 3 more args which are ignored.
-        case LEGACY_G_G2_PLAYANIM:
-            return G2API_SetBoneAnim(VMA(1), VMA(3), args[4], args[5], args[6], VMF(7), VMF(9)); // arg2 and arg8 are ignored.
+            
+        case LEGACY_G_G2_PLAYANIM: {
+            return G2API_SetBoneAnim(gameLevelGhoul2Model, VMA(3), args[4], args[5], args[6], VMF(7), VMF(9)); // arg2 and arg8 are ignored.
+        }
+            
         case LEGACY_G_G2_GETGLANAME:
             Com_Printf("LEGACY_G_G2_GETGLANAME - not implemented\r\n");
             // Not used.
@@ -1063,62 +1087,201 @@ intptr_t SV_GameSystemCalls(qboolean runningQVM, intptr_t *args ) {
             Com_Printf("LEGACY_G_G2_DUPLICATEGHOUL2INSTANCE - not implemented.\r\n");
             return 0;
         case LEGACY_G_G2_REMOVEGHOUL2MODEL:
-        case LEGACY_G_G2_CLEANMODELS:
-            return G2API_RemoveGhoul2Model(VMA(1));
-        case LEGACY_G_GP_PARSE: {
-            return (intptr_t)GP_Parse(VMA(1));
+        case LEGACY_G_G2_CLEANMODELS: {
+            return G2API_RemoveGhoul2Model(&gameLevelGhoul2Model);
         }
 
-        case LEGACY_G_GP_PARSE_FILE:
+        case LEGACY_G_GP_PARSE: {
+
+            if (qvmPointerMarshallingInitialized) {
+                return (intptr_t)qvmPtr_register(GP_Parse(VMA(1)), 0);
+            }
+
+            return GP_Parse(VMA(1));
+            
+        }
+
+        case LEGACY_G_GP_PARSE_FILE: {
+
+            if (qvmPointerMarshallingInitialized) {
+                return (intptr_t)qvmPtr_register(GP_ParseFile(VMA(1)), 0);
+            }
             return (intptr_t)GP_ParseFile(VMA(1));
-        case LEGACY_G_GP_CLEAN:
+        }
+            
+        case LEGACY_G_GP_CLEAN: {
+            if (qvmPointerMarshallingInitialized) {
+                GP_Clean(qvmPtr_resolve(VMA(1)));
+                return 0;
+            }
             GP_Clean(VMA(1));
             return 0;
-        case LEGACY_G_GP_DELETE:
+        }
+        case LEGACY_G_GP_DELETE: {
+
+            if (qvmPointerMarshallingInitialized) {
+                intptr_t* vmhandle = VMA(1);
+                TGenericParser2 gp2 = qvmPtr_resolve(*vmhandle);
+                GP_Delete(&gp2);
+                qvmPtr_remove(*vmhandle);
+                *vmhandle = 0;
+                return 0;
+            }
+
             GP_Delete(VMA(1));
             return 0;
+        }
+            
 
-        case LEGACY_G_GP_GET_BASE_PARSE_GROUP:
-            return (intptr_t)GP_GetBaseParseGroup((TGenericParser2)args[1]);
-        case LEGACY_G_GPG_GET_NAME:
+        case LEGACY_G_GP_GET_BASE_PARSE_GROUP: {
+            if (qvmPointerMarshallingInitialized) {
+                return (intptr_t)qvmPtr_register(GP_GetBaseParseGroup((TGenericParser2)qvmPtr_resolve(args[1])), args[1]);
+            }
+            return (intptr_t)(GP_GetBaseParseGroup((TGenericParser2)(args[1])));
+        }
+        case LEGACY_G_GPG_GET_NAME: {
+            if (qvmPointerMarshallingInitialized) {
+                return (intptr_t)GPG_GetName((TGPGroup)qvmPtr_resolve(args[1]), VMA(2), -1);
+            }
             return (intptr_t)GPG_GetName((TGPGroup)(args[1]), VMA(2), -1);
-        case LEGACY_G_GPG_GET_NEXT:
-            return ((intptr_t)GPG_GetNext((TGPGroup)(args[1])));
-        case LEGACY_G_GPG_GET_INORDER_NEXT:
-            return ((intptr_t)GPG_GetInOrderNext((TGPGroup)(args[1])));
-        case LEGACY_G_GPG_GET_INORDER_PREVIOUS:
-            return ((intptr_t)GPG_GetInOrderPrevious((TGPGroup)(args[1])));
-        case LEGACY_G_GPG_GET_PAIRS:
-            return ((intptr_t)GPG_GetPairs((TGPGroup)(args[1])));
-        case LEGACY_G_GPG_GET_INORDER_PAIRS:
-            return ((intptr_t)GPG_GetInOrderPairs((TGPGroup)(args[1])));
-        case LEGACY_G_GPG_GET_SUBGROUPS:
-            return ((intptr_t)GPG_GetSubGroups((TGPGroup)(args[1])));
-        case LEGACY_G_GPG_GET_INORDER_SUBGROUPS:
-            return ((intptr_t)GPG_GetInOrderSubGroups((TGPGroup)(args[1])));
-        case LEGACY_G_GPG_FIND_SUBGROUP:
-            return ((intptr_t)GPG_FindSubGroup((TGPGroup)(args[1]), VMA(2)));
-        case LEGACY_G_GPG_FIND_PAIR:
-            return ((intptr_t)GPG_FindPair((TGPGroup)(args[1]), VMA(2)));
-        case LEGACY_G_GPG_FIND_PAIRVALUE:
-            GPG_FindPairValue((TGPGroup)(args[1]), VMA(2), VMA(3), VMA(4), -1);
-            return 0;
+        }
+        case LEGACY_G_GPG_GET_NEXT: {
+            if (qvmPointerMarshallingInitialized) {
+                return ((intptr_t)qvmPtr_register(GPG_GetNext((TGPGroup)qvmPtr_resolve(args[1])), args[1]));
+            }
+            return (intptr_t)GPG_GetNext((TGPGroup)(args[1]));
+        }
+        case LEGACY_G_GPG_GET_INORDER_NEXT: {
+            if (qvmPointerMarshallingInitialized) {
+                return ((intptr_t)qvmPtr_register(GPG_GetInOrderNext((TGPGroup)qvmPtr_resolve(args[1])), args[1]));
+            }
 
-            // CGPValue (void *) routines
-        case LEGACY_G_GPV_GET_NAME:
-            return GPV_GetName((TGPValue)(args[1]), VMA(2), -1);
-        case LEGACY_G_GPV_GET_NEXT:
-            return ((intptr_t)GPV_GetNext((TGPValue)(args[1])));
-        case LEGACY_G_GPV_GET_INORDER_NEXT:
-            return ((intptr_t)GPV_GetInOrderNext((TGPValue)(args[1])));
-        case LEGACY_G_GPV_GET_INORDER_PREVIOUS:
-            return ((intptr_t)GPV_GetInOrderPrevious((TGPValue)(args[1])));
-        case LEGACY_G_GPV_IS_LIST:
-            return GPV_IsList((TGPValue)(args[1]));
-        case LEGACY_G_GPV_GET_TOP_VALUE:
-            return GPV_GetTopValue((TGPValue)(args[1]), VMA(2), -1);
-        case LEGACY_G_GPV_GET_LIST:
-            return ((intptr_t)GPV_GetList((TGPValue)(args[1])));
+            return (intptr_t)GPG_GetInOrderNext((TGPGroup)(args[1]));
+        }
+            
+        case LEGACY_G_GPG_GET_INORDER_PREVIOUS: {
+            if (qvmPointerMarshallingInitialized) {
+                return ((intptr_t)qvmPtr_register(GPG_GetInOrderPrevious((TGPGroup)qvmPtr_resolve(args[1])), args[1]));
+            }
+
+            return (intptr_t)(GPG_GetInOrderPrevious((TGPGroup) args[1]));
+        }
+            
+        case LEGACY_G_GPG_GET_PAIRS: {
+            if (qvmPointerMarshallingInitialized) {
+                return ((intptr_t)qvmPtr_register(GPG_GetPairs((TGPGroup)qvmPtr_resolve(args[1])), args[1]));
+            }
+            return (intptr_t)GPG_GetPairs((TGPGroup) args[1]);
+        }
+            
+        case LEGACY_G_GPG_GET_INORDER_PAIRS: {
+            if (qvmPointerMarshallingInitialized) {
+                return ((intptr_t)qvmPtr_register(GPG_GetInOrderPairs((TGPGroup)qvmPtr_resolve(args[1])), args[1]));
+            }
+            return (intptr_t)GPG_GetInOrderPairs((TGPGroup)args[1]);
+        }
+            
+        case LEGACY_G_GPG_GET_SUBGROUPS: {
+
+            if (qvmPointerMarshallingInitialized) {
+                return ((intptr_t)qvmPtr_register(GPG_GetSubGroups((TGPGroup)qvmPtr_resolve(args[1])), args[1]));
+            }
+            return (intptr_t)GPG_GetSubGroups((TGPGroup)args[1]);
+        }
+            
+        case LEGACY_G_GPG_GET_INORDER_SUBGROUPS: {
+            if (qvmPointerMarshallingInitialized) {
+                return ((intptr_t)qvmPtr_register(GPG_GetInOrderSubGroups((TGPGroup)qvmPtr_resolve(args[1])), args[1]));
+            }
+            return (intptr_t)GPG_GetInOrderSubGroups((TGPGroup)args[1]);
+        }
+            
+        case LEGACY_G_GPG_FIND_SUBGROUP: {
+            if (qvmPointerMarshallingInitialized) {
+                return ((intptr_t)qvmPtr_register(GPG_FindSubGroup((TGPGroup)qvmPtr_resolve(args[1]), VMA(2)), args[1]));
+            }
+            return (intptr_t)GPG_FindSubGroup((TGPGroup)args[1], VMA(2));
+        }
+            
+        case LEGACY_G_GPG_FIND_PAIR: {
+
+            if (qvmPointerMarshallingInitialized) {
+                return ((intptr_t)qvmPtr_register(GPG_FindPair((TGPGroup)qvmPtr_resolve(args[1]), VMA(2)), args[1]));
+            }
+
+            return (intptr_t)GPG_FindPair((TGPGroup)args[1], VMA(2));
+
+        }
+            
+        case LEGACY_G_GPG_FIND_PAIRVALUE: {
+
+            if (qvmPointerMarshallingInitialized) {
+                GPG_FindPairValue((TGPGroup)qvmPtr_resolve(args[1]), VMA(2), VMA(3), VMA(4), -1);
+                return 0;
+            }
+            GPG_FindPairValue((TGPGroup)args[1], VMA(2), VMA(3), VMA(4), -1);
+            return 0;
+        }
+            
+        case LEGACY_G_GPV_GET_NAME: {
+
+            if (qvmPointerMarshallingInitialized) {
+                return GPV_GetName((TGPValue)qvmPtr_resolve(args[1]), VMA(2), -1);
+            }
+            return GPV_GetName((TGPValue)args[1], VMA(2), -1);
+        }
+             
+        case LEGACY_G_GPV_GET_NEXT: {
+
+            if (qvmPointerMarshallingInitialized) {
+                return ((intptr_t)qvmPtr_register(GPV_GetNext((TGPValue)qvmPtr_resolve(args[1])), args[1]));
+            }
+            return (intptr_t)GPV_GetNext((TGPValue)args[1]);
+        }
+            
+        case LEGACY_G_GPV_GET_INORDER_NEXT: {
+
+            if (qvmPointerMarshallingInitialized) {
+                return ((intptr_t)qvmPtr_register(GPV_GetInOrderNext((TGPValue)qvmPtr_resolve(args[1])), args[1]));
+            }
+            return (intptr_t)GPV_GetInOrderNext((TGPValue)args[1]);
+        }
+            
+        case LEGACY_G_GPV_GET_INORDER_PREVIOUS: {
+
+            if (qvmPointerMarshallingInitialized) {
+                return ((intptr_t)qvmPtr_register(GPV_GetInOrderPrevious((TGPValue)qvmPtr_resolve(args[1])), args[1]));
+            }
+            return (intptr_t)GPV_GetInOrderPrevious((TGPValue)args[1]);
+
+        }
+            
+        case LEGACY_G_GPV_IS_LIST: {
+
+            if (qvmPointerMarshallingInitialized) {
+                return GPV_IsList((TGPValue)qvmPtr_resolve(args[1]));
+            }
+            return GPV_IsList((TGPValue)args[1]);
+        }
+            
+        case LEGACY_G_GPV_GET_TOP_VALUE: {
+
+            if (qvmPointerMarshallingInitialized) {
+                return GPV_GetTopValue((TGPValue)qvmPtr_resolve(args[1]), VMA(2), -1);
+            }
+            return GPV_GetTopValue((TGPValue)args[1], VMA(2), -1);
+        }
+            
+        case LEGACY_G_GPV_GET_LIST: {
+
+            if (qvmPointerMarshallingInitialized) {
+                return ((intptr_t)qvmPtr_register(GPV_GetList((TGPValue)qvmPtr_resolve(args[1])), args[1]));
+            }
+
+            return (intptr_t)GPV_GetList((TGPValue)args[1]);
+
+        }
+            
 
         case LEGACY_G_CM_REGISTER_TERRAIN:
             return CM_RegisterTerrain((const char*)VMA(1));
@@ -1132,65 +1295,46 @@ intptr_t SV_GameSystemCalls(qboolean runningQVM, intptr_t *args ) {
             // In SoF2Plus, memory management is actually handled by the game module, but QVM expects them to be managed by the engine module.
         case LEGACY_G_VM_LOCALALLOC:
         {
-            /*if (!qvmMemoryInitialized) {
-                SV_InitQvmMemory();
-            }
-
-            return (intptr_t)SV_QVM_Alloc(args[1]);*/
             return (intptr_t)QVM_Local_Alloc(args[1]);
         }
         case LEGACY_G_VM_LOCALALLOCUNALIGNED:
         {
-            /*if (!qvmMemoryInitialized) {
-                SV_InitQvmMemory();
-            }
-
-            return (intptr_t)SV_QVM_AllocUnaligned(args[1]);*/
             return (intptr_t)QVM_Local_AllocUnaligned(args[1]);
         }
         case LEGACY_G_VM_LOCALTEMPALLOC:
         {
-            /*if (!qvmMemoryInitialized) {
-                SV_InitQvmMemory();
-            }
-
-            return (intptr_t)SV_QVM_TempAlloc(args[1]);*/
             return (intptr_t)QVM_Local_TempAlloc(args[1]);
         }
         case LEGACY_G_VM_LOCALTEMPFREE:
         {
-            /*if (!qvmMemoryInitialized) {
-                SV_InitQvmMemory();
-            }
-
-            SV_QVM_TempFree(args[1]);*/
             QVM_Local_TempFree(args[1]);
             return 0;
         }
         case LEGACY_G_VM_LOCALSTRINGALLOC:
         {
-            /*if (!qvmMemoryInitialized) {
-                SV_InitQvmMemory();
-            }
-
-            return SV_QVM_StringAlloc((const char*)VMA(1));*/
             return QVM_Local_StringAlloc((const char*)VMA(1));
         }
 
         // End memory management
 
-        case LEGACY_G_G2_COLLISIONDETECT:
-            G2API_CollisionDetect(VMA(1), VMA(2), (const float*)VMA(3), (const float*)VMA(4), args[5], args[6],
+        case LEGACY_G_G2_COLLISIONDETECT: {
+            G2API_CollisionDetect(VMA(1), gameLevelGhoul2Model, (const float*)VMA(3), (const float*)VMA(4), args[5], args[6],
                 (float*)VMA(7), (float*)VMA(8), (float*)VMA(9), args[10], args[11]);
             return 0;
-        case LEGACY_G_G2_REGISTERSKIN:
+
+        }
+        case LEGACY_G_G2_REGISTERSKIN: {
             return G2API_RegisterSkin((const char*)VMA(1), args[2], (const char*)VMA(3));
+        }
+            
         case LEGACY_G_G2_SETSKIN: {
-            return (intptr_t)G2API_SetSkin(args[1], args[3]);
+            return (intptr_t)G2API_SetSkin(gameLevelGhoul2Model, args[3]);
         }
 
-        case LEGACY_G_G2_GETANIMFILENAMEINDEX:
-            return G2API_GetAnimFileName(args[1], VMA(3), -1);
+        case LEGACY_G_G2_GETANIMFILENAMEINDEX: {
+            return G2API_GetAnimFileName(gameLevelGhoul2Model, VMA(3), -1);
+        }
+            
         case LEGACY_G_GT_INIT:
             SV_GT_Init((const char*)VMA(1), args[2]);
             return 0;

@@ -306,7 +306,6 @@
     <ClCompile Include="..\..\code\null\null_snddma.c">
       <Filter>Source Files\null</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\code\server\sv_gametype.c" />
     <ClCompile Include="..\..\code\qcommon\cm_shader.c">
       <Filter>Source Files\qcommon</Filter>
     </ClCompile>
@@ -327,6 +326,9 @@
     </ClCompile>
     <ClCompile Include="..\..\code\qcommon\vm_armv7l.c">
       <Filter>Source Files\qcommon</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\server\sv_gametype.c">
+      <Filter>Source Files\server</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

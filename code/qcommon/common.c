@@ -2706,6 +2706,7 @@ void Com_Init( char *commandLine ) {
         Cmd_AddCommand ("crash", Com_Crash_f);
         Cmd_AddCommand ("freeze", Com_Freeze_f);
     }
+    Cmd_AddCommand ("qvmptrs", qvmPtr_show);
     Cmd_AddCommand ("quit", Com_Quit_f);
     Cmd_AddCommand ("changeVectors", MSG_ReportChangeVectors_f );
     Cmd_AddCommand ("writeconfig", Com_WriteConfig_f );

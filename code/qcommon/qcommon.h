@@ -376,13 +376,21 @@ void *QVM_Local_AllocUnaligned ( int size );
 void *QVM_Local_Alloc ( int size );
 
 // VM pointer marshalling shenanigans
-#define QVMPTR_MAX_PTRS 1024
+#define QVMPTR_MAX_PTRS 512000 
 #define QVMPTR_INVALID_HANDLE 0
+
+typedef struct qvmPtrEntry_s {
+    intptr_t ptr;
+    uint32_t first_child;   // handle of first child, 0 if none
+    uint32_t next_sibling;  // handle of next sibling, 0 if end
+} qvmPtrEntry_t;
+
 void        qvmPtr_init(void);
-intptr_t    qvmPtr_register(intptr_t ptr);
-intptr_t    qvmPtr_resolve(intptr_t handle);
-intptr_t    qvmPtr_remove(intptr_t handle);
+uint32_t    qvmPtr_register(intptr_t ptr, uint32_t parent_handle);
+intptr_t    qvmPtr_resolve(uint32_t handle);
+qboolean    qvmPtr_remove(uint32_t handle);
 void qvmPtr_show(void);
+
 /*
 ==============================================================
 

@@ -402,19 +402,19 @@ vmHeader_t* VM_LoadQVM(vm_t* vm, qboolean alloc, qboolean unpure)
     vm->localPoolStart = header.h->dataLength + header.h->litLength +
         header.h->bssLength;
     vm->localPoolSize = 0;
-	vm->localPoolTail = vm->localPoolStart + LOCAL_POOL_SIZE;
-	dataLength = vm->localPoolStart + LOCAL_POOL_SIZE;
+    vm->localPoolTail = LOCAL_POOL_SIZE;
+	dataLength = vm->localPoolStart + vm->localPoolTail;
 	for ( i = 0 ; dataLength > ( 1 << i ) ; i++ ) {
 	}
 	dataLength = 1 << i;
 
     if (alloc)
     {
-        // allocate zero filled space for initialized and uninitialized data
-        // leave some space beyond data mask so we can secure all mask operations
-        vm->dataAlloc = dataLength + 4;
-        vm->dataBase = Hunk_Alloc(vm->dataAlloc, h_high);
-        vm->dataMask = dataLength - 1;
+            // allocate zero filled space for initialized and uninitialized data
+            // leave some space beyond data mask so we can secure all mask operations
+            vm->dataAlloc = dataLength + 4;
+            vm->dataBase = Hunk_Alloc(vm->dataAlloc, h_high);
+            vm->dataMask = dataLength - 1;
     }
     else
     {
@@ -981,7 +981,7 @@ void *QVM_Local_Alloc ( int size )
 		return NULL;
 	}
 
-	currentVM->localPoolSize = ((currentVM->localPoolSize + 0x00000003) & 0xfffffffc);
+    currentVM->localPoolSize = ((currentVM->localPoolSize + 0x00000003) & 0xfffffffc);
 
 	if (currentVM->localPoolSize + size > currentVM->localPoolTail)
 	{
@@ -989,7 +989,7 @@ void *QVM_Local_Alloc ( int size )
 		return 0;
 	}
 
-	currentVM->localPoolSize += size;
+    currentVM->localPoolSize += size;
 
 	byte * pool = currentVM->dataBase;
     if (!currentVM->dataBase) {
@@ -1012,7 +1012,7 @@ void *QVM_Local_AllocUnaligned ( int size )
 		return 0;
 	}
 
-	currentVM->localPoolSize += size;
+    currentVM->localPoolSize += size;
 
 	byte * pool = currentVM->dataBase;
     if (!currentVM->dataBase) {
@@ -1037,7 +1037,7 @@ void *QVM_Local_TempAlloc( int size )
 		return 0;
 	}
 
-	currentVM->localPoolTail -= size;
+    currentVM->localPoolTail -= size;
 
 	byte * pool = currentVM->dataBase;
     if (!currentVM->dataBase) {
@@ -1050,18 +1050,127 @@ void QVM_Local_TempFree( int size )
 {
 	size = ((size + 0x00000003) & 0xfffffffc);
 
-	if (currentVM->localPoolTail + size > LOCAL_POOL_SIZE + currentVM->localPoolStart)
+	if (currentVM->localPoolTail + size > LOCAL_POOL_SIZE)
 	{
-		Com_Error( ERR_DROP, "BG_TempFree: tail greater than size (%d > %d)", currentVM->localPoolTail+size, LOCAL_POOL_SIZE + currentVM->localPoolStart );
+		Com_Error( ERR_DROP, "BG_TempFree: tail greater than size (%d > %d)", currentVM->localPoolTail+size, LOCAL_POOL_SIZE );
 	}
 
-	currentVM->localPoolTail += size;
+    currentVM->localPoolTail += size;
 }
 
 char *QVM_Local_StringAlloc ( const char *source )
 {
 	char *dest = (char*)QVM_Local_Alloc( strlen ( source ) + 1 );
-	char *localDest = (char*)VM_ArgPtr((int)dest);
+    char* localDest = VM_ArgPtr(dest);
 	strcpy( localDest, source );
 	return dest;
+}
+
+
+// Pointer marshalling shenanigans makes a return...
+
+static qvmPtrEntry_t qvmPtrTable[QVMPTR_MAX_PTRS];
+static uint32_t qvmPtrTable_free_indices[QVMPTR_MAX_PTRS];
+static uint32_t qvmPtrTable_free_count = 0;
+static uint32_t qvmPtrTable_next_index = 1;
+
+void qvmPtr_init(void) {
+    Com_Memset(qvmPtrTable, 0, sizeof(qvmPtrTable));
+    qvmPtrTable_free_count = 0;
+    qvmPtrTable_next_index = 1;
+}
+
+uint32_t qvmPtr_register(intptr_t ptr, uint32_t parent_handle) {
+#if defined(__x86_64__) || defined(_M_X64) || defined(_M_AMD64)
+    if (!ptr) return QVMPTR_INVALID_HANDLE;
+
+    uint32_t idx;
+    if (qvmPtrTable_free_count > 0) {
+        idx = qvmPtrTable_free_indices[--qvmPtrTable_free_count];
+    }
+    else if (qvmPtrTable_next_index < QVMPTR_MAX_PTRS) {
+        idx = qvmPtrTable_next_index++;
+    }
+    else {
+        return QVMPTR_INVALID_HANDLE;
+    }
+
+    qvmPtrTable[idx].ptr = ptr;
+    qvmPtrTable[idx].first_child = 0;
+    qvmPtrTable[idx].next_sibling = 0;
+
+    // Append to parent child list
+    if (parent_handle && parent_handle < QVMPTR_MAX_PTRS && qvmPtrTable[parent_handle].ptr) {
+        uint32_t child = qvmPtrTable[parent_handle].first_child;
+        if (!child) {
+            qvmPtrTable[parent_handle].first_child = idx;
+        }
+        else {
+            while (qvmPtrTable[child].next_sibling) {
+                child = qvmPtrTable[child].next_sibling;
+            }
+            qvmPtrTable[child].next_sibling = idx;
+        }
+    }
+
+    return idx;
+#else
+    return (uint32_t)ptr;
+#endif
+}
+
+intptr_t qvmPtr_resolve(uint32_t handle) {
+#if defined(__x86_64__) || defined(_M_X64) || defined(_M_AMD64)
+    if (handle <= QVMPTR_INVALID_HANDLE || handle >= QVMPTR_MAX_PTRS || !qvmPtrTable[handle].ptr) {
+        Com_DPrintf("Handle %d not resolved.\r\n", handle);
+        return QVMPTR_INVALID_HANDLE;
+    }
+    return qvmPtrTable[handle].ptr;
+#else
+    return (intptr_t)handle;
+#endif
+}
+
+qboolean qvmPtr_remove(uint32_t handle) {
+#if defined(__x86_64__) || defined(_M_X64) || defined(_M_AMD64)
+    if (handle <= QVMPTR_INVALID_HANDLE || handle >= QVMPTR_MAX_PTRS || !qvmPtrTable[handle].ptr) {
+        return qfalse;
+    }
+
+    uint32_t stack[QVMPTR_MAX_PTRS / 8];  // Stack for depth 
+    int stack_top = 0;
+    stack[stack_top++] = handle;
+    int removedPtrs = 0;
+    while (stack_top > 0) {
+        uint32_t current = stack[--stack_top];
+
+        // Push children to stack
+        uint32_t child = qvmPtrTable[current].first_child;
+        while (child) {
+            stack[stack_top++] = child;
+            child = qvmPtrTable[child].next_sibling;
+        }
+
+        // Free current
+        qvmPtrTable[current].ptr = 0;
+        qvmPtrTable[current].first_child = 0;
+        qvmPtrTable[current].next_sibling = 0;
+        removedPtrs++;
+        qvmPtrTable_free_indices[qvmPtrTable_free_count++] = current;
+    }
+    return qtrue;
+#else
+    return qtrue;
+#endif
+}
+
+void qvmPtr_show(void) {
+#if defined(__x86_64__) || defined(_M_X64) || defined(_M_AMD64)
+    for (uint32_t i = 1; i < QVMPTR_MAX_PTRS; i++) { 
+        if (qvmPtrTable[i].ptr) {
+            Com_DPrintf("[QVMPtr] Idx %u points to %p (first_child %u, next_sibling %u)\n",
+                i, (void*)qvmPtrTable[i].ptr, qvmPtrTable[i].first_child, qvmPtrTable[i].next_sibling);
+        }
+    }
+#endif
 }
