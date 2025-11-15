@@ -56,9 +56,9 @@ sv_gameModernABI 0   # Use legacy ABI (for older mods)
 | x86 | Original | Shared Library | ✅ | Runtime patches must be removed if present |
 | x86 | Modern | QVM | ✅ | Requires modern ABI usage in the Game module |
 | x86 | Modern | Shared Library | ✅ | Requires modern ABI usage in the Game module |
-| x86_64 | Original | QVM | ❌ | QVMs are 32-bit; pointer values shared between the Game and Engine become invalid due to pointer size mismatch |
+| x86_64 | Original | QVM | ✅ | There's a translation layer for 64-bit pointers to 32-bit handles for the game module, experimental, but so far promising |
 | x86_64 | Original | Shared Library | ✅ | Runtime patches must be removed if present |
-| x86_64 | Modern | QVM | ❌ | QVMs are 32-bit; pointer values shared between the Game and Engine become invalid due to pointer size mismatch |
+| x86_64 | Modern | QVM | ❌ | QVMs are 32-bit and considering the usage of modern ABI needs partial rebuild of the mod, you should rather convert it to a shared library instead |
 | x86_64 | Modern | Shared Library | ✅ | Requires modern ABI usage in the Game module |
 
 The known issues from the original SoF2 executable (for example `q3dirtrav`, `q3infoboom`, `update` query, etc.) have been fixed within the engine.  
