@@ -148,3 +148,39 @@ Your own mod should then also take care of serving scoreboards properly to the c
 
 
 ---
+
+### Building the engine
+
+There is a GitHub workflow which automatically builds the engine on every commit / PR to master branch. Occasionally, I also generate a Release tag given that enough functionality has been delivered so it deserves a release. The releases can be found [over here](https://github.com/JannoEsko/sof2plus-engine/releases).
+
+If you wish to build the engine by yourself, then you have 2 options - either use the Visual Studio MSVC14 solution files available in `misc/msvc14/` folder or build it with CMake. 
+
+#### Preparations for the build
+
+If you're building with Visual Studio, then there's not much to prepare.
+
+If you're building with CMake over Linux or MSYS / MinGW, along the usual buildchain tools, you need to ensure you have `libbacktrace` installed. Please see above how to install `libbacktrace` if it is missing. 
+
+#### CMake
+
+In the root folder of the repository, run the below command (depending on the architecture and build type you want):
+
+```
+cmake -S . -B {your-preferred-folder} -DCMAKE_BUILD_TYPE={release-type} {additional-options}
+```
+
+Your preferred folder is truly up to you, for example, you can set it to `build-x86-debug`, which would mean that you're intending to build a debug version in x86 architecture. Release type is either Debug or Release. Valid additional options to use are `FORCE_32BIT` (default is off) and `USE_INTERNAL_LIBS` (default is on). If `USE_INTERNAL_LIBS` is turned off, you need to have zlib installed as well.
+
+**Please note that when building x86, using option `FORCE_32BIT` is required**
+
+So for example, to build a x86 Debug engine, you'd run the command:
+```
+cmake -S . -B build-x86-debug -DCMAKE_BUILD_TYPE=Debug -DFORCE_32BIT=On
+```
+
+If you'd want to build a x64 Release engine, you'd run the command:
+```
+cmake -S . -B build-x86_64-debug -DCMAKE_BUILD_TYPE=Release 
+```
+
+After that, head to the generated folder and just type `make`. That will build the engine based on the defined configuration.
