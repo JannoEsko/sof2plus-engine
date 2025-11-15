@@ -239,24 +239,28 @@ jobs:
     if: github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
     permissions:
-      contents: write  # Needed for tag + release creation
+      contents: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Important: fetch all history & tags
+          fetch-depth: 0
 
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
           path: release_artifacts
 
-      - name: Delete old Latest tag (local + remote)
+      - name: Delete old Latest tag and release
         run: |
           git tag -d Latest || true
           git push origin :refs/tags/Latest || true
+          gh release delete Latest --yes || true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Create and push Latest tag
+        id: tag
         run: |
           DATE=$(date -u +"%Y-%m-%d")
           echo "RELEASE_DATE=$DATE" >> $GITHUB_ENV
@@ -270,11 +274,14 @@ jobs:
         with:
           tag_name: Latest
           name: "Latest Build — ${{ env.RELEASE_DATE }}"
-          files: |
-            release_artifacts/**/*
+          # https://github.com/orgs/community/discussions/31628 - can't use autogeneration because that only references PR's
           draft: false
           prerelease: true
           fail_on_unmatched_files: true
-          generate_release_notes: true
+          body: |
+            This release contains all the latest builds for each platform and configuration.
+            Updated automatically from **master**.
+          files: |
+            release_artifacts/**/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
