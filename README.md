@@ -183,4 +183,4 @@ If you'd want to build a x64 Release engine, you'd run the command:
 cmake -S . -B build-x86_64-debug -DCMAKE_BUILD_TYPE=Release 
 ```
 
-After that, head to the generated folder and just type `make`. That will build the engine based on the defined configuration.
+After that, head to the generated folder and just type `make`. That will build the engine based on the defined configuration. Setting up the builds is an one-time task and afterwards, whatever changes you perform or if you sync the repository, you can just head to your predefined folder and run `make` again.
