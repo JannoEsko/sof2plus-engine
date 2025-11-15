@@ -274,10 +274,13 @@ jobs:
         with:
           tag_name: Latest
           name: "Latest Build — ${{ env.RELEASE_DATE }}"
-          generate_release_notes: true
+          # https://github.com/orgs/community/discussions/31628 - can't use autogeneration because that only references PR's
           draft: false
           prerelease: true
           fail_on_unmatched_files: true
+          body: |
+            This release contains all the latest builds for each platform and configuration.
+            Updated automatically from **master**.
           files: |
             release_artifacts/**/*
         env:
