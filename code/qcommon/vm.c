@@ -521,6 +521,8 @@ vm_t *VM_Restart(vm_t *vm, qboolean unpure)
 
     // free the original file
     FS_FreeFile(header);
+
+    return vm;
 }
 
 /*

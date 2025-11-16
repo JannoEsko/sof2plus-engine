@@ -480,7 +480,12 @@ gametype module.
 void SV_GT_Init(const char *gametype, qboolean restart)
 {
 
-    SV_InitGametypeProgs(gametype);
+    if (restart && gtvm) {
+        SV_RestartGametypeProgs();
+    }
+    else {
+        SV_InitGametypeProgs(gametype);
+    }
 
     // Execute the initialization routine
     // of the loaded gametype module.
