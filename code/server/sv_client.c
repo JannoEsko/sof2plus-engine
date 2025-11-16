@@ -121,9 +121,9 @@ void SV_GetChallenge(netadr_t from, commProtocol_t commProto)
     int protocol = 0;
 
     if (commProto == COMMPROTO_SILVER) {
-        protocol = SILVER_GAME_PROTOCOL;
+        protocol = SILVER_GAME_PROTOCOL_INT;
     } else if (commProto == COMMPROTO_GOLD) {
-        protocol = GOLD_GAME_PROTOCOL;
+        protocol = GOLD_GAME_PROTOCOL_INT;
     }
 
     NET_OutOfBandPrint(NS_SERVER, challenge->adr, commProto, "challengeResponse %d %d %d",
