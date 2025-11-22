@@ -2022,6 +2022,10 @@ intptr_t SV_GameSystemCalls(qboolean runningQVM, intptr_t *args ) {
             SV_SkipToMap(args[1]);
             return 0;
 
+        case G_REMOVECOMMAND:
+            Cmd_RemoveCommand(VMA(1));
+            return 0;
+
             //=======================================================
         default:
             Com_Error(ERR_DROP, "Bad game system trap: %ld", (long int)args[0]);

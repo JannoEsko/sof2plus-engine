@@ -440,7 +440,8 @@ typedef enum {
     G_TRANSLATE_GOLD_WPN_TO_SILVER,
     G_VALIDATE_MAP_NAME,
     G_GET_MAPCYCLE_LIST,
-    G_SKIP_TO_MAP
+    G_SKIP_TO_MAP,
+    G_REMOVECOMMAND
 
 } gameImport_t;
 

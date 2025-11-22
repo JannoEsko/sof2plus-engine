@@ -1633,11 +1633,11 @@ void SV_AddOperatorCommands( void ) {
     initialized = qtrue;
 
     Cmd_AddCommand ("heartbeat", SV_Heartbeat_f);
-    //Cmd_AddCommand ("kick", SV_Kick_f); // allow the game module to control this command
+    Cmd_AddCommand ("kick", SV_Kick_f); 
     Cmd_AddCommand ("kickbots", SV_KickBots_f);
-    //Cmd_AddCommand ("kickall", SV_KickAll_f); // allow the game module to control this command
-    //Cmd_AddCommand ("kicknum", SV_KickNum_f); // allow the game module to control this command
-    //Cmd_AddCommand ("clientkick", SV_KickNum_f); // Legacy command // allow the game module to control this command
+    Cmd_AddCommand ("kickall", SV_KickAll_f); 
+    Cmd_AddCommand ("kicknum", SV_KickNum_f); 
+    Cmd_AddCommand ("clientkick", SV_KickNum_f); 
     Cmd_AddCommand ("status", SV_Status_f);
     Cmd_AddCommand ("serverinfo", SV_Serverinfo_f);
     Cmd_AddCommand ("systeminfo", SV_Systeminfo_f);
@@ -1667,10 +1667,10 @@ void SV_AddOperatorCommands( void ) {
 
     Cmd_AddCommand("rehashbans", SV_RehashBans_f);
     Cmd_AddCommand("listbans", SV_ListBans_f);
-    //Cmd_AddCommand("banaddr", SV_BanAddr_f); // allow the game module to control this command
-    //Cmd_AddCommand("exceptaddr", SV_ExceptAddr_f); // allow the game module to control this command
-    //Cmd_AddCommand("bandel", SV_BanDel_f); // allow the game module to control this command
-    //Cmd_AddCommand("exceptdel", SV_ExceptDel_f); // allow the game module to control this command
+    Cmd_AddCommand("banaddr", SV_BanAddr_f); 
+    Cmd_AddCommand("exceptaddr", SV_ExceptAddr_f); 
+    Cmd_AddCommand("bandel", SV_BanDel_f); 
+    Cmd_AddCommand("exceptdel", SV_ExceptDel_f); 
     Cmd_AddCommand("flushbans", SV_FlushBans_f);
 }
 
