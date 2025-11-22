@@ -1048,7 +1048,7 @@ intptr_t SV_GameSystemCalls(qboolean runningQVM, intptr_t *args ) {
             // 3. Write back trash into QVM (something has to be written, otherwise QVM will be sad and will break out early due to receiving NULL ghoul2).
             // 4. For every call, we just take the ghoul model pointer from our local pool.
 
-            intptr_t* vmhandle = VMA(1);
+            int32_t* vmhandle = VMA(1);
             qboolean ok = G2API_InitGhoul2Model(&gameLevelGhoul2Model, (const char*)VMA(2), args[4], args[7]);
             *vmhandle = 123456;
             return ok;
@@ -1121,10 +1121,12 @@ intptr_t SV_GameSystemCalls(qboolean runningQVM, intptr_t *args ) {
 
             if (qvmPointerMarshallingInitialized) {
                 intptr_t* vmhandle = VMA(1);
+                int32_t* vmhandle32 = (int32_t*)VMA(1);
                 TGenericParser2 gp2 = qvmPtr_resolve(*vmhandle);
                 GP_Delete(&gp2);
                 qvmPtr_remove(*vmhandle);
-                *vmhandle = 0;
+                //*vmhandle = 0; // This causes a crash in file parsers with x86_64 - intptr_t will write 8 bytes back, use vmhandle32 instead so we only write back 4 bytes.
+                *vmhandle32 = 0;
                 return 0;
             }
 
