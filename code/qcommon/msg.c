@@ -1611,7 +1611,9 @@ void MSG_WriteDeltaEntity( msg_t *msg, struct entityState_s *from, struct entity
                 fromEventParm = from->eventParm;
 
                 qboolean autoSwitch = (from->eventParm & ITEM_AUTOSWITCHBIT) ? qtrue : qfalse;
-                from->eventParm = translateGoldWeaponToSilverWeapon(from->eventParm & ~ITEM_AUTOSWITCHBIT);
+                //from->eventParm = translateGoldWeaponToSilverWeapon(from->eventParm & ~ITEM_AUTOSWITCHBIT);
+                // EV_ITEM_PICKUP sends a modelindex instead of a weapon num.
+                from->eventParm = translateGoldModelIdxToSilverModelIdx(from->eventParm & ~ITEM_AUTOSWITCHBIT);
 
                 if (autoSwitch) {
                     from->eventParm |= ITEM_AUTOSWITCHBIT;
@@ -1623,8 +1625,8 @@ void MSG_WriteDeltaEntity( msg_t *msg, struct entityState_s *from, struct entity
                 toEventParm = to->eventParm;
 
                 qboolean autoSwitch = (to->eventParm & ITEM_AUTOSWITCHBIT) ? qtrue : qfalse;
-                to->eventParm = translateGoldWeaponToSilverWeapon(to->eventParm & ~ITEM_AUTOSWITCHBIT);
-
+                //to->eventParm = translateGoldWeaponToSilverWeapon(to->eventParm & ~ITEM_AUTOSWITCHBIT);
+                to->eventParm = translateGoldModelIdxToSilverModelIdx(to->eventParm & ~ITEM_AUTOSWITCHBIT);
                 if (autoSwitch) {
                     to->eventParm |= ITEM_AUTOSWITCHBIT;
                 }
@@ -1763,7 +1765,8 @@ void MSG_WriteDeltaEntity( msg_t *msg, struct entityState_s *from, struct entity
                 fromEventParm = from->eventParm;
 
                 qboolean autoSwitch = (from->eventParm & ITEM_AUTOSWITCHBIT) ? qtrue : qfalse;
-                from->eventParm = translateSilverWeaponToGoldWeapon(from->eventParm & ~ITEM_AUTOSWITCHBIT);
+                //from->eventParm = translateSilverWeaponToGoldWeapon(from->eventParm & ~ITEM_AUTOSWITCHBIT);
+                from->eventParm = translateSilverModelIdxToGoldModelIdx(from->eventParm & ~ITEM_AUTOSWITCHBIT);
 
                 if (autoSwitch) {
                     from->eventParm |= ITEM_AUTOSWITCHBIT;
@@ -1775,7 +1778,8 @@ void MSG_WriteDeltaEntity( msg_t *msg, struct entityState_s *from, struct entity
                 toEventParm = to->eventParm;
 
                 qboolean autoSwitch = (to->eventParm & ITEM_AUTOSWITCHBIT) ? qtrue : qfalse;
-                to->eventParm = translateSilverWeaponToGoldWeapon(to->eventParm & ~ITEM_AUTOSWITCHBIT);
+                //to->eventParm = translateSilverWeaponToGoldWeapon(to->eventParm & ~ITEM_AUTOSWITCHBIT);
+                to->eventParm = translateSilverModelIdxToGoldModelIdx(to->eventParm & ~ITEM_AUTOSWITCHBIT);
 
                 if (autoSwitch) {
                     to->eventParm |= ITEM_AUTOSWITCHBIT;
@@ -2483,8 +2487,8 @@ void MSG_WriteDeltaPlayerstate( msg_t *msg, struct playerState_s *from, struct p
 
             */
 
-            if (from->events[0] >= EV_ITEM_PICKUP_QUIET) {
-
+            if (from->events[0] >= EV_ITEM_PICKUP) {
+                
                 if (from->events[0] == EV_WEAPON_CALLBACK) {
                     fromEventParm0 = from->eventParms[0];
                     int wpn = from->eventParms[0] & 0xFF;
@@ -2492,13 +2496,26 @@ void MSG_WriteDeltaPlayerstate( msg_t *msg, struct playerState_s *from, struct p
                     from->eventParms[0] = (from->eventParms[0] & ~0xFF) | (wpn & 0xFF);
                 }
 
-                fromEvents0 = from->events[0];
-                from->events[0]--;
+                if (from->events[0] == EV_ITEM_PICKUP || from->events[0] == EV_ITEM_PICKUP_QUIET) {
+                    fromEventParm0 = from->eventParms[0];
+                    qboolean autoswitch = (from->eventParms[0] & ITEM_AUTOSWITCHBIT) ? qtrue : qfalse;;
+
+                    from->eventParms[0] = translateGoldModelIdxToSilverModelIdx(from->eventParms[0] & ~ITEM_AUTOSWITCHBIT);
+
+                    if (autoswitch) {
+                        from->eventParms[0] |= ITEM_AUTOSWITCHBIT;
+                    }
+                }
+
+                if (from->events[0] >= EV_ITEM_PICKUP_QUIET) {
+                    fromEvents0 = from->events[0];
+                    from->events[0]--;
+                }
 
             }
 
-            if (to->events[0] >= EV_ITEM_PICKUP_QUIET) {
-
+            if (to->events[0] >= EV_ITEM_PICKUP) {
+                
                 if (to->events[0] == EV_WEAPON_CALLBACK) {
                     toEventParm0 = to->eventParms[0];
                     int wpn = to->eventParms[0] & 0xFF;
@@ -2506,11 +2523,23 @@ void MSG_WriteDeltaPlayerstate( msg_t *msg, struct playerState_s *from, struct p
                     to->eventParms[0] = (to->eventParms[0] & ~0xFF) | (wpn & 0xFF);
                 }
 
-                toEvents0 = to->events[0];
-                to->events[0]--;
+                if (to->events[0] == EV_ITEM_PICKUP || to->events[0] == EV_ITEM_PICKUP_QUIET) {
+                    toEventParm0 = to->eventParms[0];
+                    qboolean autoswitch = (to->eventParms[0] & ITEM_AUTOSWITCHBIT) ? qtrue : qfalse;;
+
+                    to->eventParms[0] = translateGoldModelIdxToSilverModelIdx(to->eventParms[0] & ~ITEM_AUTOSWITCHBIT);
+                    if (autoswitch) {
+                        to->eventParms[0] |= ITEM_AUTOSWITCHBIT;
+                    }
+                }
+
+                if (to->events[0] >= EV_ITEM_PICKUP_QUIET) {
+                    toEvents0 = to->events[0];
+                    to->events[0]--;
+                }
             }
 
-            if (from->events[1] >= EV_ITEM_PICKUP_QUIET) {
+            if (from->events[1] >= EV_ITEM_PICKUP) {
 
                 if (from->events[1] == EV_WEAPON_CALLBACK) {
                     fromEventParm1 = from->eventParms[1];
@@ -2519,11 +2548,23 @@ void MSG_WriteDeltaPlayerstate( msg_t *msg, struct playerState_s *from, struct p
                     from->eventParms[1] = (from->eventParms[1] & ~0xFF) | (wpn & 0xFF);
                 }
 
-                fromEvents1 = from->events[1];
-                from->events[1]--;
+                if (from->events[1] == EV_ITEM_PICKUP || from->events[1] == EV_ITEM_PICKUP_QUIET) {
+                    fromEventParm1 = from->eventParms[1];
+                    qboolean autoswitch = (from->eventParms[1] & ITEM_AUTOSWITCHBIT) ? qtrue : qfalse;;
+
+                    from->eventParms[1] = translateGoldModelIdxToSilverModelIdx(from->eventParms[1] & ~ITEM_AUTOSWITCHBIT);
+                    if (autoswitch) {
+                        from->eventParms[1] |= ITEM_AUTOSWITCHBIT;
+                    }
+                }
+
+                if (from->events[1] >= EV_ITEM_PICKUP_QUIET) {
+                    fromEvents1 = from->events[1];
+                    from->events[1]--;
+                }
             }
 
-            if (to->events[1] >= EV_ITEM_PICKUP_QUIET) {
+            if (to->events[1] >= EV_ITEM_PICKUP) {
 
                 if (to->events[1] == EV_WEAPON_CALLBACK) {
                     toEventParm1 = to->eventParms[1];
@@ -2532,11 +2573,23 @@ void MSG_WriteDeltaPlayerstate( msg_t *msg, struct playerState_s *from, struct p
                     to->eventParms[1] = (to->eventParms[1] & ~0xFF) | (wpn & 0xFF);
                 }
 
-                toEvents1 = to->events[1];
-                to->events[1]--;
+                if (to->events[1] == EV_ITEM_PICKUP || to->events[1] == EV_ITEM_PICKUP_QUIET) {
+                    toEventParm1 = to->eventParms[1];
+                    qboolean autoswitch = (to->eventParms[1] & ITEM_AUTOSWITCHBIT) ? qtrue : qfalse;;
+
+                    to->eventParms[1] = translateGoldModelIdxToSilverModelIdx(to->eventParms[1] & ~ITEM_AUTOSWITCHBIT);
+                    if (autoswitch) {
+                        to->eventParms[1] |= ITEM_AUTOSWITCHBIT;
+                    }
+                }
+
+                if (to->events[1] >= EV_ITEM_PICKUP_QUIET) {
+                    toEvents1 = to->events[1];
+                    to->events[1]--;
+                }
             }
 
-            if (from->events[2] >= EV_ITEM_PICKUP_QUIET) {
+            if (from->events[2] >= EV_ITEM_PICKUP) {
 
                 if (from->events[2] == EV_WEAPON_CALLBACK) {
                     fromEventParm2 = from->eventParms[2];
@@ -2545,11 +2598,24 @@ void MSG_WriteDeltaPlayerstate( msg_t *msg, struct playerState_s *from, struct p
                     from->eventParms[2] = (from->eventParms[2] & ~0xFF) | (wpn & 0xFF);
                 }
 
-                fromEvents2 = from->events[2];
-                from->events[2]--;
+                if (from->events[2] == EV_ITEM_PICKUP || from->events[2] == EV_ITEM_PICKUP_QUIET) {
+                    fromEventParm2 = from->eventParms[2];
+                    qboolean autoswitch = (from->eventParms[2] & ITEM_AUTOSWITCHBIT) ? qtrue : qfalse;;
+
+                    from->eventParms[2] = translateGoldModelIdxToSilverModelIdx(from->eventParms[2] & ~ITEM_AUTOSWITCHBIT);
+
+                    if (autoswitch) {
+                        from->eventParms[2] |= ITEM_AUTOSWITCHBIT;
+                    }
+                }
+
+                if (from->events[2] >= EV_ITEM_PICKUP_QUIET) {
+                    fromEvents2 = from->events[2];
+                    from->events[2]--;
+                }
             }
 
-            if (to->events[2] >= EV_ITEM_PICKUP_QUIET) {
+            if (to->events[2] >= EV_ITEM_PICKUP) {
 
                 if (to->events[2] == EV_WEAPON_CALLBACK) {
                     toEventParm2 = to->eventParms[2];
@@ -2558,11 +2624,23 @@ void MSG_WriteDeltaPlayerstate( msg_t *msg, struct playerState_s *from, struct p
                     to->eventParms[2] = (to->eventParms[2] & ~0xFF) | (wpn & 0xFF);
                 }
 
-                toEvents2 = to->events[2];
-                to->events[2]--;
+                if (to->events[2] == EV_ITEM_PICKUP || to->events[2] == EV_ITEM_PICKUP_QUIET) {
+                    toEventParm2 = to->eventParms[2];
+                    qboolean autoswitch = (to->eventParms[2] & ITEM_AUTOSWITCHBIT) ? qtrue : qfalse;;
+
+                    to->eventParms[2] = translateGoldModelIdxToSilverModelIdx(to->eventParms[2] & ~ITEM_AUTOSWITCHBIT);
+                    if (autoswitch) {
+                        to->eventParms[2] |= ITEM_AUTOSWITCHBIT;
+                    }
+                }
+
+                if (to->events[2] >= EV_ITEM_PICKUP_QUIET) {
+                    toEvents2 = to->events[2];
+                    to->events[2]--;
+                }
             }
 
-            if (from->events[3] >= EV_ITEM_PICKUP_QUIET) {
+            if (from->events[3] >= EV_ITEM_PICKUP) {
 
                 if (from->events[3] == EV_WEAPON_CALLBACK) {
                     fromEventParm3 = from->eventParms[3];
@@ -2571,11 +2649,24 @@ void MSG_WriteDeltaPlayerstate( msg_t *msg, struct playerState_s *from, struct p
                     from->eventParms[3] = (from->eventParms[3] & ~0xFF) | (wpn & 0xFF);
                 }
 
-                fromEvents3 = from->events[3];
-                from->events[3]--;
+                if (from->events[3] == EV_ITEM_PICKUP || from->events[3] == EV_ITEM_PICKUP_QUIET) {
+                    fromEventParm3 = from->eventParms[3];
+                    qboolean autoswitch = (from->eventParms[3] & ITEM_AUTOSWITCHBIT) ? qtrue : qfalse;;
+
+                    from->eventParms[3] = translateGoldModelIdxToSilverModelIdx(from->eventParms[3] & ~ITEM_AUTOSWITCHBIT);
+                    
+                    if (autoswitch) {
+                        from->eventParms[3] |= ITEM_AUTOSWITCHBIT;
+                    }
+                }
+
+                if (from->events[3] >= EV_ITEM_PICKUP_QUIET) {
+                    fromEvents3 = from->events[3];
+                    from->events[3]--;
+                }
             }
 
-            if (to->events[3] >= EV_ITEM_PICKUP_QUIET) {
+            if (to->events[3] >= EV_ITEM_PICKUP) {
 
                 if (to->events[3] == EV_WEAPON_CALLBACK) {
                     toEventParm3 = to->eventParms[3];
@@ -2584,13 +2675,32 @@ void MSG_WriteDeltaPlayerstate( msg_t *msg, struct playerState_s *from, struct p
                     to->eventParms[3] = (to->eventParms[3] & ~0xFF) | (wpn & 0xFF);
                 }
 
-                toEvents3 = to->events[3];
-                to->events[3]--;
+                if (to->events[3] == EV_ITEM_PICKUP || to->events[3] == EV_ITEM_PICKUP_QUIET) {
+                    toEventParm3 = to->eventParms[3];
+                    qboolean autoswitch = (to->eventParms[3] & ITEM_AUTOSWITCHBIT) ? qtrue : qfalse;;
+
+                    to->eventParms[3] = translateGoldModelIdxToSilverModelIdx(to->eventParms[3] & ~ITEM_AUTOSWITCHBIT);
+                    if (autoswitch) {
+                        to->eventParms[3] |= ITEM_AUTOSWITCHBIT;
+                    }
+                }
+
+                if (to->events[3] >= EV_ITEM_PICKUP_QUIET) {
+                    toEvents3 = to->events[3];
+                    to->events[3]--;
+                }
+
+                
             }
 
             if (((from->externalEvent & ~EV_EVENT_BITS) == EV_ITEM_PICKUP || (from->externalEvent & ~EV_EVENT_BITS) == EV_ITEM_PICKUP_QUIET)) {
                 fromExternalEventParm = from->externalEventParm;
-                from->externalEventParm = translateGoldModelIdxToSilverModelIdx(from->externalEventParm);
+                qboolean autoswitch = (from->externalEventParm & ITEM_AUTOSWITCHBIT) ? qtrue : qfalse;
+                from->externalEventParm = translateGoldModelIdxToSilverModelIdx(from->externalEventParm & ~(ITEM_AUTOSWITCHBIT));
+
+                if (autoswitch) {
+                    from->externalEventParm |= ITEM_AUTOSWITCHBIT;
+                }
 
             }
 
@@ -2602,7 +2712,13 @@ void MSG_WriteDeltaPlayerstate( msg_t *msg, struct playerState_s *from, struct p
 
             if (((to->externalEvent & ~EV_EVENT_BITS) == EV_ITEM_PICKUP || (to->externalEvent & ~EV_EVENT_BITS) == EV_ITEM_PICKUP_QUIET)) {
                 toExternalEventParm = to->externalEventParm;
-                to->externalEventParm = translateGoldModelIdxToSilverModelIdx(to->externalEventParm);
+                qboolean autoswitch = (to->externalEventParm & ITEM_AUTOSWITCHBIT) ? qtrue : qfalse; 
+                to->externalEventParm = translateGoldModelIdxToSilverModelIdx(to->externalEventParm & ~(ITEM_AUTOSWITCHBIT));
+
+                if (autoswitch) {
+                    to->externalEventParm |= ITEM_AUTOSWITCHBIT;
+                }
+
             }
 
             if ((to->externalEvent & ~EV_EVENT_BITS) >= EV_ITEM_PICKUP_QUIET) {
@@ -2681,7 +2797,7 @@ void MSG_WriteDeltaPlayerstate( msg_t *msg, struct playerState_s *from, struct p
 
             */
 
-            if (from->events[0] > LEGACY_EV_ITEM_PICKUP) {
+            if (from->events[0] >= LEGACY_EV_ITEM_PICKUP) {
 
                 if (from->events[0] == LEGACY_EV_WEAPON_CALLBACK) {
                     fromEventParm0 = from->eventParms[0];
@@ -2690,12 +2806,25 @@ void MSG_WriteDeltaPlayerstate( msg_t *msg, struct playerState_s *from, struct p
                     from->eventParms[0] = (from->eventParms[0] & ~0xFF) | (wpn & 0xFF);
                 }
 
-                fromEvents0 = from->events[0];
-                from->events[0]++;
+                if (from->events[0] == LEGACY_EV_ITEM_PICKUP) {
+                    fromEventParm0 = from->eventParms[0];
+                    qboolean autoswitch = (from->eventParms[0] & ITEM_AUTOSWITCHBIT) ? qtrue : qfalse;
+                    from->eventParms[0] = translateSilverModelIdxToGoldModelIdx(from->eventParms[0] & ~ITEM_AUTOSWITCHBIT);
+
+                    if (autoswitch) {
+                        from->eventParms[0] |= ITEM_AUTOSWITCHBIT;
+                    }
+                }
+
+
+                if (from->events[0] > LEGACY_EV_ITEM_PICKUP) {
+                    fromEvents0 = from->events[0];
+                    from->events[0]++;
+                }
 
             }
 
-            if (to->events[0] > LEGACY_EV_ITEM_PICKUP) {
+            if (to->events[0] >= LEGACY_EV_ITEM_PICKUP) {
 
                 if (to->events[0] == LEGACY_EV_WEAPON_CALLBACK) {
                     toEventParm0 = to->eventParms[0];
@@ -2704,11 +2833,25 @@ void MSG_WriteDeltaPlayerstate( msg_t *msg, struct playerState_s *from, struct p
                     to->eventParms[0] = (to->eventParms[0] & ~0xFF) | (wpn & 0xFF);
                 }
 
-                toEvents0 = to->events[0];
-                to->events[0]++;
+
+                if (to->events[0] == LEGACY_EV_ITEM_PICKUP) {
+                    toEventParm0 = to->eventParms[0];
+                    qboolean autoswitch = (to->eventParms[0] & ITEM_AUTOSWITCHBIT) ? qtrue : qfalse;
+                    to->eventParms[0] = translateSilverModelIdxToGoldModelIdx(to->eventParms[0] & ~ITEM_AUTOSWITCHBIT);
+
+                    if (autoswitch) {
+                        to->eventParms[0] |= ITEM_AUTOSWITCHBIT;
+                    }
+                }
+
+
+                if (to->events[0] > LEGACY_EV_ITEM_PICKUP) {
+                    toEvents0 = to->events[0];
+                    to->events[0]++;
+                };
             }
 
-            if (from->events[1] > LEGACY_EV_ITEM_PICKUP) {
+            if (from->events[1] >= LEGACY_EV_ITEM_PICKUP) {
 
                 if (from->events[1] == LEGACY_EV_WEAPON_CALLBACK) {
                     fromEventParm1 = from->eventParms[1];
@@ -2717,11 +2860,24 @@ void MSG_WriteDeltaPlayerstate( msg_t *msg, struct playerState_s *from, struct p
                     from->eventParms[1] = (from->eventParms[1] & ~0xFF) | (wpn & 0xFF);
                 }
 
-                fromEvents1 = from->events[1];
-                from->events[1]++;
+                if (from->events[1] == LEGACY_EV_ITEM_PICKUP) {
+                    fromEventParm1 = from->eventParms[1];
+                    qboolean autoswitch = (from->eventParms[1] & ITEM_AUTOSWITCHBIT) ? qtrue : qfalse;
+                    from->eventParms[1] = translateSilverModelIdxToGoldModelIdx(from->eventParms[1] & ~ITEM_AUTOSWITCHBIT);
+
+                    if (autoswitch) {
+                        from->eventParms[1] |= ITEM_AUTOSWITCHBIT;
+                    }
+                }
+
+
+                if (from->events[1] > LEGACY_EV_ITEM_PICKUP) {
+                    fromEvents1 = from->events[1];
+                    from->events[1]++;
+                };
             }
 
-            if (to->events[1] > LEGACY_EV_ITEM_PICKUP) {
+            if (to->events[1] >= LEGACY_EV_ITEM_PICKUP) {
 
                 if (to->events[1] == LEGACY_EV_WEAPON_CALLBACK) {
                     toEventParm1 = to->eventParms[1];
@@ -2730,11 +2886,24 @@ void MSG_WriteDeltaPlayerstate( msg_t *msg, struct playerState_s *from, struct p
                     to->eventParms[1] = (to->eventParms[1] & ~0xFF) | (wpn & 0xFF);
                 }
 
-                toEvents1 = to->events[1];
-                to->events[1]++;
+                if (to->events[1] == LEGACY_EV_ITEM_PICKUP) {
+                    toEventParm1 = to->eventParms[1];
+                    qboolean autoswitch = (to->eventParms[1] & ITEM_AUTOSWITCHBIT) ? qtrue : qfalse;
+                    to->eventParms[1] = translateSilverModelIdxToGoldModelIdx(to->eventParms[1] & ~ITEM_AUTOSWITCHBIT);
+
+                    if (autoswitch) {
+                        to->eventParms[1] |= ITEM_AUTOSWITCHBIT;
+                    }
+                }
+
+
+                if (to->events[1] > LEGACY_EV_ITEM_PICKUP) {
+                    toEvents1 = to->events[1];
+                    to->events[1]++;
+                };
             }
 
-            if (from->events[2] > LEGACY_EV_ITEM_PICKUP) {
+            if (from->events[2] >= LEGACY_EV_ITEM_PICKUP) {
 
                 if (from->events[2] == LEGACY_EV_WEAPON_CALLBACK) {
                     fromEventParm2 = from->eventParms[2];
@@ -2743,11 +2912,25 @@ void MSG_WriteDeltaPlayerstate( msg_t *msg, struct playerState_s *from, struct p
                     from->eventParms[2] = (from->eventParms[2] & ~0xFF) | (wpn & 0xFF);
                 }
 
-                fromEvents2 = from->events[2];
-                from->events[2]++;
+
+                if (from->events[2] == LEGACY_EV_ITEM_PICKUP) {
+                    fromEventParm2 = from->eventParms[2];
+                    qboolean autoswitch = (from->eventParms[2] & ITEM_AUTOSWITCHBIT) ? qtrue : qfalse;
+                    from->eventParms[2] = translateSilverModelIdxToGoldModelIdx(from->eventParms[2] & ~ITEM_AUTOSWITCHBIT);
+
+                    if (autoswitch) {
+                        from->eventParms[2] |= ITEM_AUTOSWITCHBIT;
+                    }
+                }
+
+
+                if (from->events[2] > LEGACY_EV_ITEM_PICKUP) {
+                    fromEvents2 = from->events[2];
+                    from->events[2]++;
+                };
             }
 
-            if (to->events[2] > LEGACY_EV_ITEM_PICKUP) {
+            if (to->events[2] >= LEGACY_EV_ITEM_PICKUP) {
 
                 if (to->events[2] == LEGACY_EV_WEAPON_CALLBACK) {
                     toEventParm2 = to->eventParms[2];
@@ -2756,11 +2939,24 @@ void MSG_WriteDeltaPlayerstate( msg_t *msg, struct playerState_s *from, struct p
                     to->eventParms[2] = (to->eventParms[2] & ~0xFF) | (wpn & 0xFF);
                 }
 
-                toEvents2 = to->events[2];
-                to->events[2]++;
+                if (to->events[2] == LEGACY_EV_ITEM_PICKUP) {
+                    toEventParm2 = to->eventParms[2];
+                    qboolean autoswitch = (to->eventParms[2] & ITEM_AUTOSWITCHBIT) ? qtrue : qfalse;
+                    to->eventParms[2] = translateSilverModelIdxToGoldModelIdx(to->eventParms[2] & ~ITEM_AUTOSWITCHBIT);
+
+                    if (autoswitch) {
+                        to->eventParms[2] |= ITEM_AUTOSWITCHBIT;
+                    }
+                }
+
+
+                if (to->events[2] > LEGACY_EV_ITEM_PICKUP) {
+                    toEvents2 = to->events[2];
+                    to->events[2]++;
+                };
             }
 
-            if (from->events[3] > LEGACY_EV_ITEM_PICKUP) {
+            if (from->events[3] >= LEGACY_EV_ITEM_PICKUP) {
 
                 if (from->events[3] == LEGACY_EV_WEAPON_CALLBACK) {
                     fromEventParm3 = from->eventParms[3];
@@ -2769,11 +2965,25 @@ void MSG_WriteDeltaPlayerstate( msg_t *msg, struct playerState_s *from, struct p
                     from->eventParms[3] = (from->eventParms[3] & ~0xFF) | (wpn & 0xFF);
                 }
 
-                fromEvents3 = from->events[3];
-                from->events[3]++;
+
+                if (from->events[3] == LEGACY_EV_ITEM_PICKUP) {
+                    fromEventParm3 = from->eventParms[3];
+                    qboolean autoswitch = (from->eventParms[3] & ITEM_AUTOSWITCHBIT) ? qtrue : qfalse;
+                    from->eventParms[3] = translateSilverModelIdxToGoldModelIdx(from->eventParms[3] & ~ITEM_AUTOSWITCHBIT);
+
+                    if (autoswitch) {
+                        from->eventParms[3] |= ITEM_AUTOSWITCHBIT;
+                    }
+                }
+
+
+                if (from->events[3] > LEGACY_EV_ITEM_PICKUP) {
+                    fromEvents3 = from->events[3];
+                    from->events[3]++;
+                };
             }
 
-            if (to->events[3] > LEGACY_EV_ITEM_PICKUP) {
+            if (to->events[3] >= LEGACY_EV_ITEM_PICKUP) {
 
                 if (to->events[3] == LEGACY_EV_WEAPON_CALLBACK) {
                     toEventParm3 = to->eventParms[3];
@@ -2782,8 +2992,21 @@ void MSG_WriteDeltaPlayerstate( msg_t *msg, struct playerState_s *from, struct p
                     to->eventParms[3] = (to->eventParms[3] & ~0xFF) | (wpn & 0xFF);
                 }
 
-                toEvents3 = to->events[3];
-                to->events[3]++;
+                if (to->events[3] == LEGACY_EV_ITEM_PICKUP) {
+                    toEventParm3 = to->eventParms[3];
+                    qboolean autoswitch = (to->eventParms[3] & ITEM_AUTOSWITCHBIT) ? qtrue : qfalse;
+                    to->eventParms[3] = translateSilverModelIdxToGoldModelIdx(to->eventParms[3] & ~ITEM_AUTOSWITCHBIT);
+
+                    if (autoswitch) {
+                        to->eventParms[3] |= ITEM_AUTOSWITCHBIT;
+                    }
+                }
+
+
+                if (to->events[3] > LEGACY_EV_ITEM_PICKUP) {
+                    toEvents3 = to->events[3];
+                    to->events[3]++;
+                };
             }
 
             if (((from->externalEvent & ~EV_EVENT_BITS) == LEGACY_EV_ITEM_PICKUP)) {

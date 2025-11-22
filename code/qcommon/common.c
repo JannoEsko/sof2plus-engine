@@ -277,7 +277,7 @@ void QDECL Com_Error( int code, const char *fmt, ... ) {
     static qboolean inGracefulRecovery = qfalse;
 
 #ifdef _CRASH_ON_ERR
-    volatile int* zero = (volatile int*)0;;
+    volatile int* zero = (volatile int*)0;
 	*zero = 0;
 #endif
 
