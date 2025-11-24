@@ -879,6 +879,9 @@ typedef enum {
     LEGACY_G_GT_START,
     LEGACY_G_GT_SENDEVENT,
 
+    // Custom traps also for legacy ABI
+    LEGACY_G_REMOVECOMMAND = 1001,
+
 } legacyGameImport_t;
 
 
