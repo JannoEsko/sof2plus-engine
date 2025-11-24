@@ -595,7 +595,7 @@ static void SV_Kick_f( void ) {
         return;
     }
 
-    if ( Cmd_Argc() != 2 ) {
+    if ( Cmd_Argc() < 2 ) {
         Com_Printf ("Usage: kick <player name>\nkick all = kick everyone\nkick allbots = kick all bots\n");
         return;
     }
@@ -633,7 +633,12 @@ static void SV_Kick_f( void ) {
         return;
     }
 
-    SV_DropClient( cl, "was kicked" );
+    char* reason = Cmd_ArgsFrom(3);
+    if (!reason || !*reason) {
+        reason = "was kicked";
+    }
+
+    SV_DropClient(cl, reason);
     cl->lastPacketTime = svs.time;  // in case there is a funny zombie
 }
 
@@ -684,6 +689,11 @@ static void SV_KickAll_f( void ) {
         return;
     }
 
+    char* reason = Cmd_ArgsFrom(2);
+    if (!reason || !*reason) {
+        reason = "was kicked";
+    }
+
     for( i = 0, cl = svs.clients; i < sv_maxclients->integer; i++, cl++ ) {
         if( !cl->state ) {
             continue;
@@ -693,7 +703,7 @@ static void SV_KickAll_f( void ) {
             continue;
         }
 
-        SV_DropClient( cl, "was kicked" );
+        SV_DropClient( cl, reason );
         cl->lastPacketTime = svs.time; // in case there is a funny zombie
     }
 }
@@ -714,7 +724,7 @@ static void SV_KickNum_f( void ) {
         return;
     }
 
-    if ( Cmd_Argc() != 2 ) {
+    if ( Cmd_Argc() < 2 ) {
         Com_Printf ("Usage: %s <client number>\n", Cmd_Argv(0));
         return;
     }
@@ -728,7 +738,12 @@ static void SV_KickNum_f( void ) {
         return;
     }
 
-    SV_DropClient( cl, "was kicked" );
+    char* reason = Cmd_ArgsFrom(3);
+    if (!reason || !*reason) {
+        reason = "was kicked";
+    }
+    
+    SV_DropClient( cl, reason );
     cl->lastPacketTime = svs.time;  // in case there is a funny zombie
 }
 
