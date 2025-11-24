@@ -1349,6 +1349,10 @@ intptr_t SV_GameSystemCalls(qboolean runningQVM, intptr_t *args ) {
         case LEGACY_G_GT_SENDEVENT:
             return SV_GT_SendEvent(args[1], args[2], args[3], args[4], args[5], args[6], args[7]);
 
+        case LEGACY_G_REMOVECOMMAND:
+            Cmd_RemoveCommand(VMA(1));
+            return 0;
+
         default:
             Com_Error(ERR_DROP, "Bad game system trap: %ld", (long int)args[0]);
         }
