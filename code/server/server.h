@@ -278,6 +278,8 @@ extern  cvar_t* sv_smartDownload;
 extern  cvar_t* sv_smartAdditionalPaks;
 extern  cvar_t* sv_altmap;
 
+extern  cvar_t *sv_maxIPConnections;
+
 extern  serverBan_t serverBans[SERVER_MAXBANS];
 extern  int serverBansCount;
 

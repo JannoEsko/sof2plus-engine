@@ -291,21 +291,31 @@ void SV_DirectConnect( netadr_t from, commProtocol_t commProto ) {
     challenge = atoi( Info_ValueForKey( userinfo, "challenge" ) );
     qport = atoi( Info_ValueForKey( userinfo, "qport" ) );
 
+    int countSameIPs = 0;
+
     // quick reject
     for (i=0,cl=svs.clients ; i < sv_maxclients->integer ; i++,cl++) {
         if ( cl->state == CS_FREE ) {
             continue;
         }
-        if ( NET_CompareBaseAdr( from, cl->netchan.remoteAddress )
-            && ( cl->netchan.qport == qport
-            || from.port == cl->netchan.remoteAddress.port ) ) {
-            if (( svs.time - cl->lastConnectTime)
-                < (sv_reconnectlimit->integer * 1000)) {
-                Com_DPrintf ("%s:reconnect rejected : too soon\n", NET_AdrToString (from));
-                return;
+        if (NET_CompareBaseAdr(from, cl->netchan.remoteAddress)) {
+            countSameIPs++;
+            if (cl->netchan.qport == qport || from.port == cl->netchan.remoteAddress.port) {
+                if ((svs.time - cl->lastConnectTime)
+                    < (sv_reconnectlimit->integer * 1000)) {
+                    Com_DPrintf("%s:reconnect rejected : too soon\n", NET_AdrToString(from));
+                    return;
+                }
             }
-            break;
+
         }
+    }
+
+    if (sv_maxIPConnections->integer && countSameIPs >= sv_maxIPConnections->integer) {
+        NET_OutOfBandPrint( NS_SERVER, from, commProto,
+            "print\nToo many connections from your address.\n" );
+        Com_DPrintf("%s:rejected : too many connections (%d)\n", NET_AdrToString(from), countSameIPs);
+        return;
     }
 
     // don't let "ip" overflow userinfo string

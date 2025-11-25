@@ -64,6 +64,7 @@ cvar_t* sv_smartDownload;
 cvar_t* sv_smartAdditionalPaks;
 cvar_t* sv_altmap;
 cvar_t* sv_gameModernABI;
+cvar_t* sv_maxIPConnections;
 serverBan_t serverBans[SERVER_MAXBANS];
 int serverBansCount = 0;
 
