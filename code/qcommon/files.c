@@ -225,6 +225,7 @@ static  cvar_t      *fs_gogpath;
 static  cvar_t      *fs_basepath;
 static  cvar_t      *fs_basegame;
 static  cvar_t      *fs_gamedirvar;
+static  cvar_t      *fs_useDefaultHomePath;
 static  searchpath_t    *fs_searchpaths;
 static  int         fs_readCount;           // total bytes read
 static  int         fs_loadCount;           // total files read
@@ -3280,7 +3281,7 @@ FS_Startup
 */
 static void FS_Startup( const char *gameName )
 {
-    const char *homePath;
+    const char *homePath = NULL;
 
     Com_Printf( "----- FS_Startup -----\n" );
 
@@ -3289,7 +3290,13 @@ static void FS_Startup( const char *gameName )
     fs_debug = Cvar_Get( "fs_debug", "0", 0 );
     fs_basepath = Cvar_Get ("fs_basepath", Sys_DefaultInstallPath(), CVAR_INIT|CVAR_PROTECTED );
     fs_basegame = Cvar_Get ("fs_basegame", "", CVAR_INIT );
-    homePath = Sys_DefaultHomePath();
+
+    fs_useDefaultHomePath = Cvar_Get("fs_useDefaultHomePath", "0", CVAR_INIT | CVAR_PROTECTED);
+
+    if (fs_useDefaultHomePath->integer) {
+        homePath = Sys_DefaultHomePath();
+    }
+
     if (!homePath || !homePath[0]) {
         homePath = fs_basepath->string;
     }
