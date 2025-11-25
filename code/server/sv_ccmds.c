@@ -633,7 +633,7 @@ static void SV_Kick_f( void ) {
         return;
     }
 
-    char* reason = Cmd_ArgsFrom(3);
+    char* reason = Cmd_ArgsFrom(2);
     if (!reason || !*reason) {
         reason = "was kicked";
     }
@@ -689,7 +689,7 @@ static void SV_KickAll_f( void ) {
         return;
     }
 
-    char* reason = Cmd_ArgsFrom(2);
+    char* reason = Cmd_ArgsFrom(1);
     if (!reason || !*reason) {
         reason = "was kicked";
     }
@@ -738,7 +738,7 @@ static void SV_KickNum_f( void ) {
         return;
     }
 
-    char* reason = Cmd_ArgsFrom(3);
+    char* reason = Cmd_ArgsFrom(2);
     if (!reason || !*reason) {
         reason = "was kicked";
     }
