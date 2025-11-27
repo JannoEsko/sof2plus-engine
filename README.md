@@ -11,14 +11,21 @@ Originally designed to support one-way Gold → Silver communication and only be
 SoF2Plus allows servers to run **multiprotocol environments**, where both Silver and Gold clients can connect and play together.  
 Multiprotocol logic works transparently by translating key network structures — such as `entityState` and `playerState` — before transmission.
 
-Enable multiprotocol support using:
-```
-net_multiprotocol 1
-```
-
-When `net_multiprotocol` is **not set**, the engine behaves exactly like the standard engine, based on which mod you run and to what `net_runningLegacy` is set to.
-
 ---
+
+### Configuring the engine
+
+There are some cvars, which can only be used over the command line during startup. These can be in a script or just appended to the end of the start command.
+| CVAR | Default value |  Comment |
+|:--------------------:|:-----------------:|:---------:|
+| `dedicated` | `0` | Set this to 2 to run a public server, 1 to run a local (LAN) server, 0 will not run a server at all |
+| `fs_game` | `""` | Directs the game module where libraries / QVM's should be loaded. E.g. `1fx`, `RPM`, `fragpit` |
+| `fs_useDefaultHomePath` | `0` | If this is set to 0, fs_useDefaultHomePath will be set to `fs_basepath`, which, when not altered, is the working directory of the engine. If this is set to 1, then `fs_homepath`, unless explicitly set, will be directed to AppData in Windows and home env path in Linux |
+| `fs_homepath` | see above | Optional. Useful if you want to have the home folder in a different folder than the current working directory. |
+| `fs_basepath` | Current working directory | Optional. Useful if you keep base folder separated from the game files (e.g. You run multiple game servers but to keep from having a duplicate 'base' folder, you keep a central version of it). See also fs_useDefaultHomePath |
+| `sv_cheats` | `0` | Enables cheats in the server if turned on. Instead of using this as a startup variable, use command `devmap`, which toggles cheats on without using sv_cheats cvar. |
+
+For the rest, please refer to the config file which you can find [over here - misc/s2pserver.cfg](https://github.com/JannoEsko/sof2plus-engine/blob/master/misc/s2pserver.cfg)
 
 ### 🚀 Major Features
 
