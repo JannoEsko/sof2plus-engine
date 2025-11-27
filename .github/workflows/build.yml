@@ -152,6 +152,7 @@ jobs:
             Copy-Item "$MSVC_DIR/sof2plus.${{ matrix.arch }}.pdb" artifacts/
             Copy-Item "$MSVC_DIR/sof2plus.${{ matrix.arch }}.ilk" artifacts/ -ErrorAction SilentlyContinue
           }
+          Copy-Item "misc/s2pserver.cfg" artifacts/
           Write-Host "Collected:"
           Get-ChildItem artifacts/ | Format-Table -AutoSize
 
@@ -166,6 +167,7 @@ jobs:
 
           SUBDIR=$([[ "${{ matrix.build_type }}" == "Debug" ]] && echo "Debug" || echo "Release")
           cp "$BUILD_DIR/$SUBDIR/$BIN_NAME" artifacts/
+          cp "misc/s2pserver.cfg" artifacts/
           # =========================================================
           # Ship libwinpthread-1.dll for MinGW Debug - needed for x86 build
           # =========================================================
@@ -196,6 +198,7 @@ jobs:
 
           SUBDIR=$([[ "${{ matrix.build_type }}" == "Debug" ]] && echo "Debug" || echo "Release")
           cp "$BUILD_DIR/$SUBDIR/$BIN_NAME" artifacts/
+          cp "misc/s2pserver.cfg" artifacts/
           # No libs needed for Linux - dynamic linking
 
           echo "Collected:"
