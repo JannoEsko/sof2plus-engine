@@ -1687,6 +1687,7 @@ void SV_AddOperatorCommands( void ) {
     Cmd_AddCommand("bandel", SV_BanDel_f); 
     Cmd_AddCommand("exceptdel", SV_ExceptDel_f); 
     Cmd_AddCommand("flushbans", SV_FlushBans_f);
+    Cmd_AddCommand("dumpcvars", Cvar_DumpCvars);
 }
 
 /*

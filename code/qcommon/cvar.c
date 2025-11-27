@@ -1434,7 +1434,22 @@ void    Cvar_Update( vmCvar_t *vmCvar ) {
     vmCvar->integer = cv->integer;
 }
 
-void Cvar_DumpCvars(fileHandle_t h) {
+void Cvar_DumpCvars() {
+
+    for (cvar_t* cvar = &cvar_indexes[0]; cvar && cvar->name; cvar++) {
+
+        Com_Printf("[%s Cvar] %s => %s", (cvar->flags & CVAR_VM_CREATED) ? "VM" : "Engine", cvar->name, cvar->string);
+
+        if (cvar->latchedString) {
+            Com_Printf(" [Latched value: %s]", cvar->latchedString);
+        }
+
+        Com_Printf("\n");
+
+    }
+}
+
+void Cvar_DumpCvarsToFile(fileHandle_t h) {
 
     FS_Printf(h, "\nDumping CVAR values...\n");
 
@@ -1445,7 +1460,7 @@ void Cvar_DumpCvars(fileHandle_t h) {
             continue;
         }
 
-        FS_Printf(h, "[Cvar] %s => %s", cvar->name, cvar->string);
+        FS_Printf(h, "[%s Cvar] %s => %s", (cvar->flags & CVAR_VM_CREATED) ? "VM" : "Engine", cvar->name, cvar->string);
 
         if (cvar->latchedString) {
             FS_Printf(h, " [Latched value: %s]", cvar->latchedString);

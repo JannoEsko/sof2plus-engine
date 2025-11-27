@@ -357,7 +357,7 @@ void QDECL Com_Error( int code, const char *fmt, ... ) {
             if (logFile) {
 
                 FS_Printf(logFile, "Softcrash detected, message: %s\nPlease raise an issue at https://github.com/JannoEsko/1fxplus.git and attach this log file to the issue.\n\n", com_errorMessage);
-                Cvar_DumpCvars(logFile);
+                Cvar_DumpCvarsToFile(logFile);
 
                 FS_FCloseFile(logFile);
                 Com_Printf("^3LOGGING CRASH INTO FILE SUCCEEDED!\n");
@@ -2484,6 +2484,12 @@ void Com_ExecuteCfg(void)
         Cbuf_ExecuteText(EXEC_NOW, "exec " Q3CONFIG_CFG "\n");
         Cbuf_Execute();
         Cbuf_ExecuteText(EXEC_NOW, "exec autoexec.cfg\n");
+        Cbuf_Execute();
+
+        // sof2plus.cfg is written into as well, so we have another cfg which is for server startup params.
+        // That way we can also write cvars BEFORE net is initialized, so we don't have to net_restart in cfg.
+
+        Cbuf_ExecuteText(EXEC_NOW, "exec s2pserver.cfg\n");
         Cbuf_Execute();
     }
 }

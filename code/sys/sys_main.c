@@ -832,7 +832,7 @@ void Sys_SigHandler( int signal )
             // Generate and write the backtrace
             backtrace_full(bt_state, 0, custom_backtrace_full_callback, custom_backtrace_error_callback, &logFile);
 
-            Cvar_DumpCvars(logFile);
+            Cvar_DumpCvarsToFile(logFile);
 
             FS_FCloseFile(logFile);
             Com_Printf("^3LOGGING CRASH INTO FILE SUCCEEDED!\n");
@@ -855,7 +855,7 @@ void Sys_SigHandler( int signal )
         if (logFile) {
             FS_Printf(logFile, "Crash detected, signal: %d\nPlease raise an issue at https://github.com/JannoEsko/1fxplus.git and attach this log file to the issue.\n\n", signal);
             WriteBacktrace(logFile);
-            Cvar_DumpCvars(logFile);
+            Cvar_DumpCvarsToFile(logFile);
             FS_FCloseFile(logFile);
             Com_Printf("^3LOGGING CRASH INTO FILE SUCCEEDED!\n");
         }
