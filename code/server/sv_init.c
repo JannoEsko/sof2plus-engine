@@ -731,9 +731,22 @@ void SV_SpawnServer( char *server, qboolean killBots ) {
             // otherwise we'll fall back to the standard refpaks which will contain whatever's needed.
 
             if (strlen(sv_smartAdditionalPaks->string)) {
-                char* token = strtok(sv_smartAdditionalPaks->string, " ");
 
-                while (token != NULL) {
+                char paksTokenizer[BIG_INFO_STRING];
+                char paksBuf[MAX_ADDITIONAL_PAKS][BIG_INFO_STRING];
+
+                Q_strncpyz(paksTokenizer, sv_smartAdditionalPaks->string, sizeof(paksTokenizer));
+
+                char* token = strtok(paksTokenizer, " ");
+                int totalPaks = 0;
+                while (token != NULL && totalPaks < MAX_ADDITIONAL_PAKS) {
+                    Q_strncpyz(paksBuf[totalPaks], token, BIG_INFO_STRING);
+                    totalPaks++;
+                    token = strtok(NULL, " ");
+                }
+
+                for (int i = 0; i < totalPaks; i++) {
+                    token = paksBuf[i];
                     res = FS_FindPakByPakName(token, &gamename, &basename, &checksum);
 
                     if (res) {
