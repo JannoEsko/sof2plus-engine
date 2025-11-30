@@ -758,8 +758,6 @@ void SV_SpawnServer( char *server, qboolean killBots ) {
                         Q_strcat(refPaks, sizeof(refPaks), va("%s%s/%s", strlen(refPaks) > 0 ? " " : "", gamename, basename));
                         Q_strcat(refChecksums, sizeof(refChecksums), va("%s%d", strlen(refChecksums) > 0 ? " " : "", checksum));
                     }
-
-                    token = strtok(NULL, " ");
                 }
             }
 
