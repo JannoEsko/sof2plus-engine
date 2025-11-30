@@ -518,6 +518,14 @@ void Com_ParseCommandLine( char *commandLine ) {
     }
 }
 
+void Com_AppendCommandToConsoleLine( const char *command ) {
+    if ( com_numConsoleLines == MAX_CONSOLE_LINES ) {
+        return;
+    }
+    com_consoleLines[com_numConsoleLines] = command;
+    com_numConsoleLines++;
+}
+
 
 /*
 ===================
@@ -2718,7 +2726,8 @@ void Com_Init( char *commandLine ) {
     Cmd_AddCommand ("writeconfig", Com_WriteConfig_f );
     Cmd_SetCommandCompletionFunc( "writeconfig", Cmd_CompleteCfgName );
     Cmd_AddCommand("game_restart", Com_GameRestart_f);
-
+    Cmd_AddCommand("delayed_cmd", Cbuf_DelayedCommand_f);
+    
     Com_ExecuteCfg();
 
     // override anything from the config files with command line args
@@ -2833,6 +2842,9 @@ void Com_Init( char *commandLine ) {
 #endif
         }
     }
+
+    // At this point, whatever is passed with 'delayed_cmd' will not be executed, as AddStartupCommands will execute whatever we got in the command line.
+    Cmd_RemoveCommand("delayed_cmd");
 
     // start in full screen ui mode
     Cvar_Set("r_uiFullScreen", "1");

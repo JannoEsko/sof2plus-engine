@@ -893,3 +893,8 @@ void Cmd_OverwriteArg(int argNum, const char* newArg) {
     cmd_argv[argNum] = dst;
 }
 
+void Cbuf_DelayedCommand_f(void) {
+    static char delayedCmdBuf[MAX_STRING_CHARS];
+    Q_strncpyz(delayedCmdBuf, Cmd_ArgsFrom(1), sizeof(delayedCmdBuf));
+    Com_AppendCommandToConsoleLine(delayedCmdBuf);
+}

@@ -482,6 +482,8 @@ void    Cmd_ExecuteString( const char *text );
 void    Cmd_OverwriteArg( int argNum, const char* newArg );
 // Overwrites an argument at a specific argc
 
+void    Cbuf_DelayedCommand_f(void);
+// Sets current command to be executed with a delay
 
 /*
 ==============================================================
@@ -998,6 +1000,7 @@ void Com_TouchMemory( void );
 void Com_Init( char *commandLine );
 void Com_Frame( void );
 void Com_Shutdown( void );
+void Com_AppendCommandToConsoleLine(const char* command);
 
 
 /*
