@@ -84,6 +84,7 @@ Some cvars which existed in the original SoF2MP/sof2ded or which were previously
 | `sv_legacyClientMod` | `sv_silverClientMod` | Defines Silver-side client mod name |
 | `g_spoofGametype` | `g_spoofGametype` | `1` = show public gametype name, `0` = disable spoofing, now changeable through console or config files |
 | `g_publicGametype` | `g_publicGametype` | The gametype name visible to clients when spoofing is active, now changeable through console or config files |
+| `sv_smartAdditionalPaks` | `sv_smartAdditionalPaksGold` | Cvar name was changed to have a distinction between Silver and Gold additional paks along with adding similar functionality to Silver |
 
 ---
 
@@ -104,11 +105,12 @@ Limit downloads to only the `.pk3` containing the current map:
 sv_smartDownload 1
 ```
 
-As `sv_smartDownload` does remove all packages from `sv_referencedPaks` except for the current map, there is a possibility to enforce additional packages to be sent to the client with a cvar `sv_smartAdditionalPaks`.
+As `sv_smartDownload` does remove all packages from `sv_referencedPaks` except for the current map, there is a possibility to enforce additional packages to be sent to the client with cvars `sv_smartAdditionalPaksSilver` and `sv_smartAdditionalPaksGold`.
 ```
-sv_smartAdditionalPaks "pak1 pak2 pak3"
+sv_smartAdditionalPaksSilver "pak1 pak2 pak3"
+sv_smartAdditionalPaksGold "pak4 pak5 pak6"
 ```
-Additional packages is a space delimited list, where the package names shouldn't contain extensions (.pk3) and do note that they will only be served to Gold clients as it is today.
+Additional packages is a space delimited list, where the package names shouldn't contain extensions (.pk3).
 This does make `sv_pure` usage useless, but running pure server in a multiprotocol state nevertheless wouldn't properly work.
 
 ---
