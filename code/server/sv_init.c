@@ -77,7 +77,7 @@ static void SV_SendConfigstring(client_t *client, int index)
                 Info_SetValueForKey_Big(bigInfoString, "fs_game", silverMod->string);
 
 
-                if (goldMod && goldMod->string && strlen(goldMod->string) > 0 && Q_stricmp(goldMod->string, "none") && Q_stricmp(goldMod->string, goldMod->string)) {
+                if (goldMod && goldMod->string && strlen(goldMod->string) > 0 && Q_stricmp(goldMod->string, "none") && Q_stricmp(goldMod->string, silverMod->string)) {
                     Q_strncpyz(refPaks, Info_ValueForKey(bigInfoString, "sv_referencedPakNames"), sizeof(refPaks));
                     Q_strncpyz(refChecksums, Info_ValueForKey(bigInfoString, "sv_referencedPaks"), sizeof(refChecksums));
 
@@ -90,7 +90,7 @@ static void SV_SendConfigstring(client_t *client, int index)
             else if (client->commProto == COMMPROTO_GOLD && goldMod && goldMod->string && strlen(goldMod->string) > 0 && Q_stricmp(goldMod->string, "none")) {
                 Info_SetValueForKey_Big(bigInfoString, "fs_game", goldMod->string);
 
-                if (silverMod && silverMod->string && strlen(silverMod->string) > 0 && Q_stricmp(silverMod->string, "none") && Q_stricmp(silverMod->string, silverMod->string)) {
+                if (silverMod && silverMod->string && strlen(silverMod->string) > 0 && Q_stricmp(silverMod->string, "none") && Q_stricmp(silverMod->string, goldMod->string)) {
                     Q_strncpyz(refPaks, Info_ValueForKey(bigInfoString, "sv_referencedPakNames"), sizeof(refPaks));
                     Q_strncpyz(refChecksums, Info_ValueForKey(bigInfoString, "sv_referencedPaks"), sizeof(refChecksums));
 
@@ -695,7 +695,8 @@ void SV_SpawnServer( char *server, qboolean killBots ) {
     // out which pk3s should be auto-downloaded
 
     sv_smartDownload = Cvar_Get("sv_smartDownload", "1", CVAR_ARCHIVE | CVAR_LATCH);
-    sv_smartAdditionalPaks = Cvar_Get("sv_smartAdditionalPaks", "", CVAR_ARCHIVE | CVAR_LATCH);
+    sv_smartAdditionalPaksGold = Cvar_Get("sv_smartAdditionalPaksGold", "", CVAR_ARCHIVE | CVAR_LATCH);
+    sv_smartAdditionalPaksSilver = Cvar_Get("sv_smartAdditionalPaksSilver", "", CVAR_ARCHIVE | CVAR_LATCH);
 
     if (sv_smartDownload->integer) {
         // we only ask for the pk3 file which contains the current map.
@@ -703,6 +704,8 @@ void SV_SpawnServer( char *server, qboolean killBots ) {
         char* basename;
         int checksum = 0;
         char refPaks[BIG_INFO_STRING], refChecksums[BIG_INFO_STRING];
+        char paksTokenizer[MAX_CVAR_VALUE_STRING];
+        char paksBuf[MAX_ADDITIONAL_PAKS][MAX_CVAR_VALUE_STRING];
         char* fsGame = Cvar_VariableString("fs_game");
         qboolean res = FS_FindPakByFile(va("maps/%s.bsp", server), &gamename, &basename, &checksum);
 
@@ -730,12 +733,11 @@ void SV_SpawnServer( char *server, qboolean killBots ) {
             // additional info gets added only if we're using smartdl and we found a pk3 with the map.
             // otherwise we'll fall back to the standard refpaks which will contain whatever's needed.
 
-            if (strlen(sv_smartAdditionalPaks->string)) {
+            if (strlen(sv_smartAdditionalPaksGold->string)) {
 
-                char paksTokenizer[BIG_INFO_STRING];
-                char paksBuf[MAX_ADDITIONAL_PAKS][BIG_INFO_STRING];
+                Com_Memset(paksBuf, 0, sizeof(paksBuf));
 
-                Q_strncpyz(paksTokenizer, sv_smartAdditionalPaks->string, sizeof(paksTokenizer));
+                Q_strncpyz(paksTokenizer, sv_smartAdditionalPaksGold->string, sizeof(paksTokenizer));
 
                 char* token = strtok(paksTokenizer, " ");
                 int totalPaks = 0;
@@ -753,6 +755,34 @@ void SV_SpawnServer( char *server, qboolean killBots ) {
 
                         if (Q_stricmp(gamename, sv_goldClientMod->string) && !Q_stricmp(gamename, fsGame)) {
                             gamename = sv_goldClientMod->string;
+                        }
+
+                        Q_strcat(refPaks, sizeof(refPaks), va("%s%s/%s", strlen(refPaks) > 0 ? " " : "", gamename, basename));
+                        Q_strcat(refChecksums, sizeof(refChecksums), va("%s%d", strlen(refChecksums) > 0 ? " " : "", checksum));
+                    }
+                }
+            }
+
+            if (strlen(sv_smartAdditionalPaksSilver->string)) {
+
+                Q_strncpyz(paksTokenizer, sv_smartAdditionalPaksSilver->string, sizeof(paksTokenizer));
+
+                char* token = strtok(paksTokenizer, " ");
+                int totalPaks = 0;
+                while (token != NULL && totalPaks < MAX_ADDITIONAL_PAKS) {
+                    Q_strncpyz(paksBuf[totalPaks], token, BIG_INFO_STRING);
+                    totalPaks++;
+                    token = strtok(NULL, " ");
+                }
+
+                for (int i = 0; i < totalPaks; i++) {
+                    token = paksBuf[i];
+                    res = FS_FindPakByPakName(token, &gamename, &basename, &checksum);
+
+                    if (res) {
+
+                        if (Q_stricmp(gamename, sv_silverClientMod->string) && !Q_stricmp(gamename, fsGame)) {
+                            gamename = sv_silverClientMod->string;
                         }
 
                         Q_strcat(refPaks, sizeof(refPaks), va("%s%s/%s", strlen(refPaks) > 0 ? " " : "", gamename, basename));
