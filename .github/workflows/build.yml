@@ -15,7 +15,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        os: [ubuntu-latest, windows-latest, debian-11]
         arch: [x86, x86_64]
         build_type: [Debug, Release]
         compiler: [gcc, mingw, msvc]
@@ -26,8 +26,13 @@ jobs:
             compiler: msvc
           - os: windows-latest
             compiler: gcc
+          - os: debian-11
+            compiler: mingw
+          - os: debian-11
+            compiler: msvc
 
-    runs-on: ${{ matrix.os }}
+    runs-on: ${{ matrix.os == 'debian-11' && 'ubuntu-latest' || matrix.os }}
+    container: ${{ matrix.os == 'debian-11' && 'debian:11' || '' }}
 
     defaults:
       run:
