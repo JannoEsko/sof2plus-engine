@@ -214,7 +214,7 @@ jobs:
           ls -la artifacts/
 
       - name: Archive Artifacts
-        if: matrix.os == 'ubuntu-latest'
+        if: matrix.os == 'ubuntu-latest' || matrix.os == 'debian-11'
         run: |
           cd artifacts
           tar -czf "../sof2plus-${{ matrix.os }}-${{ matrix.arch }}-${{ matrix.build_type }}-${{ matrix.compiler }}.tar.gz" *
@@ -230,7 +230,7 @@ jobs:
           Write-Host "Created $name"
 
       - name: Upload Artifact (.tar.gz)
-        if: matrix.os == 'ubuntu-latest'
+        if: matrix.os == 'ubuntu-latest' || matrix.os == 'debian-11'
         uses: actions/upload-artifact@v4
         with:
           name: "sof2plus-${{ matrix.os }}-${{ matrix.arch }}-${{ matrix.build_type }}-${{ matrix.compiler }}"
