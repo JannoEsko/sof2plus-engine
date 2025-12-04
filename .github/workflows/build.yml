@@ -39,9 +39,9 @@ jobs:
         shell: bash
 
     steps:
-      - name: Install Git (Debian Docker image)
+      - name: Install Git and sudo (Debian Docker image)
         if: matrix.os == 'debian-11'
-        run: apt update && apt install -y git ca-certificates
+        run: apt update && apt install -y git ca-certificates sudo
 
       - name: Checkout
         uses: actions/checkout@v4
