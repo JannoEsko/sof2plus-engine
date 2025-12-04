@@ -4,7 +4,9 @@ if(NOT CMAKE_C_COMPILER_ID STREQUAL "GNU" AND NOT CMAKE_C_COMPILER_ID MATCHES "^
     return()
 endif()
 
-enable_language(ASM)
+if(NOT ARCH STREQUAL "arm")
+    enable_language(ASM)
+endif()
 
 set(ASM_SOURCES
     ${SOURCE_DIR}/asm/ftola.c

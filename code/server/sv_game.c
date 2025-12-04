@@ -404,7 +404,7 @@ The module is making a system call
 */
 intptr_t SV_GameSystemCalls(qboolean runningQVM, intptr_t *args ) {
 
-#if defined(__x86_64__) || defined(_M_X64) || defined(_M_AMD64)
+#if defined(__x86_64__) || defined(_M_X64) || defined(_M_AMD64) || defined(__aarch64__) || defined(__ARM64__) || defined(_M_ARM64)
     if (runningQVM && !qvmPointerMarshallingInitialized) {
         qvmPtr_init();
         qvmPointerMarshallingInitialized = qtrue;

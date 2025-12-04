@@ -1070,20 +1070,22 @@ char *QVM_Local_StringAlloc ( const char *source )
 
 
 // Pointer marshalling shenanigans makes a return...
-
+#if defined(__x86_64__) || defined(_M_X64) || defined(_M_AMD64) || defined(__aarch64__) || defined(__ARM64__) || defined(_M_ARM64)
 static qvmPtrEntry_t qvmPtrTable[QVMPTR_MAX_PTRS];
 static uint32_t qvmPtrTable_free_indices[QVMPTR_MAX_PTRS];
 static uint32_t qvmPtrTable_free_count = 0;
 static uint32_t qvmPtrTable_next_index = 1;
-
+#endif
 void qvmPtr_init(void) {
+#if defined(__x86_64__) || defined(_M_X64) || defined(_M_AMD64) || defined(__aarch64__) || defined(__ARM64__) || defined(_M_ARM64)
     Com_Memset(qvmPtrTable, 0, sizeof(qvmPtrTable));
     qvmPtrTable_free_count = 0;
     qvmPtrTable_next_index = 1;
+#endif
 }
 
 uint32_t qvmPtr_register(intptr_t ptr, uint32_t parent_handle) {
-#if defined(__x86_64__) || defined(_M_X64) || defined(_M_AMD64)
+#if defined(__x86_64__) || defined(_M_X64) || defined(_M_AMD64) || defined(__aarch64__) || defined(__ARM64__) || defined(_M_ARM64)
     if (!ptr) return QVMPTR_INVALID_HANDLE;
 
     uint32_t idx;
@@ -1122,7 +1124,7 @@ uint32_t qvmPtr_register(intptr_t ptr, uint32_t parent_handle) {
 }
 
 intptr_t qvmPtr_resolve(uint32_t handle) {
-#if defined(__x86_64__) || defined(_M_X64) || defined(_M_AMD64)
+#if defined(__x86_64__) || defined(_M_X64) || defined(_M_AMD64) || defined(__aarch64__) || defined(__ARM64__) || defined(_M_ARM64)
     if (handle <= QVMPTR_INVALID_HANDLE || handle >= QVMPTR_MAX_PTRS || !qvmPtrTable[handle].ptr) {
         Com_DPrintf("Handle %d not resolved.\r\n", handle);
         return QVMPTR_INVALID_HANDLE;
@@ -1134,7 +1136,7 @@ intptr_t qvmPtr_resolve(uint32_t handle) {
 }
 
 qboolean qvmPtr_remove(uint32_t handle) {
-#if defined(__x86_64__) || defined(_M_X64) || defined(_M_AMD64)
+#if defined(__x86_64__) || defined(_M_X64) || defined(_M_AMD64) || defined(__aarch64__) || defined(__ARM64__) || defined(_M_ARM64)
     if (handle <= QVMPTR_INVALID_HANDLE || handle >= QVMPTR_MAX_PTRS || !qvmPtrTable[handle].ptr) {
         return qfalse;
     }
@@ -1167,7 +1169,7 @@ qboolean qvmPtr_remove(uint32_t handle) {
 }
 
 void qvmPtr_show(void) {
-#if defined(__x86_64__) || defined(_M_X64) || defined(_M_AMD64)
+#if defined(__x86_64__) || defined(_M_X64) || defined(_M_AMD64) || defined(__aarch64__) || defined(__ARM64__) || defined(_M_ARM64)
     for (uint32_t i = 1; i < QVMPTR_MAX_PTRS; i++) { 
         if (qvmPtrTable[i].ptr) {
             Com_DPrintf("[QVMPtr] Idx %u points to %p (first_child %u, next_sibling %u)\n",

@@ -89,8 +89,10 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #ifdef __GNUC__
 #define UNUSED_VAR __attribute__((unused))
+#define Q_NO_RETURN __attribute__((noreturn))
 #else
 #define UNUSED_VAR
+#define Q_NO_RETURN
 #endif
 
 #if (defined _MSC_VER)
