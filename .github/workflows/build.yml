@@ -127,7 +127,11 @@ jobs:
       # ==================================================================
       - name: Install Linux deps
         if: matrix.compiler == 'gcc'
-        run: sudo apt-get update -qq && sudo apt-get install -y build-essential cmake ninja-build libsdl2-dev libjpeg-dev libpng-dev zlib1g-dev gcc-multilib g++-multilib libcurl4-openssl-dev
+        run: sudo apt-get update -qq && sudo apt-get install -y build-essential cmake ninja-build libsdl2-dev libjpeg-dev libpng-dev zlib1g-dev libcurl4-openssl-dev
+
+      - name: Install Multilib (Linux, non-ARM)
+        if: matrix.compilet == 'gcc' && matrix.arch != 'aarch64'
+        run: sudo apt-get install -y gcc-multilib g++-multilib 
 
       - name: Build libbacktrace (Linux Debug only)
         if: matrix.compiler == 'gcc' && matrix.build_type == 'Debug'
