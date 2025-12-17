@@ -656,7 +656,7 @@ void SV_FilterPaksAndChecksums(const char* filePaks, const char* checksums, cons
 
         // Check if the file belongs to the clientMod folder
         const char* slash = strchr(filePath, '/');
-        qboolean matchesClientMod = slash && strncmp(filePath, clientMod, slash - filePath) == 0 ? qtrue : qfalse;
+        qboolean matchesClientMod = slash && slash - filePath == strlen(clientMod) && strncmp(filePath, clientMod, slash - filePath) == 0 ? qtrue : qfalse;
 
         if (!matchesClientMod) {
             // Append file path to filteredPaks
@@ -768,9 +768,9 @@ static void SV_SendClientGameState( client_t *client ) {
                         Info_SetValueForKey_Big(bigInfoString, "sv_referencedPakNames", filteredPaks);
                         Info_SetValueForKey_Big(bigInfoString, "sv_referencedPaks", filteredChecksums);
                     }
-
                     
 
+                    
                     //Z_Free(sv.configstrings[start]);
                     //sv.configstrings[start] = CopyString(legacyClmod->string);
                 }
