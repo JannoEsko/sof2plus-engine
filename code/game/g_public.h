@@ -881,6 +881,7 @@ typedef enum {
 
     // Custom traps also for legacy ABI
     LEGACY_G_REMOVECOMMAND = 1001,
+    LEGACY_G_MEM_INIT
 
 } legacyGameImport_t;
 

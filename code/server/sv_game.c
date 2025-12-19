@@ -1353,6 +1353,21 @@ intptr_t SV_GameSystemCalls(qboolean runningQVM, intptr_t *args ) {
             Cmd_RemoveCommand(VMA(1));
             return 0;
 
+        case LEGACY_G_MEM_INIT:
+        {
+            void* gameMemory;
+
+            // Free any memory previously allocated by the game module.
+            // This should happen once per map.
+            Z_FreeTags(TAG_GAMEMEM);
+
+            // Allocate memory for the game module memory management system.
+            gameMemory = Z_TagMalloc(args[1], TAG_GAMEMEM);
+            Com_Memset(gameMemory, 0, args[1]);
+
+            return (intptr_t)gameMemory;
+        }
+
         default:
             Com_Error(ERR_DROP, "Bad game system trap: %ld", (long int)args[0]);
         }
