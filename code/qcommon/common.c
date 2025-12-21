@@ -2808,7 +2808,14 @@ void Com_Init( char *commandLine ) {
     sv_spoofGametype = Cvar_Get("g_spoofGametype", "0", CVAR_ARCHIVE | CVAR_LATCH);
     sv_goldClientMod = Cvar_Get("sv_goldClientMod", "", CVAR_ARCHIVE | CVAR_LATCH);
     sv_silverClientMod = Cvar_Get("sv_silverClientMod", "", CVAR_ARCHIVE | CVAR_LATCH);
+
+    // Don't expect gold players to run modern ABI anyhow.
+#ifdef _DEMO
+    sv_gameModernABI = Cvar_Get("sv_gameModernABI", "0", CVAR_ARCHIVE | CVAR_LATCH);
+#else
     sv_gameModernABI = Cvar_Get("sv_gameModernABI", "1", CVAR_ARCHIVE | CVAR_LATCH);
+#endif
+    
 
 #ifndef DEDICATED
     con_autochat = Cvar_Get("con_autochat", "1", CVAR_ARCHIVE);
