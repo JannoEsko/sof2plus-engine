@@ -1403,7 +1403,196 @@ typedef struct {
 
 // using the stringizing operator to save typing...
 #define NETF(x) #x,(size_t)&((entityState_t*)0)->x
+#define DNETF(x) #x,(size_t)&((entityState_t*)0)->x
 
+/*
+Addr 0x00554124 in SoF2MP-Test (version distributed with 1fxmod)
+NETF and PSF in one go.
+Name - bits - offset
+
+NETField 0: pos.trTime, 32, 16
+NETField 1: pos.trBase[0], 0, 24
+NETField 2: pos.trBase[1], 0, 28
+NETField 3: pos.trDelta[0], 0, 36
+NETField 4: pos.trDelta[1], 0, 40
+NETField 5: pos.trBase[2], 0, 32
+NETField 6: apos.trBase[1], 0, 64
+NETField 7: pos.trDelta[2], 0, 44
+NETField 8: apos.trBase[0], 0, 60
+NETField 9: event, 10, 184
+NETField 10: angles2[1], 0, 132
+NETField 11: eType, 8, 4
+NETField 12: torsoAnim, 12, 204
+NETField 13: torsoTimer, 12, 208
+NETField 14: eventParm, 0, 188
+NETField 15: legsAnim, 12, 200
+NETField 16: groundEntityNum, 10, 148
+NETField 17: pos.trType, 8, 12
+NETField 18: eFlags, 32, 8
+NETField 19: otherEntityNum, 10, 140
+NETField 20: weapon, 8, 196
+NETField 21: clientNum, 8, 172
+NETField 22: angles[1], 0, 120
+NETField 23: pos.trDuration, 32, 20
+NETField 24: apos.trType, 8, 48
+NETField 25: origin[0], 0, 92
+NETField 26: origin[1], 0, 96
+NETField 27: origin[2], 0, 100
+NETField 28: solid, 24, 180
+NETField 29: gametypeitems, 8, 192
+NETField 30: modelindex, 8, 164
+NETField 31: otherEntityNum2, 10, 144
+NETField 32: loopSound, 8, 156
+NETField 33: generic1, 8, 216
+NETField 34: mSoundSet, 6, 160
+NETField 35: origin2[2], 0, 112
+NETField 36: origin2[0], 0, 104
+NETField 37: origin2[1], 0, 108
+NETField 38: modelindex2, 8, 168
+NETField 39: angles[0], 0, 116
+NETField 40: time, 32, 84
+NETField 41: apos.trTime, 32, 52
+NETField 42: apos.trDuration, 32, 56
+NETField 43: apos.trBase[2], 0, 68
+NETField 44: apos.trDelta[0], 0, 72
+NETField 45: apos.trDelta[1], 0, 76
+NETField 46: apos.trDelta[2], 0, 80
+NETField 47: time2, 32, 88
+NETField 48: angles[2], 0, 124
+NETField 49: angles2[0], 0, 128
+NETField 50: angles2[2], 0, 136
+NETField 51: constantLight, 32, 152
+NETField 52: frame, 16, 176
+NETField 53: leanOffset, 6, 212
+
+// PSF starts here.
+
+NETField 54: commandTime, 32, 0
+NETField 55: origin[0], 0, 24
+NETField 56: origin[1], 0, 28
+NETField 57: bobCycle, 8, 8
+NETField 58: velocity[0], 0, 36
+NETField 59: velocity[1], 0, 40
+NETField 60: viewangles[1], 0, 188
+NETField 61: viewangles[0], 0, 184
+NETField 62: weaponTime, -16, 48
+NETField 63: weaponAnimTime, -16, 64
+NETField 64: weaponFireBurstCount, 3, 52
+NETField 65: weaponAnimId, -16, 56
+NETField 66: weaponAnimIdChoice, -16, 60
+NETField 67: weaponCallbackTime, 16, 68
+NETField 68: weaponCallbackStep, -8, 72
+NETField 69: origin[2], 0, 32
+NETField 70: velocity[2], 0, 44
+NETField 71: legsTimer, 8, 100
+NETField 72: pm_time, -16, 20
+NETField 73: eventSequence, 16, 124
+NETField 74: torsoAnim, 12, 112
+NETField 75: movementDir, 4, 116
+NETField 76: events[0], 10, 128
+NETField 77: events[1], 10, 132
+NETField 78: events[2], 10, 136
+NETField 79: events[3], 10, 140
+NETField 80: legsAnim, 12, 104
+NETField 81: pm_flags, 32, 12
+NETField 82: pm_debounce, 16, 16
+NETField 83: groundEntityNum, 10, 96
+NETField 84: weaponstate, 4, 180
+NETField 85: eFlags, 32, 120
+NETField 86: externalEvent, 10, 160
+NETField 87: gravity, 16, 76
+NETField 88: speed, 16, 80
+NETField 89: delta_angles[1], 16, 88
+NETField 90: externalEventParm, 8, 164
+NETField 91: viewheight, -8, 196
+NETField 92: damageEvent, 8, 200
+NETField 93: damageYaw, 8, 204
+NETField 94: damagePitch, 8, 208
+NETField 95: damageCount, 8, 212
+NETField 96: inaccuracy, 32, 808
+NETField 97: inaccuracyTime, 16, 812
+NETField 98: kickPitch, 18, 816
+NETField 99: generic1, 8, 800
+NETField 100: pm_type, 8, 4
+NETField 101: delta_angles[0], 16, 84
+NETField 102: delta_angles[2], 16, 92
+NETField 103: torsoTimer, 12, 108
+NETField 104: eventParms[0], 32, 144
+NETField 105: eventParms[1], 32, 148
+NETField 106: eventParms[2], 32, 152
+NETField 107: eventParms[3], 32, 156
+NETField 108: clientNum, 8, 172
+NETField 109: weapon, 5, 176
+NETField 110: viewangles[2], 0, 192
+NETField 111: loopSound, 16, 804
+NETField 112: zoomTime, 32, 836
+NETField 113: zoomFov, 6, 840
+NETField 114: ladder, 6, 844
+NETField 115: leanTime, 16, 848
+NETField 116: grenadeTimer, 13, 852
+NETField 117: respawnTimer, 32, 856
+
+*/
+
+#ifdef _DEMO
+netField_t  demoEntityStateFields[] = {
+    {DNETF(pos.trTime), 32},
+    {DNETF(pos.trBase[0]), 0},
+    {DNETF(pos.trBase[1]), 0},
+    {DNETF(pos.trDelta[0]), 0},
+    {DNETF(pos.trDelta[1]), 0},
+    {DNETF(pos.trBase[2]), 0},
+    {DNETF(apos.trBase[1]), 0},
+    {DNETF(pos.trDelta[2]), 0},
+    {DNETF(apos.trBase[0]), 0},
+    {DNETF(event), GENTITYNUM_BITS},
+    {DNETF(angles2[1]), 0},
+    {DNETF(eType), 8},
+    {DNETF(torsoAnim), 12},
+    {DNETF(torsoTimer), 12},
+    {DNETF(eventParm), 0},
+    {DNETF(legsAnim), 12},
+    {DNETF(groundEntityNum), GENTITYNUM_BITS},
+    {DNETF(pos.trType), 8},
+    {DNETF(eFlags), 32},
+    {DNETF(otherEntityNum), GENTITYNUM_BITS},
+    {DNETF(weapon), 8},
+    {DNETF(clientNum), 8},
+    {DNETF(angles[1]), 0},
+    {DNETF(pos.trDuration), 32},
+    {DNETF(apos.trType), 8},
+    {DNETF(origin[0]), 0},
+    {DNETF(origin[1]), 0},
+    {DNETF(origin[2]), 0},
+    {DNETF(solid), 24},
+    {DNETF(gametypeitems), 8},
+    {DNETF(modelindex), 8},
+    {DNETF(otherEntityNum2), GENTITYNUM_BITS},
+    {DNETF(loopSound), 8},
+    {DNETF(generic1), 8},
+    {DNETF(mSoundSet), 6},
+    {DNETF(origin2[2]), 0},
+    {DNETF(origin2[0]), 0},
+    {DNETF(origin2[1]), 0},
+    {DNETF(modelindex2), 8},
+    {DNETF(angles[0]), 0},
+    {DNETF(time), 32},
+    {DNETF(apos.trTime), 32},
+    {DNETF(apos.trDuration), 32},
+    {DNETF(apos.trBase[2]), 0},
+    {DNETF(apos.trDelta[0]), 0},
+    {DNETF(apos.trDelta[1]), 0},
+    {DNETF(apos.trDelta[2]), 0},
+    {DNETF(time2), 32},
+    {DNETF(angles[2]), 0},
+    {DNETF(angles2[0]), 0},
+    {DNETF(angles2[2]), 0},
+    {DNETF(constantLight), 32},
+    {DNETF(frame), 16},
+    {DNETF(leanOffset), 6},
+
+};
+#endif
 netField_t  legacyEntityStateFields[] =
 {
     {NETF(pos.trTime), 32},
@@ -1566,11 +1755,17 @@ void MSG_WriteDeltaEntity( msg_t *msg, struct entityState_s *from, struct entity
     if (commProto == COMMPROTO_GOLD) {
         entityStateFields_Local = entityStateFields;
         numFields = ARRAY_LEN(entityStateFields);
-    } else if (commProto == COMMPROTO_SILVER) {
+    }
+    else if (commProto == COMMPROTO_SILVER) {
         entityStateFields_Local = legacyEntityStateFields;
         numFields = ARRAY_LEN(legacyEntityStateFields);
+#ifdef _DEMO
+    } else if (commProto == COMMPROTO_DEMO) {
+        entityStateFields_Local = demoEntityStateFields;
+        numFields = ARRAY_LEN(demoEntityStateFields);
+#endif
     } else {
-        Com_Error(ERR_FATAL, "commProto is not gold or silver (value: %d)", commProto);
+        Com_Error(ERR_FATAL, "commProto is not gold, silver or demo (value: %d)", commProto);
         return;
     }
 
@@ -2176,6 +2371,77 @@ plyer_state_t communication
 
 // using the stringizing operator to save typing...
 #define PSF(x) #x,(size_t)&((playerState_t*)0)->x
+#define DPSF(x) #x,(size_t)&((playerState_t*)0)->x
+
+#ifdef _DEMO
+netField_t  demoPlayerStateFields[] = {
+    {DPSF(commandTime), 32},
+    {DPSF(origin[0]), 0},
+    {DPSF(origin[1]), 0},
+    {DPSF(bobCycle), 8},
+    {DPSF(velocity[0]), 0},
+    {DPSF(velocity[1]), 0},
+    {DPSF(viewangles[1]), 0},
+    {DPSF(viewangles[0]), 0},
+    {DPSF(weaponTime), -16},
+    {DPSF(weaponAnimTime), -16},
+    {DPSF(weaponFireBurstCount), 3},
+    {DPSF(weaponAnimId), -16},
+    {DPSF(weaponAnimIdChoice), -16},
+    {DPSF(weaponCallbackTime), 16},
+    {DPSF(weaponCallbackStep), -8},
+    {DPSF(origin[2]), 0},
+    {DPSF(velocity[2]), 0},
+    {DPSF(legsTimer), 8},
+    {DPSF(pm_time), -16},
+    {DPSF(eventSequence), 16},
+    {DPSF(torsoAnim), 12},
+    {DPSF(movementDir), 4},
+    {DPSF(events[0]), GENTITYNUM_BITS},
+    {DPSF(events[1]), GENTITYNUM_BITS},
+    {DPSF(events[2]), GENTITYNUM_BITS},
+    {DPSF(events[3]), GENTITYNUM_BITS},
+    {DPSF(legsAnim), 12},
+    {DPSF(pm_flags), 32},
+    {DPSF(pm_debounce), 16},
+    {DPSF(groundEntityNum), GENTITYNUM_BITS},
+    {DPSF(weaponstate), 4},
+    {DPSF(eFlags), 32},
+    {DPSF(externalEvent), GENTITYNUM_BITS},
+    {DPSF(gravity), 16},
+    {DPSF(speed), 16},
+    {DPSF(delta_angles[1]), 16},
+    {DPSF(externalEventParm), 8},
+    {DPSF(viewheight), -8},
+    {DPSF(damageEvent), 8},
+    {DPSF(damageYaw), 8},
+    {DPSF(damagePitch), 8},
+    {DPSF(damageCount), 8},
+    {DPSF(inaccuracy), 32},
+    {DPSF(inaccuracyTime), 16},
+    {DPSF(kickPitch), 18},
+    {DPSF(generic1), 8},
+    {DPSF(pm_type), 8},
+    {DPSF(delta_angles[0]), 16},
+    {DPSF(delta_angles[2]), 16},
+    {DPSF(torsoTimer), 12},
+    {DPSF(eventParms[0]), 32},
+    {DPSF(eventParms[1]), 32},
+    {DPSF(eventParms[2]), 32},
+    {DPSF(eventParms[3]), 32},
+    {DPSF(clientNum), 8},
+    {DPSF(weapon), 5},
+    {DPSF(viewangles[2]), 0},
+    {DPSF(loopSound), 16},
+    {DPSF(zoomTime), 32},
+    {DPSF(zoomFov), 6},
+    {DPSF(ladder), 6},
+    {DPSF(leanTime), 16},
+    {DPSF(grenadeTimer), 13},
+    {DPSF(respawnTimer), 32},
+
+};
+#endif
 
 netField_t  legacyPlayerStateFields[] =
 {
@@ -2449,11 +2715,17 @@ void MSG_WriteDeltaPlayerstate( msg_t *msg, struct playerState_s *from, struct p
     if (commProto == COMMPROTO_GOLD) {
         playerStateFields_Local = playerStateFields;
         numFields = ARRAY_LEN(playerStateFields);
-    } else if (commProto == COMMPROTO_SILVER) {
+    }
+    else if (commProto == COMMPROTO_SILVER) {
         playerStateFields_Local = legacyPlayerStateFields;
         numFields = ARRAY_LEN(legacyPlayerStateFields);
+#ifdef _DEMO
+    } else if (commProto == COMMPROTO_DEMO) {
+        playerStateFields_Local = demoPlayerStateFields;
+        numFields = ARRAY_LEN(demoPlayerStateFields);
+#endif
     } else {
-        Com_Error(ERR_FATAL, "commProto is not gold or silver (value: %d)", commProto);
+        Com_Error(ERR_FATAL, "commProto is not gold, silver or demo (value: %d)", commProto);
         return;
     }
 
@@ -2462,7 +2734,7 @@ void MSG_WriteDeltaPlayerstate( msg_t *msg, struct playerState_s *from, struct p
         Com_Memset (&dummy, 0, sizeof(dummy));
     }
 
-    numFields = ARRAY_LEN( playerStateFields );
+    //numFields = ARRAY_LEN( playerStateFields );
 
     if (net_multiprotocol->integer) {
         if (commProto == COMMPROTO_SILVER && !net_runningLegacy->integer) {

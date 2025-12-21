@@ -1,9 +1,25 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug_Demo|Win32">
+      <Configuration>Debug_Demo</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug_Demo|x64">
+      <Configuration>Debug_Demo</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
     <ProjectConfiguration Include="Debug|Win32">
       <Configuration>Debug</Configuration>
       <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release_Demo|Win32">
+      <Configuration>Release_Demo</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release_Demo|x64">
+      <Configuration>Release_Demo</Configuration>
+      <Platform>x64</Platform>
     </ProjectConfiguration>
     <ProjectConfiguration Include="Release|Win32">
       <Configuration>Release</Configuration>
@@ -32,7 +48,21 @@
     <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>NotSet</CharacterSet>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug_Demo|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <CharacterSet>NotSet</CharacterSet>
+  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <WholeProgramOptimization>false</WholeProgramOptimization>
+    <CharacterSet>NotSet</CharacterSet>
+    <UseOfMfc>false</UseOfMfc>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release_Demo|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v143</PlatformToolset>
@@ -47,7 +77,22 @@
     <CharacterSet>NotSet</CharacterSet>
     <UseOfMfc>false</UseOfMfc>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug_Demo|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <CharacterSet>NotSet</CharacterSet>
+    <UseOfMfc>false</UseOfMfc>
+  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <WholeProgramOptimization>false</WholeProgramOptimization>
+    <CharacterSet>NotSet</CharacterSet>
+    <UseOfMfc>false</UseOfMfc>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release_Demo|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v143</PlatformToolset>
@@ -63,17 +108,36 @@
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug_Demo|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release_Demo|Win32'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug_Demo|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release_Demo|x64'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <LinkIncremental>true</LinkIncremental>
+    <OutDir>..\..\build\debug-msvc14-x86</OutDir>
+    <IntDir>..\..\build\debug-msvc14-x86\ded\</IntDir>
+    <TargetName>sof2plus.x86</TargetName>
+    <GenerateManifest>false</GenerateManifest>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug_Demo|Win32'">
     <LinkIncremental>true</LinkIncremental>
     <OutDir>..\..\build\debug-msvc14-x86</OutDir>
     <IntDir>..\..\build\debug-msvc14-x86\ded\</IntDir>
@@ -87,6 +151,13 @@
     <IntDir>..\..\build\debug-msvc14-x86_64\ded\</IntDir>
     <TargetName>sof2plus.x86_64</TargetName>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug_Demo|x64'">
+    <LinkIncremental>true</LinkIncremental>
+    <GenerateManifest>false</GenerateManifest>
+    <OutDir>..\..\build\debug-msvc14-x86_64</OutDir>
+    <IntDir>..\..\build\debug-msvc14-x86_64\ded\</IntDir>
+    <TargetName>sof2plus.x86_64</TargetName>
+  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
     <OutDir>..\..\build\release-msvc14-x86</OutDir>
@@ -94,7 +165,21 @@
     <TargetName>sof2plus.x86</TargetName>
     <GenerateManifest>false</GenerateManifest>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release_Demo|Win32'">
+    <LinkIncremental>false</LinkIncremental>
+    <OutDir>..\..\build\release-msvc14-x86</OutDir>
+    <IntDir>..\..\build\release-msvc14-x86\ded\</IntDir>
+    <TargetName>sof2plus.x86</TargetName>
+    <GenerateManifest>false</GenerateManifest>
+  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <LinkIncremental>false</LinkIncremental>
+    <OutDir>..\..\build\release-msvc14-x86_64</OutDir>
+    <IntDir>..\..\build\release-msvc14-x86_64\ded\</IntDir>
+    <TargetName>sof2plus.x86_64</TargetName>
+    <GenerateManifest>false</GenerateManifest>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release_Demo|x64'">
     <LinkIncremental>false</LinkIncremental>
     <OutDir>..\..\build\release-msvc14-x86_64</OutDir>
     <IntDir>..\..\build\release-msvc14-x86_64\ded\</IntDir>
@@ -124,6 +209,38 @@
       <AdditionalDependencies>user32.lib;advapi32.lib;winmm.lib;wsock32.lib;ws2_32.lib;DbgHelp.lib</AdditionalDependencies>
       <RandomizedBaseAddress>false</RandomizedBaseAddress>
       <DataExecutionPrevention />
+      <ImageHasSafeExceptionHandlers>
+      </ImageHasSafeExceptionHandlers>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+    </Link>
+    <ResourceCompile>
+      <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ResourceCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug_Demo|Win32'">
+    <ClCompile>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>_WIN32;WIN32;_WINDOWS;_CRT_SECURE_NO_DEPRECATE;BOTLIB;DEDICATED;USE_ICON;_DEMO;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <SDLCheck>
+      </SDLCheck>
+      <AdditionalIncludeDirectories>..\..\code\zlib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <BasicRuntimeChecks>Default</BasicRuntimeChecks>
+      <FloatingPointModel>Fast</FloatingPointModel>
+      <ProgramDataBaseFileName>$(IntDir)</ProgramDataBaseFileName>
+      <BrowseInformation>true</BrowseInformation>
+      <CompileAs>CompileAsC</CompileAs>
+      <MinimalRebuild>false</MinimalRebuild>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>user32.lib;advapi32.lib;winmm.lib;wsock32.lib;ws2_32.lib;DbgHelp.lib</AdditionalDependencies>
+      <RandomizedBaseAddress>false</RandomizedBaseAddress>
+      <DataExecutionPrevention>
+      </DataExecutionPrevention>
       <ImageHasSafeExceptionHandlers>
       </ImageHasSafeExceptionHandlers>
       <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
@@ -162,6 +279,37 @@
       <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ResourceCompile>
   </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug_Demo|x64'">
+    <ClCompile>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>_WIN64;__WIN64__;_WINDOWS;_CRT_SECURE_NO_DEPRECATE;BOTLIB;DEDICATED;USE_ICON;_DEMO;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <SDLCheck>
+      </SDLCheck>
+      <AdditionalIncludeDirectories>..\..\code\zlib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OmitFramePointers>false</OmitFramePointers>
+      <BasicRuntimeChecks>Default</BasicRuntimeChecks>
+      <FloatingPointModel>Fast</FloatingPointModel>
+      <ProgramDataBaseFileName>$(IntDir)</ProgramDataBaseFileName>
+      <BrowseInformation>true</BrowseInformation>
+      <CompileAs>CompileAsC</CompileAs>
+      <MinimalRebuild>false</MinimalRebuild>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>user32.lib;DbgHelp.lib;advapi32.lib;winmm.lib;wsock32.lib;ws2_32.lib</AdditionalDependencies>
+      <RandomizedBaseAddress>false</RandomizedBaseAddress>
+      <DataExecutionPrevention>
+      </DataExecutionPrevention>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+    </Link>
+    <ResourceCompile>
+      <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ResourceCompile>
+  </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
       <WarningLevel>Level4</WarningLevel>
@@ -191,6 +339,43 @@
       <AdditionalDependencies>user32.lib;advapi32.lib;winmm.lib;wsock32.lib;ws2_32.lib</AdditionalDependencies>
       <RandomizedBaseAddress>false</RandomizedBaseAddress>
       <DataExecutionPrevention />
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <ImageHasSafeExceptionHandlers>true</ImageHasSafeExceptionHandlers>
+    </Link>
+    <ResourceCompile>
+      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ResourceCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release_Demo|Win32'">
+    <ClCompile>
+      <WarningLevel>Level4</WarningLevel>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>false</IntrinsicFunctions>
+      <PreprocessorDefinitions>_WIN32;WIN32;NDEBUG;_WINDOWS;_CRT_SECURE_NO_DEPRECATE;BOTLIB;DEDICATED;USE_ICON;_DEMO;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <SDLCheck>
+      </SDLCheck>
+      <AdditionalIncludeDirectories>..\..\code\zlib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <StringPooling>true</StringPooling>
+      <FloatingPointModel>Fast</FloatingPointModel>
+      <ProgramDataBaseFileName>$(IntDir)</ProgramDataBaseFileName>
+      <CompileAs>CompileAsC</CompileAs>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <EnableCOMDATFolding>
+      </EnableCOMDATFolding>
+      <OptimizeReferences>
+      </OptimizeReferences>
+      <GenerateDebugInformation>false</GenerateDebugInformation>
+      <AdditionalDependencies>user32.lib;advapi32.lib;winmm.lib;wsock32.lib;ws2_32.lib</AdditionalDependencies>
+      <RandomizedBaseAddress>false</RandomizedBaseAddress>
+      <DataExecutionPrevention>
+      </DataExecutionPrevention>
       <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <ImageHasSafeExceptionHandlers>true</ImageHasSafeExceptionHandlers>
     </Link>
@@ -237,44 +422,116 @@
       <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ResourceCompile>
   </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release_Demo|x64'">
+    <ClCompile>
+      <WarningLevel>Level4</WarningLevel>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>false</IntrinsicFunctions>
+      <PreprocessorDefinitions>_WIN64;__WIN64__;NDEBUG;_WINDOWS;_CRT_SECURE_NO_DEPRECATE;BOTLIB;DEDICATED;USE_ICON;_DEMO;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <SDLCheck>
+      </SDLCheck>
+      <AdditionalIncludeDirectories>..\..\code\zlib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <OmitFramePointers>false</OmitFramePointers>
+      <StringPooling>true</StringPooling>
+      <FloatingPointModel>Fast</FloatingPointModel>
+      <ProgramDataBaseFileName>$(IntDir)</ProgramDataBaseFileName>
+      <CompileAs>CompileAsC</CompileAs>
+      <CallingConvention>Cdecl</CallingConvention>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <EnableCOMDATFolding>
+      </EnableCOMDATFolding>
+      <OptimizeReferences>
+      </OptimizeReferences>
+      <GenerateDebugInformation>false</GenerateDebugInformation>
+      <AdditionalDependencies>user32.lib;advapi32.lib;winmm.lib;wsock32.lib;ws2_32.lib</AdditionalDependencies>
+      <RandomizedBaseAddress>false</RandomizedBaseAddress>
+      <DataExecutionPrevention>
+      </DataExecutionPrevention>
+      <ImageHasSafeExceptionHandlers>
+      </ImageHasSafeExceptionHandlers>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+    </Link>
+    <ResourceCompile>
+      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ResourceCompile>
+  </ItemDefinitionGroup>
   <ItemGroup>
     <CustomBuild Include="..\..\code\asm\ftola.asm">
       <FileType>Document</FileType>
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">ml /c /Zi /safeseh /Fo"$(IntDir)%(Filename).asm.obj" "%(FullPath)"
 </Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug_Demo|Win32'">ml /c /Zi /safeseh /Fo"$(IntDir)%(Filename).asm.obj" "%(FullPath)"
+</Command>
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Assembling...</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug_Demo|Win32'">Assembling...</Message>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(IntDir)%(Filename).asm.obj;%(Outputs)</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug_Demo|Win32'">$(IntDir)%(Filename).asm.obj;%(Outputs)</Outputs>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">ml /c /Zi /safeseh /Fo"$(IntDir)%(Filename).asm.obj" "%(FullPath)"
 </Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release_Demo|Win32'">ml /c /Zi /safeseh /Fo"$(IntDir)%(Filename).asm.obj" "%(FullPath)"
+</Command>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Assembling...</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release_Demo|Win32'">Assembling...</Message>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(IntDir)%(Filename).asm.obj;%(Outputs)</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release_Demo|Win32'">$(IntDir)%(Filename).asm.obj;%(Outputs)</Outputs>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">ml64 /Didx64 /c /Zi /Fo"$(IntDir)%(Filename).asm.obj" "%(FullPath)"
 </Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release_Demo|x64'">ml64 /Didx64 /c /Zi /Fo"$(IntDir)%(Filename).asm.obj" "%(FullPath)"
+</Command>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Assembling...</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release_Demo|x64'">Assembling...</Message>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(IntDir)%(Filename).asm.obj;%(Outputs)</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release_Demo|x64'">$(IntDir)%(Filename).asm.obj;%(Outputs)</Outputs>
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">ml64 /Didx64 /c /Zi /Fo"$(IntDir)%(Filename).asm.obj" "%(FullPath)"
 </Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug_Demo|x64'">ml64 /Didx64 /c /Zi /Fo"$(IntDir)%(Filename).asm.obj" "%(FullPath)"
+</Command>
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Assembling...</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug_Demo|x64'">Assembling...</Message>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)%(Filename).asm.obj;%(Outputs)</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug_Demo|x64'">$(IntDir)%(Filename).asm.obj;%(Outputs)</Outputs>
     </CustomBuild>
     <CustomBuild Include="..\..\code\asm\snapvector.asm">
       <FileType>Document</FileType>
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">ml /c /Zi /safeseh /Fo"$(IntDir)%(Filename).asm.obj" "%(FullPath)"
 </Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug_Demo|Win32'">ml /c /Zi /safeseh /Fo"$(IntDir)%(Filename).asm.obj" "%(FullPath)"
+</Command>
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Assembling...</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug_Demo|Win32'">Assembling...</Message>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(IntDir)%(Filename).asm.obj;%(Outputs)</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug_Demo|Win32'">$(IntDir)%(Filename).asm.obj;%(Outputs)</Outputs>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">ml /c /Zi /safeseh /Fo"$(IntDir)%(Filename).asm.obj" "%(FullPath)"
 </Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release_Demo|Win32'">ml /c /Zi /safeseh /Fo"$(IntDir)%(Filename).asm.obj" "%(FullPath)"
+</Command>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Assembling...</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release_Demo|Win32'">Assembling...</Message>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(IntDir)%(Filename).asm.obj;%(Outputs)</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release_Demo|Win32'">$(IntDir)%(Filename).asm.obj;%(Outputs)</Outputs>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">ml64 /Didx64 /c /Zi /Fo"$(IntDir)%(Filename).asm.obj" "%(FullPath)"
 </Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release_Demo|x64'">ml64 /Didx64 /c /Zi /Fo"$(IntDir)%(Filename).asm.obj" "%(FullPath)"
+</Command>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Assembling...</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release_Demo|x64'">Assembling...</Message>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(IntDir)%(Filename).asm.obj;%(Outputs)</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release_Demo|x64'">$(IntDir)%(Filename).asm.obj;%(Outputs)</Outputs>
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">ml64 /Didx64 /c /Zi /Fo"$(IntDir)%(Filename).asm.obj" "%(FullPath)"
 </Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug_Demo|x64'">ml64 /Didx64 /c /Zi /Fo"$(IntDir)%(Filename).asm.obj" "%(FullPath)"
+</Command>
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Assembling...</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug_Demo|x64'">Assembling...</Message>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)%(Filename).asm.obj;%(Outputs)</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug_Demo|x64'">$(IntDir)%(Filename).asm.obj;%(Outputs)</Outputs>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>

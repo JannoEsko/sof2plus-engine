@@ -44,12 +44,16 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define SILVER_GAME_VERSION     "sof2mp-1.00"
 #define SILVER_GAME_PROTOCOL    "2002"
 #define SILVER_GAME_PROTOCOL_INT 2002
+#define DEMO_GAME_VERSION       "sof2mp-1.02t"
+#define DEMO_GAME_PROTOCOL      "2001"
+#define DEMO_GAME_PROTOCOL_INT  2001
 #endif
 
 typedef enum commProtocol_e {
     COMMPROTO_NONE,
     COMMPROTO_SILVER,
     COMMPROTO_GOLD,
+    COMMPROTO_DEMO,
     COMMPROTO_MAX
 } commProtocol_t;
 
@@ -269,8 +273,6 @@ PROTOCOL
 ==============================================================
 */
 
-#define PROTOCOL_VERSION    2004
-#define PROTOCOL_LEGACY_VERSION 2002
 // 1.31 - 67
 
 // maintain a list of compatible protocols for demo playing
@@ -913,6 +915,7 @@ extern  fileHandle_t    com_journalDataFile;
 
 extern  cvar_t* net_multiprotocol;
 extern  cvar_t* net_runningLegacy;
+extern  cvar_t* net_runningDemo;
 extern  cvar_t* sv_useLegacyNades;
 extern  cvar_t* sv_silverClientMod;
 extern  cvar_t* sv_goldClientMod;

@@ -94,6 +94,7 @@ cvar_t  *com_gracefulErrors;
 
 cvar_t* net_multiprotocol;
 cvar_t* net_runningLegacy;
+cvar_t* net_runningDemo;
 cvar_t* sv_useLegacyNades;
 #ifndef DEDICATED
 cvar_t  *con_autochat;
@@ -2328,6 +2329,13 @@ int Com_EventLoop( void ) {
                 }
             }
 
+            while (NET_GetLoopPacket(NS_SERVER, &evFrom, &buf, COMMPROTO_DEMO)) {
+                // if the server just shut down, flush the events
+                if (com_sv_running->integer) {
+                    Com_RunAndTimeServerPacket(&evFrom, &buf, COMMPROTO_DEMO);
+                }
+            }
+
             return ev.evTime;
         }
 
@@ -2800,7 +2808,14 @@ void Com_Init( char *commandLine ) {
     sv_spoofGametype = Cvar_Get("g_spoofGametype", "0", CVAR_ARCHIVE | CVAR_LATCH);
     sv_goldClientMod = Cvar_Get("sv_goldClientMod", "", CVAR_ARCHIVE | CVAR_LATCH);
     sv_silverClientMod = Cvar_Get("sv_silverClientMod", "", CVAR_ARCHIVE | CVAR_LATCH);
+
+    // Don't expect gold players to run modern ABI anyhow.
+#ifdef _DEMO
+    sv_gameModernABI = Cvar_Get("sv_gameModernABI", "0", CVAR_ARCHIVE | CVAR_LATCH);
+#else
     sv_gameModernABI = Cvar_Get("sv_gameModernABI", "1", CVAR_ARCHIVE | CVAR_LATCH);
+#endif
+    
 
 #ifndef DEDICATED
     con_autochat = Cvar_Get("con_autochat", "1", CVAR_ARCHIVE);

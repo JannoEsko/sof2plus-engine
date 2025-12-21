@@ -1,6 +1,6 @@
 ## SoF2Plus MP-MV
 
-**SoF2Plus MP-MV** (Multiprotocol-Multiversion) is an enhanced engine based on [sof2plus-engine on GitHub](https://github.com/sof2plus/sof2plus-engine) for *Soldier of Fortune II: Double Helix* that enables seamless interoperability between the **Silver (1.00)** and **Gold (1.03)** protocol versions.  
+**SoF2Plus MP-MV** (Multiprotocol-Multiversion) is an enhanced engine based on [sof2plus-engine on GitHub](https://github.com/sof2plus/sof2plus-engine) for *Soldier of Fortune II: Double Helix* that enables seamless interoperability between the **Silver (1.00)** and **Gold (1.03)** protocol versions. It also allows hosting Demo servers, but demo servers have a different build and cannot be run in multiprotocol mode.
 
 Originally designed to support one-way Gold → Silver communication and only being compatible with the modern ABI from SoF2Plus, the project has since evolved into a fully bidirectional and modular multiprotocol engine with modern and legacy mods compatibility.
 
@@ -38,6 +38,9 @@ For the rest, please refer to the config file which you can find [over here - mi
   ```
   net_multiprotocol 1
   ```
+
+#### Demo servers
+SoF2Plus has Demo support. While running multiprotocol servers with Demo does not make sense, then at least now a modern, safe (and also a Linux-compatible) engine for Demo exists as well!
 
 #### ⚙️ Dual ABI System
 SoF2Plus can load and run game modules built for **either modern or legacy ABIs**.
@@ -78,8 +81,9 @@ Some cvars which existed in the original SoF2MP/sof2ded or which were previously
 
 | Old Name | New Name | Description/Changes |
 |-----------|-----------|-------------|
-| `net_port` | `gold_net_port` | Port for Gold/1.03 protocol |
-| `legacy_net_port` | `silver_net_port` | Port for Silver/1.00 protocol |
+| `net_port` | `net_goldPort` | Port for Gold/1.03 protocol |
+| `legacy_net_port` | `net_silverPort` | Port for Silver/1.00 protocol |
+| `net_port` | `net_demoPort` | Port for Demo/1.02t protocol |
 | `sv_clientMod` | `sv_goldClientMod` | Defines Gold-side client mod name |
 | `sv_legacyClientMod` | `sv_silverClientMod` | Defines Silver-side client mod name |
 | `g_spoofGametype` | `g_spoofGametype` | `1` = show public gametype name, `0` = disable spoofing, now changeable through console or config files |
@@ -178,7 +182,7 @@ In the root folder of the repository, run the below command (depending on the ar
 cmake -S . -B {your-preferred-folder} -DCMAKE_BUILD_TYPE={release-type} {additional-options}
 ```
 
-Your preferred folder is truly up to you, for example, you can set it to `build-x86-debug`, which would mean that you're intending to build a debug version in x86 architecture. Release type is either Debug or Release. Valid additional options to use are `FORCE_32BIT` (default is off) and `USE_INTERNAL_LIBS` (default is on). If `USE_INTERNAL_LIBS` is turned off, you need to have zlib installed as well.
+Your preferred folder is truly up to you, for example, you can set it to `build-x86-debug`, which would mean that you're intending to build a debug version in x86 architecture. Release type is either Debug or Release. Valid additional options to use are `FORCE_32BIT` (default is off), `USE_INTERNAL_LIBS` (default is on) and `BUILD_DEMO` (default is off). If `USE_INTERNAL_LIBS` is turned off, you need to have zlib installed as well.
 
 **Please note that when building x86, using option `FORCE_32BIT` is required**
 

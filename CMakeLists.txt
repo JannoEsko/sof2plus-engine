@@ -16,6 +16,7 @@ option(BUILD_SERVER "Build dedicated server" ON)
 option(USE_INTERNAL_LIBS "Use internally packaged libraries" ON)
 option(USE_INTERNAL_ZLIB "Use internal copy of zlib" ${USE_INTERNAL_LIBS})
 option(USE_LOCAL_HEADERS "Use local header files instead of system headers" ${USE_INTERNAL_LIBS})
+option(BUILD_DEMO "Build the demo version of the engine" OFF)
 
 # Release build by default, set externally if you want something else
 if(NOT CMAKE_CONFIGURATION_TYPES AND NOT CMAKE_BUILD_TYPE)
@@ -50,6 +51,11 @@ add_compile_definitions(
         $<$<CONFIG:Debug>:_DEBUG>
         $<$<CONFIG:Release>:NDEBUG>
 )
+
+if(BUILD_DEMO)
+  add_compile_definitions(_DEMO)
+endif()
+
 # For CI to read from
 file(GENERATE OUTPUT ${CMAKE_BINARY_DIR}/version.txt CONTENT ${PRODUCT_VERSION})
 

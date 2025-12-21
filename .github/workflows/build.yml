@@ -19,6 +19,7 @@ jobs:
         arch: [x86, x86_64, arm64]
         build_type: [Debug, Release]
         compiler: [gcc, mingw, msvc]
+        demobuild: [OFF, ON]
         exclude:
           - os: ubuntu-latest
             compiler: mingw
@@ -67,11 +68,17 @@ jobs:
         if: matrix.compiler == 'msvc'
         uses: microsoft/setup-msbuild@v2
 
-      - name: Build MSVC
-        if: matrix.compiler == 'msvc'
+      - name: Build MSVC (Full)
+        if: matrix.compiler == 'msvc' && matrix.demobuild == 'OFF'
         shell: pwsh
         run: |
           msbuild misc/msvc14/sof2plus-engine.sln /p:Configuration='${{ matrix.build_type }}' /p:Platform='${{ matrix.arch == 'x86_64' && 'x64' || 'Win32' }}' /m
+
+      - name: Build MSVC (Demo)
+        if: matrix.compiler == 'msvc' && matrix.demobuild == 'ON'
+        shell: pwsh
+        run: |
+          msbuild misc/msvc14/sof2plus-engine.sln /p:Configuration='${{ matrix.build_type }}_Demo' /p:Platform='${{ matrix.arch == 'x86_64' && 'x64' || 'Win32' }}' /m
 
       # ==================================================================
       # MinGW via MSYS2
@@ -119,7 +126,7 @@ jobs:
           if [[ "${{ matrix.arch }}" == "x86" ]]; then
             EXTRA="-DFORCE_32BIT=On -DCMAKE_C_FLAGS=-m32 -DCMAKE_CXX_FLAGS=-m32 -DCMAKE_EXE_LINKER_FLAGS=-m32"
           fi
-          cmake ../../ -G Ninja -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} $EXTRA $STATIC_FLAGS
+          cmake ../../ -G Ninja -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DBUILD_DEMO=${{ matrix.demobuild }} $EXTRA $STATIC_FLAGS
           cmake --build . --parallel
 
       # ==================================================================
@@ -153,7 +160,7 @@ jobs:
           if [[ "${{ matrix.arch }}" == "x86" ]]; then
             EXTRA="-DFORCE_32BIT=On -DCMAKE_C_FLAGS=-m32 -DCMAKE_CXX_FLAGS=-m32 -DCMAKE_EXE_LINKER_FLAGS=-m32"
           fi
-          cmake ../../ -G Ninja -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} $EXTRA
+          cmake ../../ -G Ninja -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DBUILD_DEMO=${{ matrix.demobuild }} $EXTRA
           cmake --build . --parallel
 
       # ==================================================================
@@ -222,15 +229,15 @@ jobs:
           echo "Collected:"
           ls -la artifacts/
 
-      - name: Archive Artifacts
-        if: matrix.os == 'ubuntu-latest' || matrix.os == 'debian-11'
+      - name: Archive Artifacts (Full)
+        if: (matrix.os == 'ubuntu-latest' || matrix.os == 'debian-11') && matrix.demobuild == 'OFF'
         run: |
           cd artifacts
           tar -czf "../sof2plus-${{ matrix.os }}-${{ matrix.arch }}-${{ matrix.build_type }}-${{ matrix.compiler }}.tar.gz" *
           echo "Created tar.gz"
 
-      - name: Archive Artifacts (Windows)
-        if: matrix.os == 'windows-latest'
+      - name: Archive Artifacts (Full; Windows)
+        if: matrix.os == 'windows-latest' && matrix.demobuild == 'OFF'
         shell: pwsh
         run: |
           Set-Location artifacts
@@ -238,18 +245,49 @@ jobs:
           Compress-Archive -Path * -DestinationPath "../$name" -Force
           Write-Host "Created $name"
 
-      - name: Upload Artifact (.tar.gz)
-        if: matrix.os == 'ubuntu-latest' || matrix.os == 'debian-11'
+      - name: Upload Artifact (Full; .tar.gz)
+        if: (matrix.os == 'ubuntu-latest' || matrix.os == 'debian-11') && matrix.demobuild == 'OFF'
         uses: actions/upload-artifact@v4
         with:
           name: "sof2plus-${{ matrix.os }}-${{ matrix.arch }}-${{ matrix.build_type }}-${{ matrix.compiler }}"
           path: "*.tar.gz"
           
-      - name: Upload Artifact (.zip)
-        if: matrix.os == 'windows-latest'
+      - name: Upload Artifact (Full; .zip)
+        if: matrix.os == 'windows-latest' && matrix.demobuild == 'OFF'
         uses: actions/upload-artifact@v4
         with:
           name: "sof2plus-${{ matrix.os }}-${{ matrix.arch }}-${{ matrix.build_type }}-${{ matrix.compiler }}"
+          path: "*.zip"
+
+
+      - name: Archive Artifacts (Demo)
+        if: (matrix.os == 'ubuntu-latest' || matrix.os == 'debian-11') && matrix.demobuild == 'ON'
+        run: |
+          cd artifacts
+          tar -czf "../sof2plus-demo-${{ matrix.os }}-${{ matrix.arch }}-${{ matrix.build_type }}-${{ matrix.compiler }}.tar.gz" *
+          echo "Created tar.gz"
+
+      - name: Archive Artifacts (Demo, Windows)
+        if: matrix.os == 'windows-latest' && matrix.demobuild == 'ON'
+        shell: pwsh
+        run: |
+          Set-Location artifacts
+          $name = "sof2plus-demo-${{ matrix.os }}-${{ matrix.arch }}-${{ matrix.build_type }}-${{ matrix.compiler }}.zip"
+          Compress-Archive -Path * -DestinationPath "../$name" -Force
+          Write-Host "Created $name"
+
+      - name: Upload Artifact (Demo; .tar.gz)
+        if: (matrix.os == 'ubuntu-latest' || matrix.os == 'debian-11') && matrix.demobuild == 'ON'
+        uses: actions/upload-artifact@v4
+        with:
+          name: "sof2plus-demo-${{ matrix.os }}-${{ matrix.arch }}-${{ matrix.build_type }}-${{ matrix.compiler }}"
+          path: "*.tar.gz"
+          
+      - name: Upload Artifact (Demo; .zip)
+        if: matrix.os == 'windows-latest' && matrix.demobuild == 'ON'
+        uses: actions/upload-artifact@v4
+        with:
+          name: "sof2plus-demo-${{ matrix.os }}-${{ matrix.arch }}-${{ matrix.build_type }}-${{ matrix.compiler }}"
           path: "*.zip"
 
   # ==================================================================

@@ -125,6 +125,9 @@ void SV_GetChallenge(netadr_t from, commProtocol_t commProto)
     } else if (commProto == COMMPROTO_GOLD) {
         protocol = GOLD_GAME_PROTOCOL_INT;
     }
+    else if (commProto == COMMPROTO_DEMO) {
+        protocol = DEMO_GAME_PROTOCOL_INT;
+    }
 
     NET_OutOfBandPrint(NS_SERVER, challenge->adr, commProto, "challengeResponse %d %d %d",
                challenge->challenge, clientChallenge, protocol);
@@ -183,7 +186,7 @@ static qboolean SV_IsBanned(netadr_t *from, qboolean isexception)
  */
 static char* SV_TranslateOutfitting(commProtocol_t commProto, char* in) {
 
-    if (!in || strlen(in) < OUTFITTING_GROUP_MAX) {
+    if (!in || strlen(in) < OUTFITTING_GROUP_MAX || commProto != COMMPROTO_GOLD || commProto != COMMPROTO_SILVER) {
         return in;
     }
 
@@ -259,33 +262,45 @@ void SV_DirectConnect( netadr_t from, commProtocol_t commProto ) {
     Info_SetValueForKey(userinfo, "outfitting", SV_TranslateOutfitting(commProto, Info_ValueForKey(userinfo, "outfitting")));
     version = atoi(Info_ValueForKey(userinfo, "protocol"));
 
-    if (version != SILVER_GAME_PROTOCOL_INT && version != GOLD_GAME_PROTOCOL_INT) {
-        NET_OutOfBandPrint(NS_SERVER, from, commProto, "print\nServer uses protocol versions " SILVER_GAME_PROTOCOL " and "GOLD_GAME_PROTOCOL" "
-                   "(yours is %i).\n", version);
-        Com_DPrintf("    rejected connect from version %i\n", version);
-        return;
+    if (net_runningDemo->integer) {
+        if (version != DEMO_GAME_PROTOCOL_INT) {
+            NET_OutOfBandPrint(NS_SERVER, from, commProto, "print\nServer uses protocol version" DEMO_GAME_PROTOCOL
+                "(yours is %i).\n", version);
+            Com_DPrintf("    rejected connect from version %i\n", version);
+            return;
+        }
     }
-
-    if (commProto == COMMPROTO_SILVER && version != SILVER_GAME_PROTOCOL_INT) {
-        if (net_multiprotocol->integer) {
-            NET_OutOfBandPrint(NS_SERVER, from, commProto, "print\nConnect to port %s, this is Silver port.\n", Cvar_VariableString("gold_net_port"));
-        } else {
-            NET_OutOfBandPrint(NS_SERVER, from, commProto, "print\nServer uses protocol version " SILVER_GAME_PROTOCOL " "
-                   "(yours is %i).\n", version);
+    else {
+        if (version != SILVER_GAME_PROTOCOL_INT && version != GOLD_GAME_PROTOCOL_INT) {
+            NET_OutOfBandPrint(NS_SERVER, from, commProto, "print\nServer uses protocol versions " SILVER_GAME_PROTOCOL " and "GOLD_GAME_PROTOCOL" "
+                "(yours is %i).\n", version);
+            Com_DPrintf("    rejected connect from version %i\n", version);
+            return;
         }
 
-        return;
-    }
+        if (commProto == COMMPROTO_SILVER && version != SILVER_GAME_PROTOCOL_INT) {
+            if (net_multiprotocol->integer) {
+                NET_OutOfBandPrint(NS_SERVER, from, commProto, "print\nConnect to port %s, this is Silver port.\n", Cvar_VariableString("net_goldPort"));
+            }
+            else {
+                NET_OutOfBandPrint(NS_SERVER, from, commProto, "print\nServer uses protocol version " SILVER_GAME_PROTOCOL " "
+                    "(yours is %i).\n", version);
+            }
 
-    if (commProto == COMMPROTO_GOLD && version != GOLD_GAME_PROTOCOL_INT) {
-        if (net_multiprotocol->integer) {
-            NET_OutOfBandPrint(NS_SERVER, from, commProto, "print\nConnect to port %s, this is Gold port.\n", Cvar_VariableString("silver_net_port"));
-        } else {
-            NET_OutOfBandPrint(NS_SERVER, from, commProto, "print\nServer uses protocol version " GOLD_GAME_PROTOCOL " "
-                   "(yours is %i).\n", version);
+            return;
         }
 
-        return;
+        if (commProto == COMMPROTO_GOLD && version != GOLD_GAME_PROTOCOL_INT) {
+            if (net_multiprotocol->integer) {
+                NET_OutOfBandPrint(NS_SERVER, from, commProto, "print\nConnect to port %s, this is Gold port.\n", Cvar_VariableString("net_silverPort"));
+            }
+            else {
+                NET_OutOfBandPrint(NS_SERVER, from, commProto, "print\nServer uses protocol version " GOLD_GAME_PROTOCOL " "
+                    "(yours is %i).\n", version);
+            }
+
+            return;
+        }
     }
 
     challenge = atoi( Info_ValueForKey( userinfo, "challenge" ) );
@@ -735,79 +750,100 @@ static void SV_SendClientGameState( client_t *client ) {
             if (client->commProto == COMMPROTO_SILVER && start >= CS_HUDICONS) {
                 continue;
             }
+            else if (client->commProto == COMMPROTO_DEMO && start >= DEMOCS_MAX) {
+                break;
+            }
 
             MSG_WriteByte( &msg, svc_configstring );
             MSG_WriteShort( &msg, start );
 
-            if (start == CS_GAME_VERSION) {
-                if (client->commProto == COMMPROTO_SILVER) {
-                    MSG_WriteBigString(&msg, SILVER_GAME_VERSION);
-                } else if (client->commProto == COMMPROTO_GOLD) {
-                    MSG_WriteBigString(&msg, GOLD_GAME_VERSION);
+            if (net_runningDemo->integer) {
+
+                if (start == DEMOCS_GAME_VERSION) {
+                    MSG_WriteBigString(&msg, DEMO_GAME_VERSION);
                 }
-            }
-
-            else if (start == CS_SYSTEMINFO) {
-                char refPaks[BIG_INFO_VALUE], refChecksums[BIG_INFO_VALUE], filteredPaks[BIG_INFO_VALUE], filteredChecksums[BIG_INFO_VALUE];
-
-                Q_strncpyz(bigInfoString, sv.configstrings[start], sizeof(bigInfoString));
-                cvar_t* silverClientMod = Cvar_FindVar("sv_silverClientMod");
-                cvar_t* goldClientMod = Cvar_FindVar("sv_goldClientMod");
-
-                if (client->commProto == COMMPROTO_SILVER && silverClientMod && silverClientMod->string && strlen(silverClientMod->string) > 0 && Q_stricmp(silverClientMod->string, "none")) {
-                    
-                    
-                    Info_SetValueForKey_Big(bigInfoString, "fs_game", silverClientMod->string);
-                    
-                    if (goldClientMod && goldClientMod->string && strlen(goldClientMod->string) > 0 && Q_stricmp(goldClientMod->string, "none") && Q_stricmp(goldClientMod->string, silverClientMod->string)) {
-                        Q_strncpyz(refPaks, Info_ValueForKey(bigInfoString, "sv_referencedPakNames"), sizeof(refPaks));
-                        Q_strncpyz(refChecksums, Info_ValueForKey(bigInfoString, "sv_referencedPaks"), sizeof(refChecksums));
-
-                        SV_FilterPaksAndChecksums(refPaks, refChecksums, goldClientMod->string, filteredPaks, sizeof(filteredPaks), filteredChecksums, sizeof(filteredChecksums));
-
-                        Info_SetValueForKey_Big(bigInfoString, "sv_referencedPakNames", filteredPaks);
-                        Info_SetValueForKey_Big(bigInfoString, "sv_referencedPaks", filteredChecksums);
-                    }
-                    
-
-                    
-                    //Z_Free(sv.configstrings[start]);
-                    //sv.configstrings[start] = CopyString(legacyClmod->string);
-                }
-                else if (client->commProto == COMMPROTO_GOLD && goldClientMod && goldClientMod->string && strlen(goldClientMod->string) > 0 && Q_stricmp(goldClientMod->string, "none")) {
-                    Info_SetValueForKey_Big(bigInfoString, "fs_game", goldClientMod->string);
-
-                    if (silverClientMod && silverClientMod->string && strlen(silverClientMod->string) > 0 && Q_stricmp(silverClientMod->string, "none") && Q_stricmp(silverClientMod->string, goldClientMod->string)) {
-                        Q_strncpyz(refPaks, Info_ValueForKey(bigInfoString, "sv_referencedPakNames"), sizeof(refPaks));
-                        Q_strncpyz(refChecksums, Info_ValueForKey(bigInfoString, "sv_referencedPaks"), sizeof(refChecksums));
-
-                        SV_FilterPaksAndChecksums(refPaks, refChecksums, silverClientMod->string, filteredPaks, sizeof(filteredPaks), filteredChecksums, sizeof(filteredChecksums));
-
-                        Info_SetValueForKey_Big(bigInfoString, "sv_referencedPakNames", filteredPaks);
-                        Info_SetValueForKey_Big(bigInfoString, "sv_referencedPaks", filteredChecksums);
-                    }
-                }
-
-                MSG_WriteBigString(&msg, bigInfoString);
-            }
-
-            else if (start == CS_SERVERINFO) {
-                if (client->commProto == COMMPROTO_SILVER && !net_runningLegacy->integer) {
-                    Q_strncpyz(bigInfoString, sv.configstrings[start], sizeof(bigInfoString));
-                    Info_SetValueForKey_Big(bigInfoString, "g_availableWeapons", MSG_SpoofAvailableWeaponsFromGoldToSilver(Info_ValueForKey(bigInfoString, "g_availableWeapons")));
-                    MSG_WriteBigString(&msg, bigInfoString);
-                } else if (client->commProto == COMMPROTO_GOLD && net_runningLegacy->integer) {
-                    Q_strncpyz(bigInfoString, sv.configstrings[start], sizeof(bigInfoString));
-                    Info_SetValueForKey_Big(bigInfoString, "g_availableWeapons", MSG_SpoofAvailableWeaponsFromSilverToGold(Info_ValueForKey(bigInfoString, "g_availableWeapons")));
-                    // Gold mods should already be using g_available, so this spoof is only necessary on silver2gold.
-                    Info_SetValueForKey_Big(bigInfoString, "g_available", Info_ValueForKey(bigInfoString, "g_availableWeapons"));
-                    MSG_WriteBigString(&msg, bigInfoString);
-                } else {
+                else {
                     MSG_WriteBigString(&msg, sv.configstrings[start]);
                 }
-            } else {
-                MSG_WriteBigString(&msg, sv.configstrings[start]);
+
             }
+            else {
+                if (start == CS_GAME_VERSION) {
+                    if (client->commProto == COMMPROTO_SILVER) {
+                        MSG_WriteBigString(&msg, SILVER_GAME_VERSION);
+                    }
+                    else if (client->commProto == COMMPROTO_GOLD) {
+                        MSG_WriteBigString(&msg, GOLD_GAME_VERSION);
+                    }
+                }
+
+                else if (start == CS_SYSTEMINFO) {
+                    char refPaks[BIG_INFO_VALUE], refChecksums[BIG_INFO_VALUE], filteredPaks[BIG_INFO_VALUE], filteredChecksums[BIG_INFO_VALUE];
+
+                    Q_strncpyz(bigInfoString, sv.configstrings[start], sizeof(bigInfoString));
+                    cvar_t* silverClientMod = Cvar_FindVar("sv_silverClientMod");
+                    cvar_t* goldClientMod = Cvar_FindVar("sv_goldClientMod");
+
+                    if (client->commProto == COMMPROTO_SILVER && silverClientMod && silverClientMod->string && strlen(silverClientMod->string) > 0 && Q_stricmp(silverClientMod->string, "none")) {
+
+
+                        Info_SetValueForKey_Big(bigInfoString, "fs_game", silverClientMod->string);
+
+                        if (goldClientMod && goldClientMod->string && strlen(goldClientMod->string) > 0 && Q_stricmp(goldClientMod->string, "none") && Q_stricmp(goldClientMod->string, silverClientMod->string)) {
+                            Q_strncpyz(refPaks, Info_ValueForKey(bigInfoString, "sv_referencedPakNames"), sizeof(refPaks));
+                            Q_strncpyz(refChecksums, Info_ValueForKey(bigInfoString, "sv_referencedPaks"), sizeof(refChecksums));
+
+                            SV_FilterPaksAndChecksums(refPaks, refChecksums, goldClientMod->string, filteredPaks, sizeof(filteredPaks), filteredChecksums, sizeof(filteredChecksums));
+
+                            Info_SetValueForKey_Big(bigInfoString, "sv_referencedPakNames", filteredPaks);
+                            Info_SetValueForKey_Big(bigInfoString, "sv_referencedPaks", filteredChecksums);
+                        }
+
+
+
+                        //Z_Free(sv.configstrings[start]);
+                        //sv.configstrings[start] = CopyString(legacyClmod->string);
+                    }
+                    else if (client->commProto == COMMPROTO_GOLD && goldClientMod && goldClientMod->string && strlen(goldClientMod->string) > 0 && Q_stricmp(goldClientMod->string, "none")) {
+                        Info_SetValueForKey_Big(bigInfoString, "fs_game", goldClientMod->string);
+
+                        if (silverClientMod && silverClientMod->string && strlen(silverClientMod->string) > 0 && Q_stricmp(silverClientMod->string, "none") && Q_stricmp(silverClientMod->string, goldClientMod->string)) {
+                            Q_strncpyz(refPaks, Info_ValueForKey(bigInfoString, "sv_referencedPakNames"), sizeof(refPaks));
+                            Q_strncpyz(refChecksums, Info_ValueForKey(bigInfoString, "sv_referencedPaks"), sizeof(refChecksums));
+
+                            SV_FilterPaksAndChecksums(refPaks, refChecksums, silverClientMod->string, filteredPaks, sizeof(filteredPaks), filteredChecksums, sizeof(filteredChecksums));
+
+                            Info_SetValueForKey_Big(bigInfoString, "sv_referencedPakNames", filteredPaks);
+                            Info_SetValueForKey_Big(bigInfoString, "sv_referencedPaks", filteredChecksums);
+                        }
+                    }
+
+                    MSG_WriteBigString(&msg, bigInfoString);
+                }
+
+                else if (start == CS_SERVERINFO) {
+                    if (client->commProto == COMMPROTO_SILVER && !net_runningLegacy->integer) {
+                        Q_strncpyz(bigInfoString, sv.configstrings[start], sizeof(bigInfoString));
+                        Info_SetValueForKey_Big(bigInfoString, "g_availableWeapons", MSG_SpoofAvailableWeaponsFromGoldToSilver(Info_ValueForKey(bigInfoString, "g_availableWeapons")));
+                        MSG_WriteBigString(&msg, bigInfoString);
+                    }
+                    else if (client->commProto == COMMPROTO_GOLD && net_runningLegacy->integer) {
+                        Q_strncpyz(bigInfoString, sv.configstrings[start], sizeof(bigInfoString));
+                        Info_SetValueForKey_Big(bigInfoString, "g_availableWeapons", MSG_SpoofAvailableWeaponsFromSilverToGold(Info_ValueForKey(bigInfoString, "g_availableWeapons")));
+                        // Gold mods should already be using g_available, so this spoof is only necessary on silver2gold.
+                        Info_SetValueForKey_Big(bigInfoString, "g_available", Info_ValueForKey(bigInfoString, "g_availableWeapons"));
+                        MSG_WriteBigString(&msg, bigInfoString);
+                    }
+                    else {
+                        MSG_WriteBigString(&msg, sv.configstrings[start]);
+                    }
+                }
+                else {
+                    MSG_WriteBigString(&msg, sv.configstrings[start]);
+                }
+
+            }
+
             
         }
     }
@@ -825,19 +861,29 @@ static void SV_SendClientGameState( client_t *client ) {
 
     MSG_WriteByte( &msg, svc_EOF );
 
-    MSG_WriteLong( &msg, client - svs.clients);
+    if (client->commProto == COMMPROTO_DEMO) {
+        // MSG_WriteLong(v6, ((int)a1 - svs_clients) / 261096);
+        // Why the division of 261096 (which seems to be sizeof(client_t)) is in DEMO, is unknown.
+        MSG_WriteLong(&msg, (client - svs.clients) / sizeof(client_t));
+    }
+    else {
+        MSG_WriteLong(&msg, client - svs.clients);
+    }
+
 
     // write the checksum feed
     MSG_WriteLong( &msg, sv.checksumFeed);
 
     //rwwRMG - send info for the terrain
 
-    if (client->commProto == COMMPROTO_GOLD) {
-        MSG_WriteShort(&msg, 0);
-    }
+    if (client->commProto != COMMPROTO_DEMO) {
+        if (client->commProto == COMMPROTO_GOLD) {
+            MSG_WriteShort(&msg, 0);
+        }
 
-    // no Roger Wilco voice communication support in SoF2Plus
-    MSG_WriteLong ( &msg, 0 );
+        // no Roger Wilco voice communication support in SoF2Plus
+        MSG_WriteLong(&msg, 0);
+    }
 
     // deliver this to the client
     SV_SendMessageToClient( &msg, client );
