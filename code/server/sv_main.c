@@ -629,7 +629,7 @@ static void SVC_Status( netadr_t from, commProtocol_t commProto ) {
         if ( cl->state >= CS_CONNECTED ) {
             ps = SV_GameClientNum( i );
 
-            if (commProto == COMMPROTO_SILVER) {
+            if (commProto == COMMPROTO_SILVER || commProto == COMMPROTO_DEMO) {
                 Com_sprintf(player, sizeof(player), "%i %i \"%s\"\n",
                     ps->persistant[PERS_SCORE], cl->ping, cl->name);
             }
