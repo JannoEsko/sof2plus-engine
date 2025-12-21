@@ -28,7 +28,13 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 // Product information.
 #define PRODUCT_NAME                "SoF2Plus"
+
+#ifdef _DEMO
+#define BASEGAME                    "demo"
+#else
 #define BASEGAME                    "base"
+#endif
+
 #define CLIENT_WINDOW_TITLE         PRODUCT_NAME
 #define HOMEPATH_NAME_UNIX          ".sof2plus"
 #define HOMEPATH_NAME_WIN           PRODUCT_NAME
@@ -36,6 +42,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #define GAMENAME_FOR_MASTER         "SoF2MP"
 #define HEARTBEAT_FOR_MASTER        "SoF2MP-1"
+#define HEARTBEAT_FOR_MASTER_DEMO   "SoF2MP-DEMO"
 
 #define BASETA              "missionpack"
 
@@ -1006,6 +1013,7 @@ typedef enum {
 #define MAX_CLIENTS         64      // absolute limit
 #define MAX_LOCATIONS       64
 #define MAX_TERRAINS        32
+#define MAX_DEMO_TERRAINS   96
 #define MAX_LADDERS         64
 
 #define MAX_INSTANCE_TYPES      16
@@ -1100,18 +1108,21 @@ typedef struct playerState_s
     int         gravity;
     int         speed;
     int         delta_angles[3];                // add to command angles to get view direction
-                                                // changed by spawns, rotating objects, and teleporters
+    // changed by spawns, rotating objects, and teleporters
     int         groundEntityNum;                // ENTITYNUM_NONE = in air
 
+#ifdef _DEMO
+    int         legsTimer;                      // don't change low priority animations until this runs out
+#endif // _DEMO
     int         legsAnim;                       // mask off ANIM_TOGGLEBIT
 
     int         torsoTimer;                     // don't change low priority animations until this runs out
     int         torsoAnim;                      // mask off ANIM_TOGGLEBIT
 
     int         movementDir;                    // a number 0 to 7 that represents the reletive angle
-                                                // of movement to the view angle (axial and diagonals)
-                                                // when at rest, the value will remain unchanged
-                                                // used to twist the legs during strafing
+    // of movement to the view angle (axial and diagonals)
+    // when at rest, the value will remain unchanged
+    // used to twist the legs during strafing
 
     int         eFlags;                         // copied to entityState_t->eFlags
 
@@ -1158,11 +1169,14 @@ typedef struct playerState_s
     int         pmove_framecount;               // FIXME: don't transmit over the network
     int         jumppad_frame;
     int         entityEventSequence;
+#ifndef _DEMO
+    // pvsOrigin is NOT present in DEMO.
     vec3_t      pvsOrigin;                      // view origin used to calculate PVS (also the lean origin)
-                                                // THIS VARIABLE MUST AT LEAST BE THE PLAYERS ORIGIN ALL OF THE
-                                                // TIME OR THE PVS CALCULATIONS WILL NOT WORK.
+    // THIS VARIABLE MUST AT LEAST BE THE PLAYERS ORIGIN ALL OF THE
+    // TIME OR THE PVS CALCULATIONS WILL NOT WORK.
+#endif // not _DEMO
 
-                                                // Zooming
+    // Zooming
     int         zoomTime;
     int         zoomFov;
 
@@ -1276,6 +1290,10 @@ typedef struct entityState_s
 
     int             groundEntityNum;    // -1 = in air
 
+#ifdef _DEMO
+    int             constantLight;  // r + (g<<8) + (b<<16) + (intensity<<24)
+#endif // not _DEMO
+
     int             loopSound;      // constantly loop this sound
     int             mSoundSet;
 
@@ -1289,7 +1307,9 @@ typedef struct entityState_s
     int             event;          // impulse events -- muzzle flashes, footsteps, etc
     int             eventParm;
 
+#ifndef _DEMO
     int             generic1;
+#endif // not _DEMO
 
     // for players
     // these fields are only transmitted for client entities!!!!!
@@ -1299,6 +1319,10 @@ typedef struct entityState_s
     int             torsoAnim;      // mask off ANIM_TOGGLEBIT
     int             torsoTimer;     // time the animation will play for
     int             leanOffset;     // Lean direction
+#ifdef _DEMO
+    int             generic1;
+#endif
+
 } entityState_t;
 
 typedef enum {

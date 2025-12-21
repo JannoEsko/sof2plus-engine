@@ -117,10 +117,12 @@ static cvar_t   *net_mcast6iface;
 * So, the game will have different sockets and the "isLegacy" qboolean will be set depending on which socket the call came from.
 */
 //static cvar_t*  net_multiprotocol; moved to com_ group to have access to it in e.g. masterserver function.
-static cvar_t   *gold_net_port;
-static cvar_t   *gold_net_port6;
-static cvar_t*  silver_net_port;
-static cvar_t*  silver_net_port6; // CVAR for it will be kept because if iosof2mp will be finalized at one point, then that means that this could become useful again.
+static cvar_t   *net_goldPort;
+static cvar_t   *net_goldPort6;
+static cvar_t*  net_silverPort;
+static cvar_t*  net_silverPort6; // CVAR for it will be kept because if iosof2mp will be finalized at one point, then that means that this could become useful again.
+static cvar_t*  net_demoPort;
+static cvar_t*  net_demoPort6;
 
 static cvar_t   *net_dropsim;
 
@@ -136,6 +138,10 @@ static SOCKET   silver_ip6_socket = INVALID_SOCKET;
 static SOCKET   silver_socks_socket = INVALID_SOCKET;
 static SOCKET   silver_multicast6_socket = INVALID_SOCKET;
 
+static SOCKET   demo_ip_socket = INVALID_SOCKET;
+static SOCKET   demo_ip6_socket = INVALID_SOCKET;
+static SOCKET   demo_socks_socket = INVALID_SOCKET;
+static SOCKET   demo_multicast6_socket = INVALID_SOCKET;
 
 // Keep track of currently joined multicast group.
 static struct ipv6_mreq curgroup;
@@ -546,185 +552,261 @@ qboolean NET_GetPacket(netadr_t *net_from, msg_t *net_message, fd_set *fdr, comm
     socklen_t   fromlen;
     int     err;
 
-    if(gold_ip_socket != INVALID_SOCKET && FD_ISSET(gold_ip_socket, fdr))
-    {
-        fromlen = sizeof(from);
-        ret = recvfrom( gold_ip_socket, (void *)net_message->data, net_message->maxsize, 0, (struct sockaddr *) &from, &fromlen );
-
-        if (ret == SOCKET_ERROR)
+    if (net_runningDemo->integer) {
+        if (demo_ip_socket != INVALID_SOCKET && FD_ISSET(demo_ip_socket, fdr))
         {
-            err = socketError;
+            fromlen = sizeof(from);
+            ret = recvfrom(demo_ip_socket, (void*)net_message->data, net_message->maxsize, 0, (struct sockaddr*)&from, &fromlen);
 
-            if( err != EAGAIN && err != ECONNRESET )
-                Com_Printf( "NET_GetPacket: %s\n", NET_ErrorString() );
-        }
-        else
-        {
-
-            memset( ((struct sockaddr_in *)&from)->sin_zero, 0, 8 );
-
-            if ( usingSocks && memcmp( &from, &socksRelayAddr, fromlen ) == 0 ) {
-                if ( ret < 10 || net_message->data[0] != 0 || net_message->data[1] != 0 || net_message->data[2] != 0 || net_message->data[3] != 1 ) {
-                    return qfalse;
-                }
-                net_from->type = NA_IP;
-                net_from->ip[0] = net_message->data[4];
-                net_from->ip[1] = net_message->data[5];
-                net_from->ip[2] = net_message->data[6];
-                net_from->ip[3] = net_message->data[7];
-                net_from->port = *(short *)&net_message->data[8];
-                net_message->readcount = 10;
-            }
-            else {
-                SockadrToNetadr( (struct sockaddr *) &from, net_from );
-                net_message->readcount = 0;
-            }
-
-            if( ret >= net_message->maxsize ) {
-                Com_Printf( "Oversize packet from %s\n", NET_AdrToString (*net_from) );
-                return qfalse;
-            }
-
-            net_message->cursize = ret;
-            *commProto = COMMPROTO_GOLD;
-            return qtrue;
-        }
-    }
-
-    if(gold_ip6_socket != INVALID_SOCKET && FD_ISSET(gold_ip6_socket, fdr))
-    {
-        fromlen = sizeof(from);
-        ret = recvfrom(gold_ip6_socket, (void *)net_message->data, net_message->maxsize, 0, (struct sockaddr *) &from, &fromlen);
-
-        if (ret == SOCKET_ERROR)
-        {
-            err = socketError;
-
-            if( err != EAGAIN && err != ECONNRESET )
-                Com_Printf( "NET_GetPacket: %s\n", NET_ErrorString() );
-        }
-        else
-        {
-            SockadrToNetadr((struct sockaddr *) &from, net_from);
-            net_message->readcount = 0;
-
-            if(ret >= net_message->maxsize)
+            if (ret == SOCKET_ERROR)
             {
-                Com_Printf( "Oversize packet from %s\n", NET_AdrToString (*net_from) );
-                return qfalse;
+                err = socketError;
+
+                if (err != EAGAIN && err != ECONNRESET)
+                    Com_Printf("NET_GetPacket: %s\n", NET_ErrorString());
             }
+            else
+            {
 
-            net_message->cursize = ret;
-            *commProto = COMMPROTO_GOLD;
-            return qtrue;
-        }
-    }
+                memset(((struct sockaddr_in*)&from)->sin_zero, 0, 8);
 
-    // legacy protocol.
-    if (silver_ip_socket != INVALID_SOCKET && FD_ISSET(silver_ip_socket, fdr))
-    {
-        fromlen = sizeof(from);
-        ret = recvfrom(silver_ip_socket, (void*)net_message->data, net_message->maxsize, 0, (struct sockaddr*)&from, &fromlen);
+                if (usingSocks && memcmp(&from, &socksRelayAddr, fromlen) == 0) {
+                    if (ret < 10 || net_message->data[0] != 0 || net_message->data[1] != 0 || net_message->data[2] != 0 || net_message->data[3] != 1) {
+                        return qfalse;
+                    }
+                    net_from->type = NA_IP;
+                    net_from->ip[0] = net_message->data[4];
+                    net_from->ip[1] = net_message->data[5];
+                    net_from->ip[2] = net_message->data[6];
+                    net_from->ip[3] = net_message->data[7];
+                    net_from->port = *(short*)&net_message->data[8];
+                    net_message->readcount = 10;
+                }
+                else {
+                    SockadrToNetadr((struct sockaddr*)&from, net_from);
+                    net_message->readcount = 0;
+                }
 
-        if (ret == SOCKET_ERROR)
-        {
-            err = socketError;
-
-            if (err != EAGAIN && err != ECONNRESET)
-                Com_Printf("NET_GetPacket: %s\n", NET_ErrorString());
-        }
-        else
-        {
-
-            memset(((struct sockaddr_in*)&from)->sin_zero, 0, 8);
-
-            if (usingSocks && memcmp(&from, &socksRelayAddr, fromlen) == 0) {
-                if (ret < 10 || net_message->data[0] != 0 || net_message->data[1] != 0 || net_message->data[2] != 0 || net_message->data[3] != 1) {
+                if (ret >= net_message->maxsize) {
+                    Com_Printf("Oversize packet from %s\n", NET_AdrToString(*net_from));
                     return qfalse;
                 }
-                net_from->type = NA_IP;
-                net_from->ip[0] = net_message->data[4];
-                net_from->ip[1] = net_message->data[5];
-                net_from->ip[2] = net_message->data[6];
-                net_from->ip[3] = net_message->data[7];
-                net_from->port = *(short*)&net_message->data[8];
-                net_message->readcount = 10;
+
+                net_message->cursize = ret;
+                *commProto = COMMPROTO_DEMO;
+                return qtrue;
             }
-            else {
+        }
+
+        if (demo_ip6_socket != INVALID_SOCKET && FD_ISSET(demo_ip6_socket, fdr))
+        {
+            fromlen = sizeof(from);
+            ret = recvfrom(demo_ip6_socket, (void*)net_message->data, net_message->maxsize, 0, (struct sockaddr*)&from, &fromlen);
+
+            if (ret == SOCKET_ERROR)
+            {
+                err = socketError;
+
+                if (err != EAGAIN && err != ECONNRESET)
+                    Com_Printf("NET_GetPacket: %s\n", NET_ErrorString());
+            }
+            else
+            {
                 SockadrToNetadr((struct sockaddr*)&from, net_from);
                 net_message->readcount = 0;
-            }
 
-            if (ret >= net_message->maxsize) {
-                Com_Printf("Oversize packet from %s\n", NET_AdrToString(*net_from));
-                return qfalse;
-            }
+                if (ret >= net_message->maxsize)
+                {
+                    Com_Printf("Oversize packet from %s\n", NET_AdrToString(*net_from));
+                    return qfalse;
+                }
 
-            net_message->cursize = ret;
-            *commProto = COMMPROTO_SILVER;
-            return qtrue;
+                net_message->cursize = ret;
+                *commProto = COMMPROTO_DEMO;
+                return qtrue;
+            }
         }
     }
-
-    if (silver_ip6_socket != INVALID_SOCKET && FD_ISSET(silver_ip6_socket, fdr))
-    {
-        fromlen = sizeof(from);
-        ret = recvfrom(silver_ip6_socket, (void*)net_message->data, net_message->maxsize, 0, (struct sockaddr*)&from, &fromlen);
-
-        if (ret == SOCKET_ERROR)
+    else {
+        if (gold_ip_socket != INVALID_SOCKET && FD_ISSET(gold_ip_socket, fdr))
         {
-            err = socketError;
+            fromlen = sizeof(from);
+            ret = recvfrom(gold_ip_socket, (void*)net_message->data, net_message->maxsize, 0, (struct sockaddr*)&from, &fromlen);
 
-            if (err != EAGAIN && err != ECONNRESET)
-                Com_Printf("NET_GetPacket: %s\n", NET_ErrorString());
-        }
-        else
-        {
-            SockadrToNetadr((struct sockaddr*)&from, net_from);
-            net_message->readcount = 0;
-
-            if (ret >= net_message->maxsize)
+            if (ret == SOCKET_ERROR)
             {
-                Com_Printf("Oversize packet from %s\n", NET_AdrToString(*net_from));
-                return qfalse;
+                err = socketError;
+
+                if (err != EAGAIN && err != ECONNRESET)
+                    Com_Printf("NET_GetPacket: %s\n", NET_ErrorString());
             }
-
-            net_message->cursize = ret;
-            *commProto = COMMPROTO_SILVER;
-            return qtrue;
-        }
-    }
-
-    // No multicast support when legacy protocol is enabled, but that is already disabled before this call.
-    if(gold_multicast6_socket != INVALID_SOCKET && gold_multicast6_socket != gold_ip6_socket && FD_ISSET(gold_multicast6_socket, fdr))
-    {
-        fromlen = sizeof(from);
-        ret = recvfrom(gold_multicast6_socket, (void *)net_message->data, net_message->maxsize, 0, (struct sockaddr *) &from, &fromlen);
-
-        if (ret == SOCKET_ERROR)
-        {
-            err = socketError;
-
-            if( err != EAGAIN && err != ECONNRESET )
-                Com_Printf( "NET_GetPacket: %s\n", NET_ErrorString() );
-        }
-        else
-        {
-            SockadrToNetadr((struct sockaddr *) &from, net_from);
-            net_message->readcount = 0;
-
-            if(ret >= net_message->maxsize)
+            else
             {
-                Com_Printf( "Oversize packet from %s\n", NET_AdrToString (*net_from) );
-                return qfalse;
-            }
 
-            net_message->cursize = ret;
-            *commProto = COMMPROTO_GOLD;
-            return qtrue;
+                memset(((struct sockaddr_in*)&from)->sin_zero, 0, 8);
+
+                if (usingSocks && memcmp(&from, &socksRelayAddr, fromlen) == 0) {
+                    if (ret < 10 || net_message->data[0] != 0 || net_message->data[1] != 0 || net_message->data[2] != 0 || net_message->data[3] != 1) {
+                        return qfalse;
+                    }
+                    net_from->type = NA_IP;
+                    net_from->ip[0] = net_message->data[4];
+                    net_from->ip[1] = net_message->data[5];
+                    net_from->ip[2] = net_message->data[6];
+                    net_from->ip[3] = net_message->data[7];
+                    net_from->port = *(short*)&net_message->data[8];
+                    net_message->readcount = 10;
+                }
+                else {
+                    SockadrToNetadr((struct sockaddr*)&from, net_from);
+                    net_message->readcount = 0;
+                }
+
+                if (ret >= net_message->maxsize) {
+                    Com_Printf("Oversize packet from %s\n", NET_AdrToString(*net_from));
+                    return qfalse;
+                }
+
+                net_message->cursize = ret;
+                *commProto = COMMPROTO_GOLD;
+                return qtrue;
+            }
+        }
+
+        if (gold_ip6_socket != INVALID_SOCKET && FD_ISSET(gold_ip6_socket, fdr))
+        {
+            fromlen = sizeof(from);
+            ret = recvfrom(gold_ip6_socket, (void*)net_message->data, net_message->maxsize, 0, (struct sockaddr*)&from, &fromlen);
+
+            if (ret == SOCKET_ERROR)
+            {
+                err = socketError;
+
+                if (err != EAGAIN && err != ECONNRESET)
+                    Com_Printf("NET_GetPacket: %s\n", NET_ErrorString());
+            }
+            else
+            {
+                SockadrToNetadr((struct sockaddr*)&from, net_from);
+                net_message->readcount = 0;
+
+                if (ret >= net_message->maxsize)
+                {
+                    Com_Printf("Oversize packet from %s\n", NET_AdrToString(*net_from));
+                    return qfalse;
+                }
+
+                net_message->cursize = ret;
+                *commProto = COMMPROTO_GOLD;
+                return qtrue;
+            }
+        }
+
+        // legacy protocol.
+        if (silver_ip_socket != INVALID_SOCKET && FD_ISSET(silver_ip_socket, fdr))
+        {
+            fromlen = sizeof(from);
+            ret = recvfrom(silver_ip_socket, (void*)net_message->data, net_message->maxsize, 0, (struct sockaddr*)&from, &fromlen);
+
+            if (ret == SOCKET_ERROR)
+            {
+                err = socketError;
+
+                if (err != EAGAIN && err != ECONNRESET)
+                    Com_Printf("NET_GetPacket: %s\n", NET_ErrorString());
+            }
+            else
+            {
+
+                memset(((struct sockaddr_in*)&from)->sin_zero, 0, 8);
+
+                if (usingSocks && memcmp(&from, &socksRelayAddr, fromlen) == 0) {
+                    if (ret < 10 || net_message->data[0] != 0 || net_message->data[1] != 0 || net_message->data[2] != 0 || net_message->data[3] != 1) {
+                        return qfalse;
+                    }
+                    net_from->type = NA_IP;
+                    net_from->ip[0] = net_message->data[4];
+                    net_from->ip[1] = net_message->data[5];
+                    net_from->ip[2] = net_message->data[6];
+                    net_from->ip[3] = net_message->data[7];
+                    net_from->port = *(short*)&net_message->data[8];
+                    net_message->readcount = 10;
+                }
+                else {
+                    SockadrToNetadr((struct sockaddr*)&from, net_from);
+                    net_message->readcount = 0;
+                }
+
+                if (ret >= net_message->maxsize) {
+                    Com_Printf("Oversize packet from %s\n", NET_AdrToString(*net_from));
+                    return qfalse;
+                }
+
+                net_message->cursize = ret;
+                *commProto = COMMPROTO_SILVER;
+                return qtrue;
+            }
+        }
+
+        if (silver_ip6_socket != INVALID_SOCKET && FD_ISSET(silver_ip6_socket, fdr))
+        {
+            fromlen = sizeof(from);
+            ret = recvfrom(silver_ip6_socket, (void*)net_message->data, net_message->maxsize, 0, (struct sockaddr*)&from, &fromlen);
+
+            if (ret == SOCKET_ERROR)
+            {
+                err = socketError;
+
+                if (err != EAGAIN && err != ECONNRESET)
+                    Com_Printf("NET_GetPacket: %s\n", NET_ErrorString());
+            }
+            else
+            {
+                SockadrToNetadr((struct sockaddr*)&from, net_from);
+                net_message->readcount = 0;
+
+                if (ret >= net_message->maxsize)
+                {
+                    Com_Printf("Oversize packet from %s\n", NET_AdrToString(*net_from));
+                    return qfalse;
+                }
+
+                net_message->cursize = ret;
+                *commProto = COMMPROTO_SILVER;
+                return qtrue;
+            }
+        }
+
+        // No multicast support when legacy protocol is enabled, but that is already disabled before this call.
+        if (gold_multicast6_socket != INVALID_SOCKET && gold_multicast6_socket != gold_ip6_socket && FD_ISSET(gold_multicast6_socket, fdr))
+        {
+            fromlen = sizeof(from);
+            ret = recvfrom(gold_multicast6_socket, (void*)net_message->data, net_message->maxsize, 0, (struct sockaddr*)&from, &fromlen);
+
+            if (ret == SOCKET_ERROR)
+            {
+                err = socketError;
+
+                if (err != EAGAIN && err != ECONNRESET)
+                    Com_Printf("NET_GetPacket: %s\n", NET_ErrorString());
+            }
+            else
+            {
+                SockadrToNetadr((struct sockaddr*)&from, net_from);
+                net_message->readcount = 0;
+
+                if (ret >= net_message->maxsize)
+                {
+                    Com_Printf("Oversize packet from %s\n", NET_AdrToString(*net_from));
+                    return qfalse;
+                }
+
+                net_message->cursize = ret;
+                *commProto = COMMPROTO_GOLD;
+                return qtrue;
+            }
         }
     }
-
 
     return qfalse;
 }
@@ -756,12 +838,23 @@ void Sys_SendPacket( int length, const void *data, netadr_t to, commProtocol_t c
             (gold_ip6_socket == INVALID_SOCKET && to.type == NA_MULTICAST6)) {
             return;
         }
-    } else if (commProto == COMMPROTO_SILVER) {
+    }
+    else if (commProto == COMMPROTO_SILVER) {
         if (
             (silver_ip_socket == INVALID_SOCKET && to.type == NA_IP) ||
             (silver_ip_socket == INVALID_SOCKET && to.type == NA_BROADCAST) ||
             (silver_ip6_socket == INVALID_SOCKET && to.type == NA_IP6) ||
             (silver_ip6_socket == INVALID_SOCKET && to.type == NA_MULTICAST6)) {
+            return;
+        }
+
+    }
+    else if (commProto == COMMPROTO_DEMO) {
+        if (
+            (demo_ip_socket == INVALID_SOCKET && to.type == NA_IP) ||
+            (demo_ip_socket == INVALID_SOCKET && to.type == NA_BROADCAST) ||
+            (demo_ip6_socket == INVALID_SOCKET && to.type == NA_IP6) ||
+            (demo_ip6_socket == INVALID_SOCKET && to.type == NA_MULTICAST6)) {
             return;
         }
 
@@ -785,12 +878,24 @@ void Sys_SendPacket( int length, const void *data, netadr_t to, commProtocol_t c
             useSocket = gold_ip6_socket;
             destAddrLen = sizeof(struct sockaddr_in6);
         }
-    } else if (commProto == COMMPROTO_SILVER) {
+    }
+    else if (commProto == COMMPROTO_SILVER) {
         if (addr.ss_family == AF_INET) {
             useSocket = silver_ip_socket;
             destAddrLen = sizeof(struct sockaddr_in);
-        } else if (addr.ss_family == AF_INET6) {
+        }
+        else if (addr.ss_family == AF_INET6) {
             useSocket = silver_ip6_socket;
+            destAddrLen = sizeof(struct sockaddr_in6);
+        }
+    }
+    else if (commProto == COMMPROTO_DEMO) {
+        if (addr.ss_family == AF_INET) {
+            useSocket = demo_ip_socket;
+            destAddrLen = sizeof(struct sockaddr_in);
+        }
+        else if (addr.ss_family == AF_INET6) {
+            useSocket = demo_ip6_socket;
             destAddrLen = sizeof(struct sockaddr_in6);
         }
     }
@@ -1491,11 +1596,19 @@ void NET_OpenIP( void ) {
     int     silver_port;
     int     silver_port6;
 
-    gold_port = gold_net_port->integer;
-    gold_port6 = gold_net_port6->integer;
+    int     demo_port;
+    int     demo_port6;
 
-    silver_port = silver_net_port->integer;
-    silver_port6 = silver_net_port6->integer;
+    gold_port = net_goldPort->integer;
+    gold_port6 = net_goldPort6->integer;
+
+    silver_port = net_silverPort->integer;
+    silver_port6 = net_silverPort6->integer;
+
+#ifdef _DEMO
+    demo_port = net_demoPort->integer;
+    demo_port6 = net_demoPort6->integer;
+#endif
 
     NET_GetLocalAddress();
 
@@ -1505,32 +1618,13 @@ void NET_OpenIP( void ) {
 
     if(net_enabled->integer & NET_ENABLEV6)
     {
-        if (net_multiprotocol->integer || !net_runningLegacy->integer) {
-            for( i = 0 ; i < 10 ; i++ )
-            {
-                gold_ip6_socket = NET_IP6Socket(net_ip6->string, gold_port6 + i, &boundto, &err);
-                if (gold_ip6_socket != INVALID_SOCKET)
-                {
-                    Cvar_SetValue( "gold_net_port6", gold_port6 + i );
-                    break;
-                }
-                else
-                {
-                    if(err == EAFNOSUPPORT)
-                        break;
-                }
-            }
-            if(gold_ip6_socket == INVALID_SOCKET)
-                Com_Printf( "WARNING: Couldn't bind to a v6 ip address.\n");
-        }
 
-        if (net_multiprotocol->integer || net_runningLegacy->integer) {
-            for (i = 0; i < 10; i++)
-            {
-                silver_ip6_socket = NET_IP6Socket(net_ip6->string, silver_port6 + i, &boundto, &err);
+        if (net_runningDemo->integer) {
+            for (i = 0; i < 10; i++) {
+                demo_ip6_socket = NET_IP6Socket(net_ip6->string, demo_port6 + i, &boundto, &err);
                 if (gold_ip6_socket != INVALID_SOCKET)
                 {
-                    Cvar_SetValue("silver_net_port6", silver_port6 + i);
+                    Cvar_SetValue("net_demoPort6", demo_port6 + i);
                     break;
                 }
                 else
@@ -1539,46 +1633,62 @@ void NET_OpenIP( void ) {
                         break;
                 }
             }
-            if (silver_ip6_socket == INVALID_SOCKET)
+            if (gold_ip6_socket == INVALID_SOCKET)
                 Com_Printf("WARNING: Couldn't bind to a v6 ip address.\n");
+        }
+        else {
+            if (net_multiprotocol->integer || !net_runningLegacy->integer) {
+                for (i = 0; i < 10; i++)
+                {
+                    gold_ip6_socket = NET_IP6Socket(net_ip6->string, gold_port6 + i, &boundto, &err);
+                    if (gold_ip6_socket != INVALID_SOCKET)
+                    {
+                        Cvar_SetValue("net_goldPort6", gold_port6 + i);
+                        break;
+                    }
+                    else
+                    {
+                        if (err == EAFNOSUPPORT)
+                            break;
+                    }
+                }
+                if (gold_ip6_socket == INVALID_SOCKET)
+                    Com_Printf("WARNING: Couldn't bind to a v6 ip address.\n");
+            }
+
+            if (net_multiprotocol->integer || net_runningLegacy->integer) {
+                for (i = 0; i < 10; i++)
+                {
+                    silver_ip6_socket = NET_IP6Socket(net_ip6->string, silver_port6 + i, &boundto, &err);
+                    if (gold_ip6_socket != INVALID_SOCKET)
+                    {
+                        Cvar_SetValue("net_silverPort6", silver_port6 + i);
+                        break;
+                    }
+                    else
+                    {
+                        if (err == EAFNOSUPPORT)
+                            break;
+                    }
+                }
+                if (silver_ip6_socket == INVALID_SOCKET)
+                    Com_Printf("WARNING: Couldn't bind to a v6 ip address.\n");
+            }
         }
     }
 
     if(net_enabled->integer & NET_ENABLEV4)
     {
 
-        if (net_multiprotocol->integer || !net_runningLegacy->integer) {
-            for( i = 0 ; i < 10 ; i++ ) {
-                gold_ip_socket = NET_IPSocket( net_ip->string, gold_port + i, &err );
-                if (gold_ip_socket != INVALID_SOCKET) {
-                    Cvar_SetValue( "gold_net_port", gold_port + i );
-
-                    if (net_socksEnabled->integer)
-                        NET_OpenSocks( gold_port + i, qfalse );
-
-                    break;
-                }
-                else
-                {
-                    if(err == EAFNOSUPPORT)
-                        break;
-                }
-            }
-
-            if(gold_ip_socket == INVALID_SOCKET)
-                Com_Printf( "WARNING: Couldn't bind to a v4 ip address.\n");
-
-        }
-
-        if (net_multiprotocol->integer || net_runningLegacy->integer) {
+        if (net_runningDemo->integer) {
             for (i = 0; i < 10; i++) {
-                silver_ip_socket = NET_IPSocket(net_ip->string, silver_port + i, &err);
-                if (silver_ip_socket != INVALID_SOCKET) {
-                    Cvar_SetValue("silver_net_port", silver_port + i);
+                demo_ip_socket = NET_IPSocket(net_ip->string, demo_port + i, &err);
+                if (demo_ip_socket != INVALID_SOCKET) {
+                    Cvar_SetValue("net_port", demo_port + i);
 
                     if (net_socksEnabled->integer) // this is actually redundant as with multiprotocol set, this will not be reached.
                         // but I'm keeping it here in case someone ever wants to have SOCKS setup with multiprotocol.
-                            NET_OpenSocks(silver_port + i, qtrue);
+                        NET_OpenSocks(demo_port + i, qtrue);
 
                     break;
                 }
@@ -1589,8 +1699,55 @@ void NET_OpenIP( void ) {
                 }
             }
 
-            if (silver_ip_socket == INVALID_SOCKET)
+            if (demo_ip_socket == INVALID_SOCKET)
                 Com_Printf("WARNING: Couldn't bind to a v4 ip address.\n");
+        }
+        else {
+            if (net_multiprotocol->integer || !net_runningLegacy->integer) {
+                for (i = 0; i < 10; i++) {
+                    gold_ip_socket = NET_IPSocket(net_ip->string, gold_port + i, &err);
+                    if (gold_ip_socket != INVALID_SOCKET) {
+                        Cvar_SetValue("net_goldPort", gold_port + i);
+
+                        if (net_socksEnabled->integer)
+                            NET_OpenSocks(gold_port + i, qfalse);
+
+                        break;
+                    }
+                    else
+                    {
+                        if (err == EAFNOSUPPORT)
+                            break;
+                    }
+                }
+
+                if (gold_ip_socket == INVALID_SOCKET)
+                    Com_Printf("WARNING: Couldn't bind to a v4 ip address.\n");
+
+            }
+
+            if (net_multiprotocol->integer || net_runningLegacy->integer) {
+                for (i = 0; i < 10; i++) {
+                    silver_ip_socket = NET_IPSocket(net_ip->string, silver_port + i, &err);
+                    if (silver_ip_socket != INVALID_SOCKET) {
+                        Cvar_SetValue("net_silverPort", silver_port + i);
+
+                        if (net_socksEnabled->integer) // this is actually redundant as with multiprotocol set, this will not be reached.
+                            // but I'm keeping it here in case someone ever wants to have SOCKS setup with multiprotocol.
+                            NET_OpenSocks(silver_port + i, qtrue);
+
+                        break;
+                    }
+                    else
+                    {
+                        if (err == EAFNOSUPPORT)
+                            break;
+                    }
+                }
+
+                if (silver_ip_socket == INVALID_SOCKET)
+                    Com_Printf("WARNING: Couldn't bind to a v4 ip address.\n");
+            }
         }
     }
 }
@@ -1626,13 +1783,13 @@ static qboolean NET_GetCvars( void ) {
     modified += net_ip6->modified;
     net_ip6->modified = qfalse;
 
-    gold_net_port = Cvar_Get( "gold_net_port", va( "%i", PORT_SERVER ), CVAR_LATCH );
-    modified += gold_net_port->modified;
-    gold_net_port->modified = qfalse;
+    net_goldPort = Cvar_Get( "net_goldPort", va( "%i", PORT_SERVER ), CVAR_LATCH );
+    modified += net_goldPort->modified;
+    net_goldPort->modified = qfalse;
 
-    gold_net_port6 = Cvar_Get( "gold_net_port6", va( "%i", PORT_SERVER ), CVAR_LATCH );
-    modified += gold_net_port6->modified;
-    gold_net_port6->modified = qfalse;
+    net_goldPort6 = Cvar_Get( "net_goldPort6", va( "%i", PORT_SERVER ), CVAR_LATCH );
+    modified += net_goldPort6->modified;
+    net_goldPort6->modified = qfalse;
 
     // legacy ports.
 
@@ -1644,13 +1801,45 @@ static qboolean NET_GetCvars( void ) {
     modified += net_runningLegacy->modified;
     net_runningLegacy->modified = qfalse;
 
-    silver_net_port = Cvar_Get("silver_net_port", va("%i", LEGACY_PORT_SERVER), CVAR_LATCH);
-    modified += silver_net_port->modified;
-    silver_net_port->modified = qfalse;
+    net_silverPort = Cvar_Get("net_silverPort", va("%i", LEGACY_PORT_SERVER), CVAR_LATCH);
+    modified += net_silverPort->modified;
+    net_silverPort->modified = qfalse;
 
-    silver_net_port6 = Cvar_Get("silver_net_port6", va("%i", LEGACY_PORT_SERVER), CVAR_LATCH);
-    modified += silver_net_port6->modified;
-    silver_net_port6->modified = qfalse;
+    net_silverPort6 = Cvar_Get("net_silverPort6", va("%i", LEGACY_PORT_SERVER), CVAR_LATCH);
+    modified += net_silverPort6->modified;
+    net_silverPort6->modified = qfalse;
+
+#ifdef _DEMO
+    net_runningDemo = Cvar_Get("net_runningDemo", "1", CVAR_INTERNAL | CVAR_ROM);
+#else
+    net_runningDemo = Cvar_Get("net_runningDemo", "0", CVAR_INTERNAL | CVAR_ROM);
+#endif
+    
+    modified += net_runningDemo->modified;
+    net_runningDemo->modified = qfalse;
+
+    net_demoPort = Cvar_Get("net_demoPort", va("%i", PORT_SERVER), CVAR_LATCH);
+    modified += net_demoPort->modified;
+    net_demoPort->modified = qfalse;
+
+    net_demoPort6 = Cvar_Get("net_demoPort6", va("%i", PORT_SERVER), CVAR_LATCH);
+    modified += net_demoPort6->modified;
+    net_demoPort6->modified = qfalse;
+
+
+    if (net_runningDemo->integer) {
+#ifdef _DEMO
+        if (net_multiprotocol->integer) {
+            Com_Printf("Disabling multiprotocol due to running in demo mode.\n");
+            Cvar_SetValue("net_multiprotocol", 0);
+            modified++;
+        }
+#else
+        Com_Printf("Disabling net_runningDemo because this executable is not running in demo mode.\n");
+        Cvar_SetValue("net_runningDemo", 0);
+        modified++;
+#endif
+    }
 
     // Some cvars for configuring multicast options which facilitates scanning for servers on local subnets.
     net_mcast6addr = Cvar_Get( "net_mcast6addr", NET_MULTICAST_IP6, CVAR_LATCH | CVAR_ARCHIVE );
@@ -1782,6 +1971,16 @@ void NET_Config( qboolean enableNetworking ) {
         if (silver_ip6_socket != INVALID_SOCKET) {
             closesocket(silver_ip6_socket);
             silver_ip6_socket = INVALID_SOCKET;
+        }
+
+        if (demo_ip_socket != INVALID_SOCKET) {
+            closesocket(demo_ip_socket);
+            demo_ip_socket = INVALID_SOCKET;
+        }
+
+        if (demo_ip6_socket != INVALID_SOCKET) {
+            closesocket(demo_ip6_socket);
+            demo_ip6_socket = INVALID_SOCKET;
         }
 
     }
@@ -1917,6 +2116,29 @@ void NET_Sleep(int msec)
         if (highestfd == INVALID_SOCKET || silver_ip_socket > highestfd)
             highestfd = silver_ip_socket;
     }
+
+    if (silver_ip6_socket != INVALID_SOCKET) {
+        FD_SET(silver_ip6_socket, &fdr);
+
+        if (highestfd == INVALID_SOCKET || silver_ip6_socket > highestfd)
+            highestfd = silver_ip6_socket;
+    }
+
+    if (demo_ip_socket != INVALID_SOCKET) {
+        FD_SET(demo_ip_socket, &fdr);
+
+        if (highestfd == INVALID_SOCKET || demo_ip_socket > highestfd)
+            highestfd = demo_ip_socket;
+    }
+
+    if (demo_ip6_socket != INVALID_SOCKET) {
+        FD_SET(demo_ip6_socket, &fdr);
+
+        if (highestfd == INVALID_SOCKET || demo_ip6_socket > highestfd)
+            highestfd = demo_ip6_socket;
+    }
+
+
 
 #ifdef _WIN32
     if(highestfd == INVALID_SOCKET)

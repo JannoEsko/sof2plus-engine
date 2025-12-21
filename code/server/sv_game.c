@@ -2074,6 +2074,8 @@ void SV_ShutdownGameProgs( void ) {
 
     VM_Free( gvm );
     gvm = NULL;
+
+    SV_GT_Shutdown(); // Shutdown GT VM as well, otherwise it'll keep VM references around.
 }
 
 /*

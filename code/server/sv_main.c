@@ -330,20 +330,27 @@ void SV_MasterHeartbeat(const char *message, qboolean shutdown)
             command = "heartbeat";
         }
 
-        if (net_multiprotocol->integer || !net_runningLegacy->integer) {
-            if(adr[i][0].type != NA_BAD)
-                NET_OutOfBandPrint( NS_SERVER, adr[i][0], COMMPROTO_GOLD, "%s %s\n", command, message);
-            if(adr[i][1].type != NA_BAD)
-                NET_OutOfBandPrint( NS_SERVER, adr[i][1], COMMPROTO_GOLD, "%s %s\n", command, message);
-        }
-
-        if (net_multiprotocol->integer || net_runningLegacy->integer) {
+        if (net_runningDemo->integer) {
             if (adr[i][0].type != NA_BAD)
-                NET_OutOfBandPrint(NS_SERVER, adr[i][0], COMMPROTO_SILVER, "%s %s\n", command, message);
+                NET_OutOfBandPrint(NS_SERVER, adr[i][0], COMMPROTO_DEMO, "%s %s\n", command, message);
             if (adr[i][1].type != NA_BAD)
-                NET_OutOfBandPrint(NS_SERVER, adr[i][1], COMMPROTO_SILVER, "%s %s\n", command, message);
+                NET_OutOfBandPrint(NS_SERVER, adr[i][1], COMMPROTO_DEMO, "%s %s\n", command, message);
         }
+        else {
+            if (net_multiprotocol->integer || !net_runningLegacy->integer) {
+                if (adr[i][0].type != NA_BAD)
+                    NET_OutOfBandPrint(NS_SERVER, adr[i][0], COMMPROTO_GOLD, "%s %s\n", command, message);
+                if (adr[i][1].type != NA_BAD)
+                    NET_OutOfBandPrint(NS_SERVER, adr[i][1], COMMPROTO_GOLD, "%s %s\n", command, message);
+            }
 
+            if (net_multiprotocol->integer || net_runningLegacy->integer) {
+                if (adr[i][0].type != NA_BAD)
+                    NET_OutOfBandPrint(NS_SERVER, adr[i][0], COMMPROTO_SILVER, "%s %s\n", command, message);
+                if (adr[i][1].type != NA_BAD)
+                    NET_OutOfBandPrint(NS_SERVER, adr[i][1], COMMPROTO_SILVER, "%s %s\n", command, message);
+            }
+        }
     }
 }
 
@@ -584,7 +591,7 @@ static void SVC_Status( netadr_t from, commProtocol_t commProto ) {
     // Determine the base keyword to use:
     // - DEMOSOF2: v1.02t (MP TEST) servers
     // - SOF2FULL: Retail servers (v1.00+)
-    if(Cvar_VariableValue("fs_restrict")){
+    if(net_runningDemo->integer){
         Com_sprintf(keywords, sizeof(keywords), "DEMOSOF2 %s",
             Info_ValueForKey(infostring, "sv_keywords"));
     }else{
@@ -603,6 +610,10 @@ static void SVC_Status( netadr_t from, commProtocol_t commProto ) {
     else if (commProto == COMMPROTO_GOLD) {
         Info_SetValueForKey(infostring, "game_version", GOLD_GAME_VERSION);
         Info_SetValueForKey(infostring, "protocol", GOLD_GAME_PROTOCOL);
+    }
+    else if (commProto == COMMPROTO_DEMO) {
+        Info_SetValueForKey(infostring, "game_version", DEMO_GAME_VERSION);
+        Info_SetValueForKey(infostring, "protocol", DEMO_GAME_PROTOCOL);
     }
     
 
@@ -693,6 +704,9 @@ void SVC_Info( netadr_t from, commProtocol_t commProto ) {
         Info_SetValueForKey(infostring, "protocol", SILVER_GAME_PROTOCOL);
     } else if (commProto == COMMPROTO_GOLD) {
         Info_SetValueForKey(infostring, "protocol", GOLD_GAME_PROTOCOL);
+    }
+    else if (commProto == COMMPROTO_DEMO) {
+        Info_SetValueForKey(infostring, "protocol", DEMO_GAME_PROTOCOL);
     }
 
     Info_SetValueForKey( infostring, "hostname", sv_hostname->string );
@@ -839,7 +853,7 @@ static void SV_ConnectionlessPacket( netadr_t from, msg_t *msg, commProtocol_t c
     Cmd_TokenizeString( s );
 
     c = Cmd_Argv(0);
-    Com_DPrintf ("SV packet %s (prot %d) : %s\n", NET_AdrToString(from), (commProto == COMMPROTO_GOLD ? 2004 : (commProto == COMMPROTO_SILVER ? 2002 : commProto)), c);
+    Com_DPrintf ("SV packet %s (prot %d) : %s\n", NET_AdrToString(from), (commProto == COMMPROTO_GOLD ? 2004 : (commProto == COMMPROTO_SILVER ? 2002 : (commProto == COMMPROTO_DEMO ? 2001 : commProto))), c);
 
     if (!Q_stricmp(c, "getstatus")) {
         SVC_Status( from, commProto );

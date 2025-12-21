@@ -126,9 +126,13 @@ static void SV_SendConfigstring(client_t *client, int index)
             if (client->commProto == COMMPROTO_SILVER) {
                 SV_SendServerCommand(client, "cs %i \"%s\"\n", index,
                         SILVER_GAME_VERSION);
-            } else if (client->commProto == COMMPROTO_GOLD) {
+            }
+            else if (client->commProto == COMMPROTO_GOLD) {
                 SV_SendServerCommand(client, "cs %i \"%s\"\n", index,
-                        GOLD_GAME_VERSION);
+                    GOLD_GAME_VERSION);
+            } else if (client->commProto == COMMPROTO_DEMO) {
+                SV_SendServerCommand(client, "cs %i \"%s\"\n", index,
+                    DEMO_GAME_VERSION);
             } else {
                 SV_SendServerCommand(client, "cs %i \"%s\"\n", index,
                         sv.configstrings[index]);

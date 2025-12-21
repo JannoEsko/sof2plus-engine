@@ -503,7 +503,9 @@ in the gametype.
 
 void SV_GT_RunFrame(int time)
 {
-    VM_Call(gtvm, GAMETYPE_RUN_FRAME, time);
+    if (gtvm) {
+        VM_Call(gtvm, GAMETYPE_RUN_FRAME, time);
+    }
 }
 
 /*
@@ -516,7 +518,9 @@ Start the gametype.
 
 void SV_GT_Start(int time)
 {
-    VM_Call(gtvm, GAMETYPE_START, time);
+    if (gtvm) {
+        VM_Call(gtvm, GAMETYPE_START, time);
+    }
 }
 
 /*
@@ -530,7 +534,11 @@ gametype module.
 
 int SV_GT_SendEvent(int event, int time, int arg0, int arg1, int arg2, int arg3, int arg4)
 {
-    return VM_Call(gtvm, GAMETYPE_EVENT, event, time, arg0, arg1, arg2, arg3, arg4);
+    if (gtvm) {
+        return VM_Call(gtvm, GAMETYPE_EVENT, event, time, arg0, arg1, arg2, arg3, arg4);
+    }
+
+    return 0;
 }
 
 /*

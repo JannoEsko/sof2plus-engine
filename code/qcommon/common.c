@@ -94,6 +94,7 @@ cvar_t  *com_gracefulErrors;
 
 cvar_t* net_multiprotocol;
 cvar_t* net_runningLegacy;
+cvar_t* net_runningDemo;
 cvar_t* sv_useLegacyNades;
 #ifndef DEDICATED
 cvar_t  *con_autochat;
@@ -2325,6 +2326,13 @@ int Com_EventLoop( void ) {
                 // if the server just shut down, flush the events
                 if (com_sv_running->integer) {
                     Com_RunAndTimeServerPacket(&evFrom, &buf, COMMPROTO_GOLD); 
+                }
+            }
+
+            while (NET_GetLoopPacket(NS_SERVER, &evFrom, &buf, COMMPROTO_DEMO)) {
+                // if the server just shut down, flush the events
+                if (com_sv_running->integer) {
+                    Com_RunAndTimeServerPacket(&evFrom, &buf, COMMPROTO_DEMO);
                 }
             }
 
