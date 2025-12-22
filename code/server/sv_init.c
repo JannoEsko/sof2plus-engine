@@ -594,7 +594,11 @@ void SV_SpawnServer( char *server, qboolean killBots ) {
     sv_spoofGametype = Cvar_Get("g_spoofGametype", "0", CVAR_ARCHIVE | CVAR_LATCH);
     sv_goldClientMod = Cvar_Get("sv_goldClientMod", "", CVAR_ARCHIVE | CVAR_LATCH);
     sv_silverClientMod = Cvar_Get("sv_silverClientMod", "", CVAR_ARCHIVE | CVAR_LATCH);
+#ifdef _DEMO
+    sv_gameModernABI = Cvar_Get("sv_gameModernABI", "0", CVAR_ARCHIVE | CVAR_LATCH);
+#else
     sv_gameModernABI = Cvar_Get("sv_gameModernABI", "1", CVAR_ARCHIVE | CVAR_LATCH);
+#endif
     
     // clear physics interaction links
     SV_ClearWorld ();
