@@ -245,9 +245,9 @@ the appropriate replacement command is sent.
 */
 #define HEARTBEAT_MSEC  300*1000
 #define MASTERDNS_MSEC  24*60*60*1000
+static netadr_t masterAddr[MAX_MASTER_SERVERS][2]; // [2] for v4 and v6 address for the same address string.
 void SV_MasterHeartbeat(const char *message, qboolean shutdown)
 {
-    static netadr_t adr[MAX_MASTER_SERVERS][2]; // [2] for v4 and v6 address for the same address string.
     int         i;
     int         res;
     int         netenabled;
@@ -281,16 +281,16 @@ void SV_MasterHeartbeat(const char *message, qboolean shutdown)
             if(netenabled & NET_ENABLEV4)
             {
                 Com_Printf("Resolving %s (IPv4)\n", sv_master[i]->string);
-                res = NET_StringToAdr(sv_master[i]->string, &adr[i][0], NA_IP);
+                res = NET_StringToAdr(sv_master[i]->string, &masterAddr[i][0], NA_IP);
 
                 if(res == 2)
                 {
                     // if no port was specified, use the default master port
-                    adr[i][0].port = BigShort(PORT_MASTER);
+                    masterAddr[i][0].port = BigShort(PORT_MASTER);
                 }
 
                 if(res)
-                    Com_Printf( "%s resolved to %s\n", sv_master[i]->string, NET_AdrToStringwPort(adr[i][0]));
+                    Com_Printf( "%s resolved to %s\n", sv_master[i]->string, NET_AdrToStringwPort(masterAddr[i][0]));
                 else
                     Com_Printf( "%s has no IPv4 address.\n", sv_master[i]->string);
             }
@@ -298,22 +298,22 @@ void SV_MasterHeartbeat(const char *message, qboolean shutdown)
             if(netenabled & NET_ENABLEV6)
             {
                 Com_Printf("Resolving %s (IPv6)\n", sv_master[i]->string);
-                res = NET_StringToAdr(sv_master[i]->string, &adr[i][1], NA_IP6);
+                res = NET_StringToAdr(sv_master[i]->string, &masterAddr[i][1], NA_IP6);
 
                 if(res == 2)
                 {
                     // if no port was specified, use the default master port
-                    adr[i][1].port = BigShort(PORT_MASTER);
+                    masterAddr[i][1].port = BigShort(PORT_MASTER);
                 }
 
                 if(res)
-                    Com_Printf( "%s resolved to %s\n", sv_master[i]->string, NET_AdrToStringwPort(adr[i][1]));
+                    Com_Printf( "%s resolved to %s\n", sv_master[i]->string, NET_AdrToStringwPort(masterAddr[i][1]));
                 else
                     Com_Printf( "%s has no IPv6 address.\n", sv_master[i]->string);
             }
         }
 
-        if(adr[i][0].type == NA_BAD && adr[i][1].type == NA_BAD)
+        if(masterAddr[i][0].type == NA_BAD && masterAddr[i][1].type == NA_BAD)
         {
             continue;
         }
@@ -331,24 +331,24 @@ void SV_MasterHeartbeat(const char *message, qboolean shutdown)
         }
 
         if (net_runningDemo->integer) {
-            if (adr[i][0].type != NA_BAD)
-                NET_OutOfBandPrint(NS_SERVER, adr[i][0], COMMPROTO_DEMO, "%s %s\n", command, message);
-            if (adr[i][1].type != NA_BAD)
-                NET_OutOfBandPrint(NS_SERVER, adr[i][1], COMMPROTO_DEMO, "%s %s\n", command, message);
+            if (masterAddr[i][0].type != NA_BAD)
+                NET_OutOfBandPrint(NS_SERVER, masterAddr[i][0], COMMPROTO_DEMO, "%s %s\n", command, message);
+            if (masterAddr[i][1].type != NA_BAD)
+                NET_OutOfBandPrint(NS_SERVER, masterAddr[i][1], COMMPROTO_DEMO, "%s %s\n", command, message);
         }
         else {
             if (net_multiprotocol->integer || !net_runningLegacy->integer) {
-                if (adr[i][0].type != NA_BAD)
-                    NET_OutOfBandPrint(NS_SERVER, adr[i][0], COMMPROTO_GOLD, "%s %s\n", command, message);
-                if (adr[i][1].type != NA_BAD)
-                    NET_OutOfBandPrint(NS_SERVER, adr[i][1], COMMPROTO_GOLD, "%s %s\n", command, message);
+                if (masterAddr[i][0].type != NA_BAD)
+                    NET_OutOfBandPrint(NS_SERVER, masterAddr[i][0], COMMPROTO_GOLD, "%s %s\n", command, message);
+                if (masterAddr[i][1].type != NA_BAD)
+                    NET_OutOfBandPrint(NS_SERVER, masterAddr[i][1], COMMPROTO_GOLD, "%s %s\n", command, message);
             }
 
             if (net_multiprotocol->integer || net_runningLegacy->integer) {
-                if (adr[i][0].type != NA_BAD)
-                    NET_OutOfBandPrint(NS_SERVER, adr[i][0], COMMPROTO_SILVER, "%s %s\n", command, message);
-                if (adr[i][1].type != NA_BAD)
-                    NET_OutOfBandPrint(NS_SERVER, adr[i][1], COMMPROTO_SILVER, "%s %s\n", command, message);
+                if (masterAddr[i][0].type != NA_BAD)
+                    NET_OutOfBandPrint(NS_SERVER, masterAddr[i][0], COMMPROTO_SILVER, "%s %s\n", command, message);
+                if (masterAddr[i][1].type != NA_BAD)
+                    NET_OutOfBandPrint(NS_SERVER, masterAddr[i][1], COMMPROTO_SILVER, "%s %s\n", command, message);
             }
         }
     }
@@ -544,6 +544,28 @@ qboolean SVC_RateLimitAddress( netadr_t from, int burst, int period ) {
     return SVC_RateLimit( bucket, burst, period );
 }
 
+static qboolean SV_NetadrIsMasterserver( netadr_t from ) {
+
+    if (from.type != NA_IP && from.type != NA_IP6) {
+        return qfalse;
+    }
+
+    for (int i = 0; i < MAX_MASTER_SERVERS; i++) {
+
+        if (from.type == NA_IP) {
+            if (NET_CompareBaseAdr(from, masterAddr[i][0])) {
+                return qtrue;
+            }
+        }
+        else if (from.type == NA_IP6) {
+            if (NET_CompareBaseAdr(from, masterAddr[i][1])) {
+                return qtrue;
+            }
+        }
+    }
+    return qfalse;
+}
+
 /*
 ================
 SVC_Status
@@ -623,7 +645,7 @@ static void SVC_Status( netadr_t from, commProtocol_t commProto ) {
     int infoStringLength = strlen(infostring);
 
     int maxMessageLength = 1400;
-    
+
     for (i=0 ; i < sv_maxclients->integer ; i++) {
         cl = &svs.clients[i];
         if ( cl->state >= CS_CONNECTED ) {
@@ -639,7 +661,7 @@ static void SVC_Status( netadr_t from, commProtocol_t commProto ) {
             }
 
             playerLength = strlen(player);
-            if (infoStringLength + statusLength + playerLength >= maxMessageLength) {
+            if (infoStringLength + statusLength + playerLength >= maxMessageLength && SV_NetadrIsMasterserver(from)) {
                 break;      // can't hold any more
             }
             strcpy (status + statusLength, player);
