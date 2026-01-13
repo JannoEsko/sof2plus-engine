@@ -552,6 +552,10 @@ static qboolean SV_NetadrIsMasterserver( netadr_t from ) {
 
     for (int i = 0; i < MAX_MASTER_SERVERS; i++) {
 
+        if(masterAddr[i][0].type == NA_BAD && masterAddr[i][1].type == NA_BAD) {
+            continue;
+        }
+        
         if (from.type == NA_IP) {
             if (NET_CompareBaseAdr(from, masterAddr[i][0])) {
                 return qtrue;
