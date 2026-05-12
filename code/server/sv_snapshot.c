@@ -392,14 +392,18 @@ static void SV_AddEntitiesVisibleFromPoint( vec3_t origin, clientSnapshot_t *fra
 
         // if we haven't found it to be visible,
         // check overflow clusters that coudln't be stored
-        if ( i == svEnt->numClusters && svEnt->lastCluster ) {
-            for ( ; l <= svEnt->lastCluster ; l++ ) {
-                if ( bitvector[l >> 3] & (1 << (l&7) ) ) {
-                    break;
+        if ( i == svEnt->numClusters ) {
+            if ( svEnt->lastCluster ) {
+                for ( ; l <= svEnt->lastCluster ; l++ ) {
+                    if ( bitvector[l >> 3] & (1 << (l&7) ) ) {
+                        break;
+                    }
                 }
-            }
-            if ( l == svEnt->lastCluster ) {
-                continue;   // not visible
+                if ( l == svEnt->lastCluster ) {
+                    continue;   // not visible
+                }
+            } else {
+                continue;
             }
         }
 
@@ -478,8 +482,23 @@ static void SV_BuildClientSnapshot( client_t *client ) {
     svEnt->snapshotCounter = sv.snapshotCounter;
 
     // find the client's viewpoint
+    // VectorCopy( ps->origin, org );
+    // org[2] += ps->viewheight;
+    
+    // sof2plus-engine issue #14 - use pvsOrigin instead of origin for full versions, calculate leans for demo.
+    
+#ifndef _DEMO
+    VectorCopy( ps->pvsOrigin, org );
+#else
     VectorCopy( ps->origin, org );
     org[2] += ps->viewheight;
+    if ( ps->leanTime != LEAN_TIME ) {
+        vec3_t right;
+        float leanOffset = (float)(ps->leanTime - LEAN_TIME) / LEAN_TIME * LEAN_OFFSET;
+        AngleVectors( ps->viewangles, NULL, right, NULL );
+        VectorMA( org, leanOffset, right, org );
+    }
+#endif
 
     // add all the entities directly visible to the eye, which
     // may include portal entities that merge other viewpoints
