@@ -163,7 +163,7 @@ static int R_ParseHitData(char *token, shader_t *shader, qboolean location)
         hitRegData  = &tr.hitRegData[tr.hitRegDataCount];
         buffer      = 0;
 
-        R_LoadPNG(fileName, &buffer, &hitRegData->width, &hitRegData->height);
+        R_LoadPNG(fileName, &buffer, &hitRegData->width, &hitRegData->height, qtrue);
         if(buffer){
             // Determine number of pixels.
             numPixels = hitRegData->width * hitRegData->height;

@@ -119,7 +119,7 @@ extern trGlobals_t          tr;
 // tr_image_png.c
 //
 
-void                R_LoadPNG                       ( const char *name, byte **pic, int *width, int *height );
+void                R_LoadPNG                       ( const char *name, byte **pic, int *width, int *height, qboolean rawIndexed );
 
 //
 // tr_main.c

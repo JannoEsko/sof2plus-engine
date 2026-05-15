@@ -1261,7 +1261,8 @@ static qboolean DecodeImageNonInterlaced(struct PNG_Chunk_IHDR *IHDR,
         uint32_t               DecompressedDataLength,
         qboolean               HasTransparentColour,
         uint8_t               *TransparentColour,
-        uint8_t               *OutPal)
+        uint8_t               *OutPal,
+        qboolean               rawIndexed)
 {
     uint32_t IHDR_Width;
     uint32_t IHDR_Height;
@@ -1499,12 +1500,20 @@ static qboolean DecodeImageNonInterlaced(struct PNG_Chunk_IHDR *IHDR,
 
                         SinglePixel = ((DecompPtr[0] & (Mask << Shift)) >> Shift);
 
-                        if(!ConvertPixel(IHDR, OutPtr, &SinglePixel, HasTransparentColour, TransparentColour, OutPal))
+                        if(rawIndexed)
                         {
-                            return(qfalse);
+                            *OutPtr = SinglePixel;
+                            OutPtr += 1;
                         }
+                        else
+                        {
+                            if(!ConvertPixel(IHDR, OutPtr, &SinglePixel, HasTransparentColour, TransparentColour, OutPal))
+                            {
+                                return(qfalse);
+                            }
 
-                        OutPtr += Q3IMAGE_BYTESPERPIXEL;
+                            OutPtr += Q3IMAGE_BYTESPERPIXEL;
+                        }
                         CurrPixel++;
                     }
                 }
@@ -1512,13 +1521,20 @@ static qboolean DecodeImageNonInterlaced(struct PNG_Chunk_IHDR *IHDR,
             }
             else
             {
-                if(!ConvertPixel(IHDR, OutPtr, DecompPtr, HasTransparentColour, TransparentColour, OutPal))
+                if(rawIndexed)
                 {
-                    return(qfalse);
+                    *OutPtr = DecompPtr[0];
+                    OutPtr += 1;
                 }
+                else
+                {
+                    if(!ConvertPixel(IHDR, OutPtr, DecompPtr, HasTransparentColour, TransparentColour, OutPal))
+                    {
+                        return(qfalse);
+                    }
 
-
-                OutPtr += Q3IMAGE_BYTESPERPIXEL;
+                    OutPtr += Q3IMAGE_BYTESPERPIXEL;
+                }
             }
 
             DecompPtr += BytesPerPixel;
@@ -1538,7 +1554,8 @@ static qboolean DecodeImageInterlaced(struct PNG_Chunk_IHDR *IHDR,
         uint32_t               DecompressedDataLength,
         qboolean               HasTransparentColour,
         uint8_t               *TransparentColour,
-        uint8_t               *OutPal)
+        uint8_t               *OutPal,
+        qboolean               rawIndexed)
 {
     uint32_t IHDR_Width;
     uint32_t IHDR_Height;
@@ -1869,11 +1886,21 @@ static qboolean DecodeImageInterlaced(struct PNG_Chunk_IHDR *IHDR,
 
                             SinglePixel = ((DecompPtr[0] & (Mask << Shift)) >> Shift);
 
-                            OutPtr = OutBuffer + (((((h * HSkip[a]) + HOffset[a]) * IHDR_Width) + ((CurrPixel * WSkip[a]) + WOffset[a])) * Q3IMAGE_BYTESPERPIXEL);
-
-                            if(!ConvertPixel(IHDR, OutPtr, &SinglePixel, HasTransparentColour, TransparentColour, OutPal))
+                            if(rawIndexed)
                             {
-                                return(qfalse);
+                                OutPtr = OutBuffer +
+                                    (((h * HSkip[a]) + HOffset[a]) * IHDR_Width) +
+                                    ((CurrPixel * WSkip[a]) + WOffset[a]);
+                                *OutPtr = SinglePixel;
+                            }
+                            else
+                            {
+                                OutPtr = OutBuffer + (((((h * HSkip[a]) + HOffset[a]) * IHDR_Width) + ((CurrPixel * WSkip[a]) + WOffset[a])) * Q3IMAGE_BYTESPERPIXEL);
+
+                                if(!ConvertPixel(IHDR, OutPtr, &SinglePixel, HasTransparentColour, TransparentColour, OutPal))
+                                {
+                                    return(qfalse);
+                                }
                             }
 
                             CurrPixel++;
@@ -1883,11 +1910,21 @@ static qboolean DecodeImageInterlaced(struct PNG_Chunk_IHDR *IHDR,
                 }
                 else
                 {
-                    OutPtr = OutBuffer + (((((h * HSkip[a]) + HOffset[a]) * IHDR_Width) + ((w * WSkip[a]) + WOffset[a])) * Q3IMAGE_BYTESPERPIXEL);
-
-                    if(!ConvertPixel(IHDR, OutPtr, DecompPtr, HasTransparentColour, TransparentColour, OutPal))
+                    if(rawIndexed)
                     {
-                        return(qfalse);
+                        OutPtr = OutBuffer +
+                            (((h * HSkip[a]) + HOffset[a]) * IHDR_Width) +
+                            ((w * WSkip[a]) + WOffset[a]);
+                        *OutPtr = DecompPtr[0];
+                    }
+                    else
+                    {
+                        OutPtr = OutBuffer + (((((h * HSkip[a]) + HOffset[a]) * IHDR_Width) + ((w * WSkip[a]) + WOffset[a])) * Q3IMAGE_BYTESPERPIXEL);
+
+                        if(!ConvertPixel(IHDR, OutPtr, DecompPtr, HasTransparentColour, TransparentColour, OutPal))
+                        {
+                            return(qfalse);
+                        }
                     }
                 }
 
@@ -1903,7 +1940,7 @@ static qboolean DecodeImageInterlaced(struct PNG_Chunk_IHDR *IHDR,
  *  The PNG loader
  */
 
-void R_LoadPNG(const char *name, byte **pic, int *width, int *height)
+void R_LoadPNG(const char *name, byte **pic, int *width, int *height, qboolean rawIndexed)
 {
     struct BufferedFile *ThePNG;
     byte *OutBuffer;
@@ -2401,7 +2438,7 @@ void R_LoadPNG(const char *name, byte **pic, int *width, int *height)
      *  Allocate output buffer.
      */
 
-    OutBuffer = Z_Malloc(IHDR_Width * IHDR_Height * Q3IMAGE_BYTESPERPIXEL);
+    OutBuffer = Z_Malloc(IHDR_Width * IHDR_Height * (rawIndexed ? 1 : Q3IMAGE_BYTESPERPIXEL));
     if(!OutBuffer)
     {
         Z_Free(DecompressedData);
@@ -2418,7 +2455,7 @@ void R_LoadPNG(const char *name, byte **pic, int *width, int *height)
     {
         case PNG_InterlaceMethod_NonInterlaced :
         {
-            if(!DecodeImageNonInterlaced(IHDR, OutBuffer, DecompressedData, DecompressedDataLength, HasTransparentColour, TransparentColour, OutPal))
+            if(!DecodeImageNonInterlaced(IHDR, OutBuffer, DecompressedData, DecompressedDataLength, HasTransparentColour, TransparentColour, OutPal, rawIndexed))
             {
                 Z_Free(OutBuffer);
                 Z_Free(DecompressedData);
@@ -2432,7 +2469,7 @@ void R_LoadPNG(const char *name, byte **pic, int *width, int *height)
 
         case PNG_InterlaceMethod_Interlaced :
         {
-            if(!DecodeImageInterlaced(IHDR, OutBuffer, DecompressedData, DecompressedDataLength, HasTransparentColour, TransparentColour, OutPal))
+            if(!DecodeImageInterlaced(IHDR, OutBuffer, DecompressedData, DecompressedDataLength, HasTransparentColour, TransparentColour, OutPal, rawIndexed))
             {
                 Z_Free(OutBuffer);
                 Z_Free(DecompressedData);
