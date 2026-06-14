@@ -356,7 +356,7 @@ int PS_ReadWhiteSpace(script_t *script)
 //============================================================================
 int PS_ReadEscapeCharacter(script_t *script, char *ch)
 {
-    int c, val, i;
+    int c, val;
 
     //step over the leading '\\'
     script->script_p++;
@@ -377,7 +377,7 @@ int PS_ReadEscapeCharacter(script_t *script, char *ch)
         case 'x':
         {
             script->script_p++;
-            for (i = 0, val = 0; ; i++, script->script_p++)
+            for (val = 0; ; script->script_p++)
             {
                 c = *script->script_p;
                 if (c >= '0' && c <= '9') c = c - '0';
@@ -398,7 +398,7 @@ int PS_ReadEscapeCharacter(script_t *script, char *ch)
         default: //NOTE: decimal ASCII code, NOT octal
         {
             if (*script->script_p < '0' || *script->script_p > '9') ScriptError(script, "unknown escape char");
-            for (i = 0, val = 0; ; i++, script->script_p++)
+            for (val = 0; ; script->script_p++)
             {
                 c = *script->script_p;
                 if (c >= '0' && c <= '9') c = c - '0';
@@ -643,7 +643,7 @@ int PS_ReadNumber(script_t *script, token_t *token)
         //hexadecimal
         while((c >= '0' && c <= '9') ||
                     (c >= 'a' && c <= 'f') ||
-                    (c >= 'A' && c <= 'A'))
+                    (c >= 'A' && c <= 'F'))
         {
             token->string[len++] = *script->script_p++;
             if (len >= MAX_TOKEN)

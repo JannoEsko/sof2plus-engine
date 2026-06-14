@@ -24,21 +24,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "q_shared.h"
 
 /*
-============
-GetIDForString
-============
-*/
-int GetIDForString(stringID_table_t *table, const char *string){
-    int index = 0;
-
-    while((table[index].name != NULL) &&
-        (table[index].name[0] != 0)){
-        if(!Q_stricmp(table[index].name, string)){
-            return table[index].id;
-        }
-
-        index++;
-    }
+=====    }
 
     return -1;
 }
@@ -760,7 +746,7 @@ int Q_isalpha( int c )
 qboolean Q_isanumber( const char *s )
 {
     char *p;
-    double UNUSED_VAR d;
+    double Q_UNUSED_VAR d;
 
     if( *s == '\0' )
         return qfalse;
@@ -1228,7 +1214,7 @@ void Info_RemoveKey( char *s, const char *key ) {
         }
         *o = 0;
 
-        if (!strcmp (key, pkey) )
+        if (!Q_stricmp (key, pkey) )
         {
             memmove(start, s, strlen(s) + 1); // remove this part
 
@@ -1284,7 +1270,7 @@ void Info_RemoveKey_Big( char *s, const char *key ) {
         }
         *o = 0;
 
-        if (!strcmp (key, pkey) )
+        if (!Q_stricmp (key, pkey) )
         {
             memmove(start, s, strlen(s) + 1); // remove this part
             return;
@@ -1308,12 +1294,22 @@ can mess up the server's parsing
 ==================
 */
 qboolean Info_Validate( const char *s ) {
-    if ( strchr( s, '\"' ) ) {
-        return qfalse;
+    const char* ch = s;
+
+    while ( *ch != '\0' )
+    {
+        if( !Q_isprint( *ch ) )
+            return qfalse;
+
+        if( *ch == '\"' )
+            return qfalse;
+
+        if( *ch == ';' )
+            return qfalse;
+
+        ++ch;
     }
-    if ( strchr( s, ';' ) ) {
-        return qfalse;
-    }
+
     return qtrue;
 }
 

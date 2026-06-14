@@ -189,7 +189,7 @@ typedef struct {
     char            pakBasename[MAX_OSPATH];    // pak0
     char            pakGamename[MAX_OSPATH];    // baseq3
     unzFile         handle;                     // handle to zip file
-    int             checksum;                   // regular checksum
+    unsigned int    checksum;                   // regular checksum
     int             pure_checksum;              // checksum for pure
     int             numfiles;                   // number of files in pk3
     int             referenced;                 // referenced file flags
@@ -261,14 +261,14 @@ static fileHandleData_t fsh[MAX_FILE_HANDLES];
 static qboolean fs_reordered;
 
 // never load anything from pk3 files that are not present at the server when pure
-static int      fs_numServerPaks = 0;
-static int      fs_serverPaks[MAX_SEARCH_PATHS];                // checksums
-static char     *fs_serverPakNames[MAX_SEARCH_PATHS];           // pk3 names
+static int          fs_numServerPaks = 0;
+static unsigned int fs_serverPaks[MAX_SEARCH_PATHS];                // checksums
+static char         *fs_serverPakNames[MAX_SEARCH_PATHS];           // pk3 names
 
 // only used for autodownload, to make sure the client has at least
 // all the pk3 files that are referenced at the server side
-static int      fs_numServerReferencedPaks;
-static int      fs_serverReferencedPaks[MAX_SEARCH_PATHS];          // checksums
+static int          fs_numServerReferencedPaks;
+static unsigned int fs_serverReferencedPaks[MAX_SEARCH_PATHS];          // checksums
 static char     *fs_serverReferencedPakNames[MAX_SEARCH_PATHS];     // pk3 names
 
 // last valid game folder used
@@ -490,9 +490,13 @@ FS_CreatePath
 Creates any directories needed to store the given filename
 ============
 */
-qboolean FS_CreatePath (char *OSPath) {
+qboolean FS_CreatePath (const char *OSPath) {
     char    *ofs;
     char    path[MAX_OSPATH];
+
+    if (!OSPath || !*OSPath) {
+        return qfalse;
+    }
 
     // make absolutely sure that it can't back up the path
     // FIXME: is c: allowed???
@@ -1624,8 +1628,6 @@ FS_Seek
 =================
 */
 int FS_Seek( fileHandle_t f, long offset, int origin ) {
-    int     _origin;
-
     if ( !fs_searchpaths ) {
         Com_Error( ERR_FATAL, "Filesystem call made without initialization" );
         return -1;
@@ -1692,6 +1694,7 @@ int FS_Seek( fileHandle_t f, long offset, int origin ) {
         }
     } else {
         FILE *file;
+        int _origin = SEEK_SET;
         file = FS_FileForHandle(f);
         switch( origin ) {
         case FS_SEEK_CUR:
@@ -2119,7 +2122,8 @@ Compares whether the given pak file matches a referenced checksum
 qboolean FS_CompareZipChecksum(const char *zipfile)
 {
     pack_t *thepak;
-    int index, checksum;
+    int index;
+    unsigned int checksum;
 
     thepak = FS_LoadZipFile(zipfile, "");
 
@@ -2497,7 +2501,7 @@ A mod directory is a peer to baseq3 with a pk3 or pk3dir in it
 ================
 */
 int FS_GetModList( char *listbuf, int bufsize ) {
-    int nMods, i, j, k, nTotal, nLen, nPaks, nDirs, nPakDirs, nPotential, nDescLen;
+    int nMods, i, j, k, nTotal, nLen, nPaks = 0, nDirs = 0, nPakDirs = 0, nPotential, nDescLen;
     char **pFiles = NULL;
     char **pPaks = NULL;
     char **pDirs = NULL;
@@ -2910,7 +2914,9 @@ void FS_AddGameDirectory( const char *path, const char *dir ) {
     // Get .pk3 files
     pakfiles = Sys_ListFiles(curpath, ".pk3", NULL, &numfiles, qfalse);
 
-    qsort( pakfiles, numfiles, sizeof(char*), paksort );
+    if ( pakfiles ) {
+        qsort( pakfiles, numfiles, sizeof(char*), paksort );
+    }
 
     if ( fs_numServerPaks ) {
         numdirs = 0;
@@ -3925,14 +3931,14 @@ void    FS_Flush( fileHandle_t f ) {
     fflush(fsh[f].handleFiles.file.o);
 }
 
-void    FS_FilenameCompletion( const char *dir, const char *ext,
+void    FS_FilenameCompletion( const char *dir, const char *ext, char *filter,
         qboolean stripExt, void(*callback)(const char *s), qboolean allowNonPureFilesOnDisk ) {
     char    **filenames;
     int     nfiles;
     int     i;
     char    filename[ MAX_STRING_CHARS ];
 
-    filenames = FS_ListFilteredFiles( dir, ext, NULL, &nfiles, allowNonPureFilesOnDisk );
+    filenames = FS_ListFilteredFiles( dir, ext, filter, &nfiles, allowNonPureFilesOnDisk );
 
     FS_SortFileList( filenames, nfiles );
 

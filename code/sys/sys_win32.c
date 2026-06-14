@@ -20,6 +20,9 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 ===========================================================================
 */
 
+// Use EnumProcesses() with Windows XP compatibility
+#define PSAPI_VERSION 1
+
 #include "../qcommon/q_shared.h"
 #include "../qcommon/qcommon.h"
 #include "sys_local.h"
@@ -435,6 +438,10 @@ void Sys_ListFilteredFiles( const char *basedir, char *subdirs, char *filter, ch
         return;
     }
 
+    if ( basedir[0] == '\0' ) {
+        return;
+    }
+
     if (strlen(subdirs)) {
         Com_sprintf( search, sizeof(search), "%s\\%s\\*", basedir, subdirs );
     }
@@ -534,6 +541,11 @@ char **Sys_ListFiles( const char *directory, const char *extension, char *filter
         listCopy[i] = NULL;
 
         return listCopy;
+    }
+
+    if ( directory[0] == '\0' ) {
+        *numfiles = 0;
+        return NULL;
     }
 
     if ( !extension) {
@@ -667,6 +679,8 @@ Display an error message
 */
 void Sys_ErrorDialog( const char *error )
 {
+    Sys_Print( va( "%s\n", error ) );
+
     if( Sys_Dialog( DT_YES_NO, va( "%s. Copy console log to clipboard?", error ),
             "Error" ) == DR_YES )
     {
@@ -844,7 +858,7 @@ qboolean Sys_PIDIsRunning( int pid )
     // Search for the pid
     for( i = 0; i < numProcesses; i++ )
     {
-        if( processes[ i ] == pid )
+        if( (int)processes[ i ] == pid )
             return qtrue;
     }
 
@@ -860,4 +874,14 @@ Check if filename should be allowed to be loaded as a DLL.
 */
 qboolean Sys_DllExtension( const char *name ) {
     return COM_CompareExtension( name, DLL_EXT );
+}
+
+/*
+=================
+Sys_SetMaxFileLimit
+=================
+*/
+qboolean Sys_SetMaxFileLimit( void )
+{
+    return qtrue;
 }

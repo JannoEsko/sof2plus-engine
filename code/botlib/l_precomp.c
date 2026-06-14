@@ -274,9 +274,9 @@ token_t *PC_CopyToken(token_t *token)
     if (!t)
     {
 #ifdef BSPC
-        Error("out of token space\n");
+        Error("out of token space");
 #else
-        Com_Error(ERR_FATAL, "out of token space\n");
+        Com_Error(ERR_FATAL, "out of token space");
 #endif
         return NULL;
     } //end if
@@ -474,7 +474,8 @@ int PC_StringizeTokens(token_t *tokens, token_t *token)
     strcat(token->string, "\"");
     for (t = tokens; t; t = t->next)
     {
-        strncat(token->string, t->string, MAX_TOKEN - strlen(token->string) - 1);
+        snprintf(token->string + strlen(token->string),
+            MAX_TOKEN - strlen(token->string), "%s", t->string);
     } //end for
     strncat(token->string, "\"", MAX_TOKEN - strlen(token->string) - 1);
     return qtrue;
@@ -554,7 +555,7 @@ void PC_PrintDefineHashTable(define_t **definehash)
 
 int PC_NameHash(char *name)
 {
-    int register hash, i;
+    int hash, i;
 
     hash = 0;
     for (i = 0; name[i] != '\0'; i++)
@@ -722,7 +723,7 @@ int PC_ExpandBuiltinDefine(source_t *source, token_t *deftoken, define_t *define
                                         token_t **firsttoken, token_t **lasttoken)
 {
     token_t *token;
-    unsigned long t;    //    time_t t; //to prevent LCC warning
+    time_t t;
     char *curtime;
 
     token = PC_CopyToken(deftoken);
@@ -753,7 +754,7 @@ int PC_ExpandBuiltinDefine(source_t *source, token_t *deftoken, define_t *define
         case BUILTIN_DATE:
         {
             t = time(NULL);
-            curtime = ctime((const time_t *)&t);
+            curtime = ctime(&t);
             strcpy(token->string, "\"");
             strncat(token->string, curtime+4, 7);
             strncat(token->string+7, curtime+20, 4);
@@ -768,7 +769,7 @@ int PC_ExpandBuiltinDefine(source_t *source, token_t *deftoken, define_t *define
         case BUILTIN_TIME:
         {
             t = time(NULL);
-            curtime = ctime((const time_t*)&t);
+            curtime = ctime(&t);
             strcpy(token->string, "\"");
             strncat(token->string, curtime+11, 8);
             strcat(token->string, "\"");
@@ -798,7 +799,7 @@ int PC_ExpandBuiltinDefine(source_t *source, token_t *deftoken, define_t *define
 int PC_ExpandDefine(source_t *source, token_t *deftoken, define_t *define,
                                         token_t **firsttoken, token_t **lasttoken)
 {
-    token_t *parms[MAX_DEFINEPARMS], *dt, *pt, *t;
+    token_t *parms[MAX_DEFINEPARMS] = { NULL }, *dt, *pt, *t;
     token_t *t1, *t2, *first, *last, *nextpt, token;
     int parmnum, i;
 

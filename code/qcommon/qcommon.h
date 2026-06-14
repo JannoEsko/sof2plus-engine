@@ -25,13 +25,6 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #include "../qcommon/cm_public.h"
 
-//Ignore __attribute__ on non-gcc platforms
-#ifndef __GNUC__
-#ifndef __attribute__
-#define __attribute__(x)
-#endif
-#endif
-
 //#define   PRE_RELEASE_DEMO
 
 //============================================================================
@@ -198,7 +191,7 @@ void        NET_Restart_f( void );
 void        NET_Config( qboolean enableNetworking );
 void        NET_FlushPacketQueue(void);
 void        NET_SendPacket (netsrc_t sock, int length, const void *data, netadr_t to, commProtocol_t commProto);
-void        QDECL NET_OutOfBandPrint( netsrc_t net_socket, netadr_t adr, commProtocol_t commProto, const char *format, ...) __attribute__ ((format (printf, 4, 5)));
+void        QDECL NET_OutOfBandPrint( netsrc_t net_socket, netadr_t adr, commProtocol_t commProto, const char *format, ...) Q_PRINTF_FUNC(4, 5);
 void        QDECL NET_OutOfBandData( netsrc_t sock, netadr_t adr, byte *format, int len );
 
 qboolean    NET_CompareAdr (netadr_t a, netadr_t b);
@@ -342,6 +335,26 @@ typedef enum {
     VMI_BYTECODE,
     VMI_COMPILED
 } vmInterpret_t;
+
+typedef enum {
+    TRAP_MEMSET = 100,
+    TRAP_MEMCPY,
+    TRAP_STRNCPY,
+    TRAP_SIN,
+    TRAP_COS,
+    TRAP_ATAN2,
+    TRAP_SQRT,
+    TRAP_MATRIXMULTIPLY,
+    TRAP_ANGLEVECTORS,
+    TRAP_PERPENDICULARVECTOR,
+    TRAP_FLOOR,
+    TRAP_CEIL,
+
+    TRAP_TESTPRINTINT,
+    TRAP_TESTPRINTFLOAT
+} sharedTraps_t;
+
+typedef intptr_t (QDECL *vmMainProc)(int callNum, int arg0, int arg1, int arg2, int arg3, int arg4, int arg5, int arg6, int arg7, int arg8, int arg9, int arg10, int arg11);
 
 void    VM_Init( void );
 vm_t    *VM_Create( const char *module, intptr_t (*systemCalls)(qboolean, intptr_t *), vmInterpret_t interpret);
@@ -641,11 +654,11 @@ void    FS_FreeFileList( char **list );
 
 qboolean FS_FileExists( const char *file );
 
-qboolean FS_CreatePath (char *OSPath);
+qboolean FS_CreatePath (const char *OSPath);
 
 int FS_FindVM(void **startSearch, char *found, int foundlen, const char *name, int enableDll);
 
-char   *FS_BuildOSPath( const char *base, const char *game, const char *qpath );
+char    *FS_BuildOSPath( const char *base, const char *game, const char *qpath );
 qboolean FS_CompareZipChecksum(const char *zipfile);
 
 int     FS_LoadStack( void );
@@ -707,7 +720,7 @@ int     FS_FTell( fileHandle_t f );
 
 void    FS_Flush( fileHandle_t f );
 
-void    QDECL FS_Printf( fileHandle_t f, const char *fmt, ... ) __attribute__ ((format (printf, 2, 3)));
+void    QDECL FS_Printf( fileHandle_t f, const char *fmt, ... ) Q_PRINTF_FUNC(2, 3);
 // like fprintf
 
 int     FS_FOpenFileByMode( const char *qpath, fileHandle_t *f, fsMode_t mode );
@@ -751,7 +764,7 @@ void FS_Rename( const char *from, const char *to );
 void FS_Remove( const char *osPath );
 void FS_HomeRemove( const char *homePath );
 
-void    FS_FilenameCompletion( const char *dir, const char *ext,
+void    FS_FilenameCompletion( const char *dir, const char *ext, char *filter,
         qboolean stripExt, void(*callback)(const char *s), qboolean allowNonPureFilesOnDisk );
 
 const char *FS_GetCurrentGameDir(void);
@@ -780,8 +793,9 @@ typedef struct {
 void Field_Clear( field_t *edit );
 void Field_AutoComplete( field_t *edit );
 void Field_CompleteKeyname( void );
-void Field_CompleteFilename( const char *dir,
-        const char *ext, qboolean stripExt, qboolean allowNonPureFilesOnDisk );
+void Field_CompleteFilename( const char *dir, const char *ext,
+        char *filter, qboolean stripExt,
+        qboolean allowNonPureFilesOnDisk );
 void Field_CompleteCommand( char *cmd,
         qboolean doCommands, qboolean doCvars );
 void Field_CompletePlayerName( const char **names, int count );
@@ -842,10 +856,10 @@ void        Info_Print( const char *s );
 
 void        Com_BeginRedirect (char *buffer, int buffersize, void (*flush)(char *, commProtocol_t), commProtocol_t commProto);
 void        Com_EndRedirect( void );
-void        QDECL Com_Printf( const char *fmt, ... ) __attribute__ ((format (printf, 1, 2)));
-void        QDECL Com_DPrintf( const char *fmt, ... ) __attribute__ ((format (printf, 1, 2)));
-void        QDECL Com_Error( int code, const char *fmt, ... ) __attribute__ ((format(printf, 2, 3)));
-void        Com_Quit_f( void ) __attribute__ ((noreturn));
+void        QDECL Com_Printf( const char *fmt, ... ) Q_PRINTF_FUNC(1, 2);
+void        QDECL Com_DPrintf( const char *fmt, ... ) Q_PRINTF_FUNC(1, 2);
+void        QDECL Com_Error( int code, const char *fmt, ... ) Q_PRINTF_FUNC(2, 3);
+void        Com_Quit_f( void ) Q_NO_RETURN;
 void        Com_GameRestart(int checksumFeed, qboolean disconnect);
 
 int         Com_Milliseconds( void );   // will be journaled properly
@@ -1123,7 +1137,7 @@ NON-PORTABLE SYSTEM SERVICES
 void    Sys_Init (void);
 
 // general development dll loading for virtual machine testing
-void    * QDECL Sys_LoadGameDll( const char *name, intptr_t (QDECL **entryPoint)(int, ...),
+void    * QDECL Sys_LoadGameDll( const char *name, vmMainProc *entryPoint,
                   intptr_t (QDECL *systemcalls)(intptr_t, ...) );
 void    Sys_UnloadDll( void *dllHandle );
 
@@ -1131,8 +1145,8 @@ qboolean Sys_DllExtension( const char *name );
 
 char    *Sys_GetCurrentUser( void );
 
-void    QDECL Sys_Error( const char *error, ...) __attribute__ ((noreturn, format (printf, 1, 2)));
-void    Sys_Quit (void) __attribute__ ((noreturn));
+void    QDECL Sys_Error( const char *error, ...) Q_NO_RETURN Q_PRINTF_FUNC(1, 2);
+void    Sys_Quit (void) Q_NO_RETURN;
 char    *Sys_GetClipboardData( void );  // note that this isn't journaled...
 
 void    Sys_Print( const char *msg );

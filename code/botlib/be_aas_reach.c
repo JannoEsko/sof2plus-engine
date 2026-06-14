@@ -3876,7 +3876,7 @@ int AAS_Reachability_Grapple(int area1num, int area2num)
         //area to end in
         areanum = AAS_PointAreaNum(trace.endpos);
         //if not in lava or slime
-        if (aasworld.areasettings[areanum].contents & AREACONTENTS_LAVA)
+        if (aasworld.areasettings[areanum].contents & (AREACONTENTS_SLIME|AREACONTENTS_LAVA))
         {
             continue;
         } //end if

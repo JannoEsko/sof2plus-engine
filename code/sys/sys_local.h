@@ -46,9 +46,11 @@ void Sys_GLimpSafeInit( void );
 void Sys_GLimpInit( void );
 void Sys_PlatformInit( void );
 void Sys_PlatformExit( void );
-void Sys_SigHandler( int signal ) __attribute__ ((noreturn));
+void Sys_SigHandler( int signal ) Q_NO_RETURN;
 void Sys_ErrorDialog( const char *error );
 void Sys_AnsiColorPrint( const char *msg );
 
 int Sys_PID( void );
 qboolean Sys_PIDIsRunning( int pid );
+
+qboolean Sys_SetMaxFileLimit( void );
