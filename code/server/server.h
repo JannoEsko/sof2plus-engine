@@ -182,6 +182,8 @@ typedef struct client_s {
     qboolean        csUpdated[MAX_CONFIGSTRINGS];
 
     commProtocol_t      commProto;
+
+    int             lastGamestate;
 } client_t;
 
 //=============================================================================

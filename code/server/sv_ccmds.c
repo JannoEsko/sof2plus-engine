@@ -1593,7 +1593,7 @@ SV_CompleteMapName
 */
 static void SV_CompleteMapName( char *args, int argNum ) {
     if( argNum == 2 ) {
-        Field_CompleteFilename( "maps", "bsp", qtrue, qfalse );
+        Field_CompleteFilename( "maps", "bsp", NULL, qtrue, qfalse );
     }
 }
 

@@ -726,6 +726,12 @@ static void SV_SendClientGameState( client_t *client ) {
 
     char bigInfoString[BIG_INFO_STRING];
 
+    if (client->lastGamestate > svs.time - 250) {
+        return;
+    }
+
+    client->lastGamestate = svs.time;
+
     Com_DPrintf ("SV_SendClientGameState() for %s\nClient commProto: %d\n", client->name, client->commProto);
     Com_DPrintf( "Going from CS_CONNECTED to CS_PRIMED for %s\n", client->name );
     client->state = CS_PRIMED;
