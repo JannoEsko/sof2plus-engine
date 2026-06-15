@@ -579,7 +579,7 @@ Used to load a development dll instead of a virtual machine
 =================
 */
 void *Sys_LoadGameDll(const char *name,
-    vmMainProc *entryPoint,
+    intptr_t (QDECL **entryPoint)(int, ...),
     intptr_t (*systemcalls)(intptr_t, ...))
 {
     void *libHandle;

@@ -336,26 +336,6 @@ typedef enum {
     VMI_COMPILED
 } vmInterpret_t;
 
-typedef enum {
-    TRAP_MEMSET = 100,
-    TRAP_MEMCPY,
-    TRAP_STRNCPY,
-    TRAP_SIN,
-    TRAP_COS,
-    TRAP_ATAN2,
-    TRAP_SQRT,
-    TRAP_MATRIXMULTIPLY,
-    TRAP_ANGLEVECTORS,
-    TRAP_PERPENDICULARVECTOR,
-    TRAP_FLOOR,
-    TRAP_CEIL,
-
-    TRAP_TESTPRINTINT,
-    TRAP_TESTPRINTFLOAT
-} sharedTraps_t;
-
-typedef intptr_t (QDECL *vmMainProc)(int callNum, int arg0, int arg1, int arg2, int arg3, int arg4, int arg5, int arg6, int arg7, int arg8, int arg9, int arg10, int arg11);
-
 void    VM_Init( void );
 vm_t    *VM_Create( const char *module, intptr_t (*systemCalls)(qboolean, intptr_t *), vmInterpret_t interpret);
 // module should be bare: "cgame", not "cgame.dll"
@@ -1137,7 +1117,7 @@ NON-PORTABLE SYSTEM SERVICES
 void    Sys_Init (void);
 
 // general development dll loading for virtual machine testing
-void    * QDECL Sys_LoadGameDll( const char *name, vmMainProc *entryPoint,
+void    * QDECL Sys_LoadGameDll( const char *name, intptr_t (QDECL **entryPoint)(int, ...),
                   intptr_t (QDECL *systemcalls)(intptr_t, ...) );
 void    Sys_UnloadDll( void *dllHandle );
 
