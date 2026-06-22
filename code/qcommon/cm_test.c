@@ -342,6 +342,10 @@ byte    *CM_ClusterPVS (int cluster) {
     return cmg->visibility + cluster * cmg->clusterBytes;
 }
 
+int CM_ClusterBytes( void ) {
+    return cmg->clusterBytes;
+}
+
 
 
 /*

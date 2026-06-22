@@ -50,6 +50,7 @@ void        CM_TransformedBoxTrace( trace_t *results, const vec3_t start, const 
                           const vec3_t origin, const vec3_t angles, int capsule );
 
 byte        *CM_ClusterPVS (int cluster);
+int         CM_ClusterBytes( void );
 
 int         CM_PointLeafnum( const vec3_t p );
 

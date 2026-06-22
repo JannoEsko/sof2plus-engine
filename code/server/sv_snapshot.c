@@ -289,6 +289,9 @@ static void SV_AddEntToSnapshot( svEntity_t *svEnt, sharedEntity_t *gEnt, snapsh
 SV_AddEntitiesVisibleFromPoint
 ===============
 */
+// SoF2 client default third-person camera distance (cg_thirdPersonRange)
+#define SV_THIRDPERSON_RANGE    80.0f
+
 static void SV_AddEntitiesVisibleFromPoint( vec3_t origin, clientSnapshot_t *frame,
                                     snapshotEntityNumbers_t *eNums, qboolean portal ) {
     int     e, i;
@@ -315,6 +318,39 @@ static void SV_AddEntitiesVisibleFromPoint( vec3_t origin, clientSnapshot_t *fra
     frame->areabytes = CM_WriteAreaBits( frame->areabits, clientarea );
 
     clientpvs = CM_ClusterPVS (clientcluster);
+
+    // sof2plus-engine issue #19
+    // PVS is built from the body origin, so those entities would be
+    // wrongly culled in thirdperson (player appears invisible even though you should see them).
+    // So instead, sample the PVS at the thirdperson camera position and merge the
+    // two cluster rows, so the snapshot covers what the camera actually sees.
+    if ( !portal ) {
+        static byte mergedpvs[ MAX_MAP_LEAFS / 8 ];
+        vec3_t      fwd, cam, delta;
+        trace_t     tr;
+        int         camLeaf, camCluster;
+
+        AngleVectors( frame->ps.viewangles, fwd, NULL, NULL );
+        VectorMA( origin, -SV_THIRDPERSON_RANGE, fwd, cam );
+
+        // trace eye->camera so the sample point never ends up buried in a wall,
+        // then back off to 90% of the (clipped) distance to stay clear of surfaces
+        CM_BoxTrace( &tr, origin, cam, vec3_origin, vec3_origin, 0, CONTENTS_SOLID, qfalse );
+        VectorSubtract( tr.endpos, origin, delta );
+        VectorMA( origin, 0.9f, delta, cam );
+
+        camLeaf    = CM_PointLeafnum( cam );
+        camCluster = CM_LeafCluster( camLeaf );
+        if ( camCluster >= 0 && camCluster != clientcluster ) {
+            byte *campvs = CM_ClusterPVS( camCluster );
+            int  nbytes  = CM_ClusterBytes();
+            int  b;
+            for ( b = 0; b < nbytes; b++ ) {
+                mergedpvs[b] = clientpvs[b] | campvs[b];
+            }
+            clientpvs = mergedpvs;
+        }
+    }
 
     for ( e = 0 ; e < sv.num_entities ; e++ ) {
         ent = SV_GentityNum(e);
@@ -491,7 +527,6 @@ static void SV_BuildClientSnapshot( client_t *client ) {
     VectorCopy( ps->pvsOrigin, org );
 #else
     VectorCopy( ps->origin, org );
-    org[2] += ps->viewheight;
     if ( ps->leanTime != LEAN_TIME ) {
         vec3_t right;
         float leanOffset = (float)(ps->leanTime - LEAN_TIME) / LEAN_TIME * LEAN_OFFSET;
@@ -499,6 +534,8 @@ static void SV_BuildClientSnapshot( client_t *client ) {
         VectorMA( org, leanOffset, right, org );
     }
 #endif
+
+    org[2] += ps->viewheight;
 
     // add all the entities directly visible to the eye, which
     // may include portal entities that merge other viewpoints

@@ -50,6 +50,7 @@ function(finish_macos_app)
     else()
         set(MACOS_APP_PLIST_URL_TYPES "")
     endif()
+    set(CLIENT_BINARY sof2plus.arm64)
 
     configure_file(${CMAKE_SOURCE_DIR}/cmake/Info.plist.in
         ${CMAKE_BINARY_DIR}/Info.plist @ONLY)
