@@ -5,6 +5,7 @@ if(NOT APPLE)
 endif()
 
 option(BUILD_MACOS_APP "Deploy as a macOS .app" ON)
+option(BUILD_MACOS_DMG "Create a macOS DragNDrop package" ${BUILD_MACOS_APP})
 
 enable_language(OBJC)
 
@@ -17,7 +18,7 @@ list(APPEND RENDERER_LIBRARIES "-framework OpenGL")
 set(CMAKE_OSX_DEPLOYMENT_TARGET 11.0)
 set(CMAKE_OSX_ARCHITECTURES arm64;x86_64)
 
-if(BUILD_MACOS_APP)
+if(BUILD_MACOS_APP AND DEFINED CLIENT_NAME)
     set(CLIENT_EXECUTABLE_OPTIONS MACOSX_BUNDLE)
     list(APPEND POST_CONFIGURE_FUNCTIONS finish_macos_app)
 endif()
@@ -103,15 +104,17 @@ if(NOT "$ENV{APPLE_CERTIFICATE_ID}" STREQUAL "")
     endfunction()
 endif()
 
-set(CPACK_GENERATOR "DragNDrop")
+if(BUILD_MACOS_DMG AND DEFINED CLIENT_NAME)
+    set(CPACK_GENERATOR "DragNDrop")
 
-set(CPACK_DMG_VOLUME_NAME "${PROJECT_NAME} Installer")
-set(CPACK_DMG_BACKGROUND_IMAGE "${CMAKE_SOURCE_DIR}/misc/macos-dmg-background.png")
+    set(CPACK_DMG_VOLUME_NAME "${PROJECT_NAME} Installer")
+    set(CPACK_DMG_BACKGROUND_IMAGE "${CMAKE_SOURCE_DIR}/misc/macos-dmg-background.png")
 
-configure_file(
-  "${CMAKE_SOURCE_DIR}/misc/macos-dmg-setup.applescript.in"
-  "${CMAKE_BINARY_DIR}/macos-dmg-setup.applescript"
-  @ONLY
-)
+    configure_file(
+      "${CMAKE_SOURCE_DIR}/misc/macos-dmg-setup.applescript.in"
+      "${CMAKE_BINARY_DIR}/macos-dmg-setup.applescript"
+      @ONLY
+    )
 
-set(CPACK_DMG_DS_STORE_SETUP_SCRIPT "${CMAKE_BINARY_DIR}/macos-dmg-setup.applescript")
+    set(CPACK_DMG_DS_STORE_SETUP_SCRIPT "${CMAKE_BINARY_DIR}/macos-dmg-setup.applescript")
+endif()
