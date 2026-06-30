@@ -66,6 +66,19 @@ int SV_BotAllocateClient(void) {
     cl->netchan.remoteAddress.type = NA_BOT;
     cl->rate = 16384;
 
+    // Set the commproto for the bot but base it on the server settings themselves.
+
+#ifdef _DEMO
+    cl->commProto = COMMPROTO_DEMO;
+#else
+    if (Cvar_VariableIntegerValue("net_runningLegacy")) {
+        cl->commProto = COMMPROTO_SILVER;
+    }
+    else {
+        cl->commProto = COMMPROTO_GOLD;
+    }
+#endif
+
     return i;
 }
 

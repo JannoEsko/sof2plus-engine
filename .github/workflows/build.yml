@@ -15,7 +15,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, debian-11]
+        os: [ubuntu-latest, windows-latest]
         arch: [x86, x86_64, arm64]
         build_type: [Debug, Release]
         compiler: [gcc, mingw, msvc]
@@ -27,28 +27,17 @@ jobs:
             compiler: msvc
           - os: windows-latest
             compiler: gcc
-          - os: debian-11
-            compiler: mingw
-          - os: debian-11
-            compiler: msvc
-          - os: debian-11
-            arch: arm64
           - os: windows-latest
             arch: arm64
             
 
-    runs-on: ${{ matrix.arch == 'arm64' && 'ubuntu-24.04-arm' || matrix.os == 'debian-11' && 'ubuntu-latest' || matrix.os }}
-    container: ${{ matrix.os == 'debian-11' && 'debian:11' || '' }}
+    runs-on: ${{ matrix.arch == 'arm64' && 'ubuntu-24.04-arm' || matrix.os }}
 
     defaults:
       run:
         shell: bash
 
     steps:
-      - name: Install Git and sudo (Debian Docker image)
-        if: matrix.os == 'debian-11'
-        run: apt update && apt install -y git ca-certificates sudo
-
       - name: Checkout
         uses: actions/checkout@v4
         with:
@@ -230,7 +219,7 @@ jobs:
           ls -la artifacts/
 
       - name: Archive Artifacts (Full)
-        if: (matrix.os == 'ubuntu-latest' || matrix.os == 'debian-11') && matrix.demobuild == 'OFF'
+        if: (matrix.os == 'ubuntu-latest') && matrix.demobuild == 'OFF'
         run: |
           cd artifacts
           tar -czf "../sof2plus-${{ matrix.os }}-${{ matrix.arch }}-${{ matrix.build_type }}-${{ matrix.compiler }}.tar.gz" *
@@ -246,7 +235,7 @@ jobs:
           Write-Host "Created $name"
 
       - name: Upload Artifact (Full; .tar.gz)
-        if: (matrix.os == 'ubuntu-latest' || matrix.os == 'debian-11') && matrix.demobuild == 'OFF'
+        if: (matrix.os == 'ubuntu-latest') && matrix.demobuild == 'OFF'
         uses: actions/upload-artifact@v4
         with:
           name: "sof2plus-${{ matrix.os }}-${{ matrix.arch }}-${{ matrix.build_type }}-${{ matrix.compiler }}"
@@ -261,7 +250,7 @@ jobs:
 
 
       - name: Archive Artifacts (Demo)
-        if: (matrix.os == 'ubuntu-latest' || matrix.os == 'debian-11') && matrix.demobuild == 'ON'
+        if: (matrix.os == 'ubuntu-latest') && matrix.demobuild == 'ON'
         run: |
           cd artifacts
           tar -czf "../sof2plus-demo-${{ matrix.os }}-${{ matrix.arch }}-${{ matrix.build_type }}-${{ matrix.compiler }}.tar.gz" *
@@ -277,7 +266,7 @@ jobs:
           Write-Host "Created $name"
 
       - name: Upload Artifact (Demo; .tar.gz)
-        if: (matrix.os == 'ubuntu-latest' || matrix.os == 'debian-11') && matrix.demobuild == 'ON'
+        if: (matrix.os == 'ubuntu-latest') && matrix.demobuild == 'ON'
         uses: actions/upload-artifact@v4
         with:
           name: "sof2plus-demo-${{ matrix.os }}-${{ matrix.arch }}-${{ matrix.build_type }}-${{ matrix.compiler }}"
