@@ -622,7 +622,7 @@ static int translateSilverStatWpnsToGold(int input) {
 static int translateGoldModToSilver(int input) {
     int mod = input & 0xFF;
 
-    if (mod < 0 || mod > sizeof(meansOfDeathTranslations) / sizeof(meansOfDeathTranslations[0])) {
+    if (mod < 0 || mod >= sizeof(meansOfDeathTranslations) / sizeof(meansOfDeathTranslations[0])) {
         return input;
     }
     return (input & ~0xFF) | meansOfDeathTranslations[mod].translatedMod;
@@ -671,10 +671,256 @@ meansOfDeathDiff_t meansOfDeathTranslationsReversed[] = {
 static int translateSilverModToGold(int input) {
     int mod = input & 0xFF;
 
-    if (mod < 0 || mod > sizeof(meansOfDeathTranslationsReversed) / sizeof(meansOfDeathTranslationsReversed[0])) {
+    if (mod < 0 || mod >= sizeof(meansOfDeathTranslationsReversed) / sizeof(meansOfDeathTranslationsReversed[0])) {
         return input;
     }
     return (input & ~0xFF) | meansOfDeathTranslationsReversed[mod].translatedMod;
+}
+
+typedef int (*msgTranslateIntFunc_t)(int);
+
+static ID_INLINE qboolean MSG_ModelIndexInRange(int modelindex, qboolean goldToSilver) {
+    int limit = goldToSilver
+        ? sizeof(modelIndexTranslations) / sizeof(modelIndexTranslations[0])
+        : sizeof(modelIndexTranslationsReversed) / sizeof(modelIndexTranslationsReversed[0]);
+
+    return modelindex > 0 && modelindex < limit;
+}
+
+static ID_INLINE void MSG_SpoofAutoswitchModelIndex(int *value, msgTranslateIntFunc_t translate) {
+    qboolean autoswitch = (*value & ITEM_AUTOSWITCHBIT) ? qtrue : qfalse;
+
+    *value = translate(*value & ~ITEM_AUTOSWITCHBIT);
+
+    if (autoswitch) {
+        *value |= ITEM_AUTOSWITCHBIT;
+    }
+}
+
+static ID_INLINE void MSG_SpoofWeaponCallbackParm(int *value, msgTranslateIntFunc_t translate, qboolean forceWeapon) {
+    int wpn = *value & 0xFF;
+
+    wpn = translate(wpn);
+
+    if (forceWeapon && wpn == 0) {
+        wpn++;
+    }
+
+    *value = (*value & ~0xFF) | (wpn & 0xFF);
+}
+
+static ID_INLINE void MSG_SpoofEventTimeWeapon(int *value, msgTranslateIntFunc_t translate) {
+    int originalWeapon = *value & 0xFF;
+    int originalAttack = (*value >> 8) & 0xFF;
+    int originalYaw = (*value >> 16) & 0xFFFF;
+    int translatedWeapon = translate(originalWeapon);
+
+    *value = (translatedWeapon & 0xFF)
+        | ((originalAttack & 0xFF) << 8)
+        | ((originalYaw & 0xFFFF) << 16);
+}
+
+static ID_INLINE void MSG_SpoofShiftedEvent(int *event, int firstShiftedEvent, int offset, int *outSave) {
+    if ((*event & ~EV_EVENT_BITS) > firstShiftedEvent) {
+        *outSave = *event;
+        *event += offset;
+    }
+}
+
+static void MSG_RestoreDeltaEntitySpoofs(entityState_t *from, entityState_t *to,
+                                         int fromModelIdx, int toModelIdx,
+                                         int fromEventParm, int toEventParm,
+                                         int fromTime, int toTime,
+                                         int fromEType, int toEType,
+                                         int fromEvent, int toEvent,
+                                         int fromWpn, int toWpn) {
+    if (fromEventParm != -1) {
+        from->eventParm = fromEventParm;
+    }
+
+    if (toEventParm != -1) {
+        to->eventParm = toEventParm;
+    }
+
+    if (fromTime != -1) {
+        from->time = fromTime;
+    }
+
+    if (toTime != -1) {
+        to->time = toTime;
+    }
+
+    if (fromEType != -1) {
+        from->eType = fromEType;
+    }
+
+    if (toEType != -1) {
+        to->eType = toEType;
+    }
+
+    if (fromEvent != -1) {
+        from->event = fromEvent;
+    }
+
+    if (toEvent != -1) {
+        to->event = toEvent;
+    }
+
+    if (fromModelIdx != -1) {
+        from->modelindex = fromModelIdx;
+    }
+
+    if (toModelIdx != -1) {
+        to->modelindex = toModelIdx;
+    }
+
+    if (fromWpn != -1) {
+        from->weapon = fromWpn;
+    }
+
+    if (toWpn != -1) {
+        to->weapon = toWpn;
+    }
+}
+
+static void MSG_SpoofEntityEventParm(entityState_t *from, entityState_t *to,
+                                     qboolean goldToSilver, int *outFromEventParm, int *outToEventParm) {
+    int pickupEvent = goldToSilver ? ET_EVENTS + EV_ITEM_PICKUP : LEGACY_ET_EVENTS + LEGACY_EV_ITEM_PICKUP;
+    int callbackEvent = goldToSilver ? ET_EVENTS + EV_WEAPON_CALLBACK : LEGACY_ET_EVENTS + LEGACY_EV_WEAPON_CALLBACK;
+    int obituaryEvent = goldToSilver ? ET_EVENTS + EV_OBITUARY : LEGACY_ET_EVENTS + LEGACY_EV_OBITUARY;
+    qboolean fromPickup = from->eType == pickupEvent || (goldToSilver && from->eType == ET_EVENTS + EV_ITEM_PICKUP_QUIET);
+    qboolean toPickup = to->eType == pickupEvent || (goldToSilver && to->eType == ET_EVENTS + EV_ITEM_PICKUP_QUIET);
+    qboolean fromCallback = from->eType == callbackEvent;
+    qboolean toCallback = to->eType == callbackEvent;
+    qboolean fromObituary = from->eType == obituaryEvent;
+    qboolean toObituary = to->eType == obituaryEvent;
+    msgTranslateIntFunc_t modelTranslate = goldToSilver ? translateGoldModelIdxToSilverModelIdx : translateSilverModelIdxToGoldModelIdx;
+    msgTranslateIntFunc_t weaponTranslate = goldToSilver ? translateGoldWeaponToSilverWeapon : translateSilverWeaponToGoldWeapon;
+    msgTranslateIntFunc_t modTranslate = goldToSilver ? translateGoldModToSilver : translateSilverModToGold;
+
+    if (fromPickup) {
+        *outFromEventParm = from->eventParm;
+        MSG_SpoofAutoswitchModelIndex(&from->eventParm, modelTranslate);
+    } else if (fromCallback) {
+        *outFromEventParm = from->eventParm;
+        MSG_SpoofWeaponCallbackParm(&from->eventParm, weaponTranslate, qtrue);
+    } else if (fromObituary) {
+        *outFromEventParm = from->eventParm;
+        from->eventParm = modTranslate(from->eventParm);
+    }
+
+    if (toPickup) {
+        *outToEventParm = to->eventParm;
+        MSG_SpoofAutoswitchModelIndex(&to->eventParm, modelTranslate);
+    } else if (toCallback) {
+        *outToEventParm = to->eventParm;
+        MSG_SpoofWeaponCallbackParm(&to->eventParm, weaponTranslate, qtrue);
+    } else if (toObituary) {
+        *outToEventParm = to->eventParm;
+        to->eventParm = modTranslate(to->eventParm);
+    }
+}
+
+static void MSG_SpoofEntityEventTime(entityState_t *from, entityState_t *to,
+                                     qboolean goldToSilver, int *outFromTime, int *outToTime) {
+    int bulletFleshEvent = goldToSilver ? ET_EVENTS + EV_BULLET_HIT_FLESH : LEGACY_ET_EVENTS + LEGACY_EV_BULLET_HIT_FLESH;
+    int bulletWallEvent = goldToSilver ? ET_EVENTS + EV_BULLET_HIT_WALL : LEGACY_ET_EVENTS + LEGACY_EV_BULLET_HIT_WALL;
+    int bulletEvent = goldToSilver ? ET_EVENTS + EV_BULLET : LEGACY_ET_EVENTS + LEGACY_EV_BULLET;
+    int explosionFleshEvent = goldToSilver ? ET_EVENTS + EV_EXPLOSION_HIT_FLESH : LEGACY_ET_EVENTS + LEGACY_EV_EXPLOSION_HIT_FLESH;
+    qboolean fromBullet = from->eType == bulletFleshEvent
+        || from->eType == bulletWallEvent
+        || from->eType == bulletEvent
+        || from->eType == explosionFleshEvent;
+    qboolean toBullet = to->eType == bulletFleshEvent
+        || to->eType == bulletWallEvent
+        || to->eType == bulletEvent
+        || to->eType == explosionFleshEvent;
+    msgTranslateIntFunc_t weaponTranslate = goldToSilver ? translateGoldWeaponToSilverWeapon : translateSilverWeaponToGoldWeapon;
+
+    if (!fromBullet && !toBullet) {
+        return;
+    }
+
+    if (fromBullet == toBullet && from->time == to->time) {
+        return;
+    }
+
+    if (fromBullet) {
+        *outFromTime = from->time;
+        MSG_SpoofEventTimeWeapon(&from->time, weaponTranslate);
+    }
+
+    if (toBullet) {
+        *outToTime = to->time;
+        MSG_SpoofEventTimeWeapon(&to->time, weaponTranslate);
+    }
+}
+
+static void MSG_SpoofEntityItemModelIndex(entityState_t *from, entityState_t *to, int itemType,
+                                          qboolean goldToSilver, msgTranslateIntFunc_t translate,
+                                          int *outFromModelIdx, int *outToModelIdx) {
+    qboolean fromItem = from->eType == itemType;
+    qboolean toItem = to->eType == itemType;
+
+    if (!fromItem && !toItem) {
+        return;
+    }
+
+    if (fromItem == toItem && from->modelindex == to->modelindex) {
+        return;
+    }
+
+    if (fromItem && MSG_ModelIndexInRange(from->modelindex, goldToSilver)) {
+        *outFromModelIdx = from->modelindex;
+        from->modelindex = translate(from->modelindex);
+    }
+
+    if (toItem && MSG_ModelIndexInRange(to->modelindex, goldToSilver)) {
+        *outToModelIdx = to->modelindex;
+        to->modelindex = translate(to->modelindex);
+    }
+}
+
+static void MSG_SpoofPlayerEventGoldToSilver(int *event, int *eventParm, int *outEventSave, int *outEventParmSave) {
+    if (*event < EV_ITEM_PICKUP) {
+        return;
+    }
+
+    if (*event == EV_WEAPON_CALLBACK) {
+        *outEventParmSave = *eventParm;
+        MSG_SpoofWeaponCallbackParm(eventParm, translateGoldWeaponToSilverWeapon, qfalse);
+    }
+
+    if (*event == EV_ITEM_PICKUP || *event == EV_ITEM_PICKUP_QUIET) {
+        *outEventParmSave = *eventParm;
+        MSG_SpoofAutoswitchModelIndex(eventParm, translateGoldModelIdxToSilverModelIdx);
+    }
+
+    if (*event >= EV_ITEM_PICKUP_QUIET) {
+        *outEventSave = *event;
+        (*event)--;
+    }
+}
+
+static void MSG_SpoofPlayerEventSilverToGold(int *event, int *eventParm, int *outEventSave, int *outEventParmSave) {
+    if (*event < LEGACY_EV_ITEM_PICKUP) {
+        return;
+    }
+
+    if (*event == LEGACY_EV_WEAPON_CALLBACK) {
+        *outEventParmSave = *eventParm;
+        MSG_SpoofWeaponCallbackParm(eventParm, translateSilverWeaponToGoldWeapon, qfalse);
+    }
+
+    if (*event == LEGACY_EV_ITEM_PICKUP) {
+        *outEventParmSave = *eventParm;
+        MSG_SpoofAutoswitchModelIndex(eventParm, translateSilverModelIdxToGoldModelIdx);
+    }
+
+    if (*event > LEGACY_EV_ITEM_PICKUP) {
+        *outEventSave = *event;
+        (*event)++;
+    }
 }
 
 /*
@@ -1799,128 +2045,15 @@ void MSG_WriteDeltaEntity( msg_t *msg, struct entityState_s *from, struct entity
                 Com_Printf("Emitting entity type %d => %d\n", from->eType, to->eType);
             }*/
 
+            MSG_SpoofEntityEventParm(from, to, qtrue, &fromEventParm, &toEventParm);
+            MSG_SpoofEntityEventTime(from, to, qtrue, &fromTime, &toTime);
 
 
-            if ((from->eType == ET_EVENTS + EV_ITEM_PICKUP || from->eType == ET_EVENTS + EV_ITEM_PICKUP_QUIET) && from->eType != to->eType) {
+            MSG_SpoofShiftedEvent(&to->event, EV_ITEM_PICKUP_QUIET, -1, &toEvent);
 
-                fromEventParm = from->eventParm;
+            MSG_SpoofEntityItemModelIndex(from, to, ET_ITEM, qtrue, translateGoldModelIdxToSilverModelIdx, &fromModelIdx, &toModelIdx);
 
-                qboolean autoSwitch = (from->eventParm & ITEM_AUTOSWITCHBIT) ? qtrue : qfalse;
-                //from->eventParm = translateGoldWeaponToSilverWeapon(from->eventParm & ~ITEM_AUTOSWITCHBIT);
-                // EV_ITEM_PICKUP sends a modelindex instead of a weapon num.
-                from->eventParm = translateGoldModelIdxToSilverModelIdx(from->eventParm & ~ITEM_AUTOSWITCHBIT);
-
-                if (autoSwitch) {
-                    from->eventParm |= ITEM_AUTOSWITCHBIT;
-                }
-            }
-
-            if ((to->eType == ET_EVENTS + EV_ITEM_PICKUP || to->eType == ET_EVENTS + EV_ITEM_PICKUP_QUIET) && from->eType != to->eType) {
-
-                toEventParm = to->eventParm;
-
-                qboolean autoSwitch = (to->eventParm & ITEM_AUTOSWITCHBIT) ? qtrue : qfalse;
-                //to->eventParm = translateGoldWeaponToSilverWeapon(to->eventParm & ~ITEM_AUTOSWITCHBIT);
-                to->eventParm = translateGoldModelIdxToSilverModelIdx(to->eventParm & ~ITEM_AUTOSWITCHBIT);
-                if (autoSwitch) {
-                    to->eventParm |= ITEM_AUTOSWITCHBIT;
-                }
-
-            }
-
-            if (from->eType != to->eType && (from->eType == ET_EVENTS + EV_WEAPON_CALLBACK || to->eType == ET_EVENTS + EV_WEAPON_CALLBACK)) {
-
-                fromEventParm = from->eventParm;
-                toEventParm = to->eventParm;
-
-                int wpn = -1;
-
-                if (from->eType == ET_EVENTS + EV_WEAPON_CALLBACK) {
-                    int wpn = from->eventParm & 0xFF;
-                    wpn = translateGoldWeaponToSilverWeapon(wpn);
-
-                    if (wpn == 0) wpn++; // Don't send an animation without any weapon.
-
-                    from->eventParm = (from->eventParm & ~0xFF) | (wpn & 0xFF);
-                }
-
-                if (to->eType == ET_EVENTS + EV_WEAPON_CALLBACK) {
-                    int wpn = to->eventParm & 0xFF;
-                    wpn = translateGoldWeaponToSilverWeapon(wpn);
-
-                    if (wpn == 0) wpn++; // Don't send an animation without any weapon.
-
-                    to->eventParm = (to->eventParm & ~0xFF) | (wpn & 0xFF);
-                }
-
-            }
-
-
-            if (to->eType == (ET_EVENTS + EV_OBITUARY) && from->eType != to->eType) {
-                fromEventParm = from->eventParm;
-                toEventParm = to->eventParm;
-
-                to->eventParm = translateGoldModToSilver(toEventParm);
-
-            }
-
-            if ((to->eType == ET_EVENTS + EV_BULLET_HIT_FLESH || to->eType == ET_EVENTS + EV_BULLET_HIT_WALL || to->eType == ET_EVENTS + EV_BULLET || to->eType == ET_EVENTS + EV_EXPLOSION_HIT_FLESH) && from->time != to->time) {
-                // I honestly question the sanity of the developers on this. Weapon + attack type is inside entity time...???? :)))))))))))
-                toTime = to->time;
-                //tent->s.time = weapon + ((attack&0xFF)<<8);
-                int originalWeapon = to->time & 0xFF;
-                int originalAttack = (to->time >> 8) & 0xFF;
-                int originalYaw = (to->time >> 16) & 0xFFFF;
-
-                int silverWpn = translateGoldWeaponToSilverWeapon(originalWeapon);
-
-                to->time = (silverWpn & 0xFF)
-                    | ((originalAttack & 0xFF) << 8)
-                    | ((originalYaw & 0xFFFF) << 16);
-
-            }
-
-
-            if ((to->event & ~EV_EVENT_BITS) > EV_ITEM_PICKUP_QUIET && from->event != to->event) {
-                toEvent = to->event;
-                to->event--;
-            }
-
-            if (to->modelindex > 0 && to->modelindex < sizeof(modelIndexTranslations) / sizeof(modelIndexTranslations[0]) && to->eType == ET_ITEM && from->modelindex != to->modelindex) {
-                toModelIdx = to->modelindex;
-                to->modelindex = translateGoldModelIdxToSilverModelIdx(to->modelindex);
-            }
-
-
-
-
-
-            if ((from->eType == ET_EVENTS + EV_BULLET_HIT_FLESH || from->eType == ET_EVENTS + EV_BULLET_HIT_WALL || from->eType == ET_EVENTS + EV_BULLET || from->eType == ET_EVENTS + EV_EXPLOSION_HIT_FLESH) && from->time != to->time) {
-                // I honestly question the sanity of the developers on this. Weapon + attack type is inside entity time...???? :)))))))))))
-                fromTime = from->time;
-                //tent->s.time = weapon + ((attack&0xFF)<<8);
-                int originalWeapon = from->time & 0xFF;
-                int originalAttack = (from->time >> 8) & 0xFF;
-                int originalYaw = (from->time >> 16) & 0xFFFF;
-
-                int silverWpn = translateGoldWeaponToSilverWeapon(originalWeapon);
-
-                from->time = (silverWpn & 0xFF)
-                    | ((originalAttack & 0xFF) << 8)
-                    | ((originalYaw & 0xFFFF) << 16);
-
-            }
-
-
-            if ((from->event & ~EV_EVENT_BITS) > EV_ITEM_PICKUP_QUIET && from->event != to->event) {
-                fromEvent = from->event;
-                from->event--;
-            }
-
-            if (from->modelindex > 0 && from->modelindex < sizeof(modelIndexTranslations) / sizeof(modelIndexTranslations[0]) && from->eType == ET_ITEM && from->modelindex != to->modelindex) {
-                fromModelIdx = from->modelindex;
-                from->modelindex = translateGoldModelIdxToSilverModelIdx(from->modelindex);
-            }
+            MSG_SpoofShiftedEvent(&from->event, EV_ITEM_PICKUP_QUIET, -1, &fromEvent);
 
             if (from->weapon != to->weapon) {
                 fromWpn = from->weapon;
@@ -1953,131 +2086,15 @@ void MSG_WriteDeltaEntity( msg_t *msg, struct entityState_s *from, struct entity
                 Com_Printf("Emitting entity type %d => %d\n", from->eType, to->eType);
             }*/
 
+            MSG_SpoofEntityEventParm(from, to, qfalse, &fromEventParm, &toEventParm);
+            MSG_SpoofEntityEventTime(from, to, qfalse, &fromTime, &toTime);
 
 
-            if (from->eType == LEGACY_ET_EVENTS + LEGACY_EV_ITEM_PICKUP && from->eType != to->eType) {
+            MSG_SpoofShiftedEvent(&to->event, LEGACY_EV_ITEM_PICKUP, 1, &toEvent);
 
-                fromEventParm = from->eventParm;
+            MSG_SpoofEntityItemModelIndex(from, to, LEGACY_ET_ITEM, qfalse, translateSilverModelIdxToGoldModelIdx, &fromModelIdx, &toModelIdx);
 
-                qboolean autoSwitch = (from->eventParm & ITEM_AUTOSWITCHBIT) ? qtrue : qfalse;
-                //from->eventParm = translateSilverWeaponToGoldWeapon(from->eventParm & ~ITEM_AUTOSWITCHBIT);
-                from->eventParm = translateSilverModelIdxToGoldModelIdx(from->eventParm & ~ITEM_AUTOSWITCHBIT);
-
-                if (autoSwitch) {
-                    from->eventParm |= ITEM_AUTOSWITCHBIT;
-                }
-            }
-
-            if (to->eType == LEGACY_ET_EVENTS + LEGACY_EV_ITEM_PICKUP && from->eType != to->eType) {
-
-                toEventParm = to->eventParm;
-
-                qboolean autoSwitch = (to->eventParm & ITEM_AUTOSWITCHBIT) ? qtrue : qfalse;
-                //to->eventParm = translateSilverWeaponToGoldWeapon(to->eventParm & ~ITEM_AUTOSWITCHBIT);
-                to->eventParm = translateSilverModelIdxToGoldModelIdx(to->eventParm & ~ITEM_AUTOSWITCHBIT);
-
-                if (autoSwitch) {
-                    to->eventParm |= ITEM_AUTOSWITCHBIT;
-                }
-
-            }
-
-            if (from->eType != to->eType && (from->eType == LEGACY_ET_EVENTS + LEGACY_EV_WEAPON_CALLBACK || to->eType == LEGACY_ET_EVENTS + LEGACY_EV_WEAPON_CALLBACK)) {
-
-                fromEventParm = from->eventParm;
-                toEventParm = to->eventParm;
-
-                int wpn = -1;
-
-                if (from->eType == LEGACY_ET_EVENTS + LEGACY_EV_WEAPON_CALLBACK) {
-                    int wpn = from->eventParm & 0xFF;
-                    wpn = translateSilverWeaponToGoldWeapon(wpn);
-
-                    if (wpn == 0) wpn++; // Don't send an animation without any weapon.
-
-                    from->eventParm = (from->eventParm & ~0xFF) | (wpn & 0xFF);
-                }
-
-                if (to->eType == LEGACY_ET_EVENTS + LEGACY_EV_WEAPON_CALLBACK) {
-                    int wpn = to->eventParm & 0xFF;
-                    wpn = translateSilverWeaponToGoldWeapon(wpn);
-
-                    if (wpn == 0) wpn++; // Don't send an animation without any weapon.
-
-                    to->eventParm = (to->eventParm & ~0xFF) | (wpn & 0xFF);
-                }
-
-            }
-
-
-            if (to->eType == (LEGACY_ET_EVENTS + LEGACY_EV_OBITUARY) && from->eType != to->eType) {
-                fromEventParm = from->eventParm;
-                toEventParm = to->eventParm;
-
-                to->eventParm = translateSilverModToGold(toEventParm);
-
-            }
-
-            if ((to->eType == LEGACY_ET_EVENTS + LEGACY_EV_BULLET_HIT_FLESH || to->eType == LEGACY_ET_EVENTS + LEGACY_EV_BULLET_HIT_WALL || to->eType == LEGACY_ET_EVENTS + LEGACY_EV_BULLET || to->eType == LEGACY_ET_EVENTS + LEGACY_EV_EXPLOSION_HIT_FLESH) && from->time != to->time) {
-                // I honestly question the sanity of the developers on this. Weapon + attack type is inside entity time...???? :)))))))))))
-                toTime = to->time;
-                //tent->s.time = weapon + ((attack&0xFF)<<8);
-                int originalWeapon = to->time & 0xFF;
-                int originalAttack = (to->time >> 8) & 0xFF;
-                int originalYaw = (to->time >> 16) & 0xFFFF;
-
-                int silverWpn = translateSilverWeaponToGoldWeapon(originalWeapon);
-
-                to->time = (silverWpn & 0xFF)
-                    | ((originalAttack & 0xFF) << 8)
-                    | ((originalYaw & 0xFFFF) << 16);
-
-            }
-
-
-            if ((to->event & ~EV_EVENT_BITS) > LEGACY_EV_ITEM_PICKUP && from->event != to->event) {
-                if ((to->event & ~EV_EVENT_BITS) > LEGACY_EV_WEAPON_CALLBACK) {
-                    Com_Printf("!!!!!!!!!!!!!!!!!!! BIGGER BTW\r\n");
-                }
-                toEvent = to->event;
-                to->event++;
-            }
-
-            if (to->modelindex > 0 && to->modelindex < sizeof(modelIndexTranslations) / sizeof(modelIndexTranslations[0]) && to->eType == LEGACY_ET_ITEM && from->modelindex != to->modelindex) {
-                toModelIdx = to->modelindex;
-                to->modelindex = translateSilverModelIdxToGoldModelIdx(to->modelindex);
-            }
-
-
-
-
-
-            if ((from->eType == LEGACY_ET_EVENTS + LEGACY_EV_BULLET_HIT_FLESH || from->eType == LEGACY_ET_EVENTS + LEGACY_EV_BULLET_HIT_WALL || from->eType == LEGACY_ET_EVENTS + LEGACY_EV_BULLET || from->eType == LEGACY_ET_EVENTS + LEGACY_EV_EXPLOSION_HIT_FLESH) && from->time != to->time) {
-                // I honestly question the sanity of the developers on this. Weapon + attack type is inside entity time...???? :)))))))))))
-                fromTime = from->time;
-                //tent->s.time = weapon + ((attack&0xFF)<<8);
-                int originalWeapon = from->time & 0xFF;
-                int originalAttack = (from->time >> 8) & 0xFF;
-                int originalYaw = (from->time >> 16) & 0xFFFF;
-
-                int silverWpn = translateSilverWeaponToGoldWeapon(originalWeapon);
-
-                from->time = (silverWpn & 0xFF)
-                    | ((originalAttack & 0xFF) << 8)
-                    | ((originalYaw & 0xFFFF) << 16);
-
-            }
-
-
-            if ((from->event & ~EV_EVENT_BITS) > LEGACY_EV_ITEM_PICKUP && from->event != to->event) {
-                fromEvent = from->event;
-                from->event++;
-            }
-
-            if (from->modelindex > 0 && from->modelindex < sizeof(modelIndexTranslations) / sizeof(modelIndexTranslations[0]) && from->eType == LEGACY_ET_ITEM && from->modelindex != to->modelindex) {
-                fromModelIdx = from->modelindex;
-                from->modelindex = translateSilverModelIdxToGoldModelIdx(from->modelindex);
-            }
+            MSG_SpoofShiftedEvent(&from->event, LEGACY_EV_ITEM_PICKUP, 1, &fromEvent);
 
             if (from->weapon != to->weapon) {
                 fromWpn = from->weapon;
@@ -2116,6 +2133,16 @@ void MSG_WriteDeltaEntity( msg_t *msg, struct entityState_s *from, struct entity
     }
 
     if ( lc == 0 ) {
+        if (multiprotocolFieldsSpoofed) {
+            MSG_RestoreDeltaEntitySpoofs(from, to,
+                                         fromModelIdx, toModelIdx,
+                                         fromEventParm, toEventParm,
+                                         fromTime, toTime,
+                                         fromEType, toEType,
+                                         fromEvent, toEvent,
+                                         fromWpn, toWpn);
+        }
+
         // nothing at all changed
         if ( !force ) {
             return;     // nothing at all
@@ -2180,55 +2207,13 @@ void MSG_WriteDeltaEntity( msg_t *msg, struct entityState_s *from, struct entity
 
 
     if (multiprotocolFieldsSpoofed) {
-
-        if (fromEventParm != -1) {
-            from->eventParm = fromEventParm;
-        }
-
-        if (toEventParm != -1) {
-            to->eventParm = toEventParm;
-        }
-
-        if (fromTime != -1) {
-            from->time = fromTime;
-        }
-
-        if (toTime != -1) {
-            to->time = toTime;
-        }
-
-        if (fromEType != -1) {
-            from->eType = fromEType;
-        }
-
-        if (toEType != -1) {
-            to->eType = toEType;
-        }
-
-        if (fromEvent != -1) {
-            from->event = fromEvent;
-        }
-
-        if (toEvent != -1) {
-            to->event = toEvent;
-        }
-
-        if (fromModelIdx != -1) {
-            from->modelindex = fromModelIdx;
-        }
-
-        if (toModelIdx != -1) {
-            to->modelindex = toModelIdx;
-        }
-
-        if (fromWpn != -1) {
-            from->weapon = fromWpn;
-        }
-
-        if (toWpn != -1) {
-            to->weapon = toWpn;
-        }
-
+        MSG_RestoreDeltaEntitySpoofs(from, to,
+                                     fromModelIdx, toModelIdx,
+                                     fromEventParm, toEventParm,
+                                     fromTime, toTime,
+                                     fromEType, toEType,
+                                     fromEvent, toEvent,
+                                     fromWpn, toWpn);
     }
 }
 
@@ -2759,221 +2744,21 @@ void MSG_WriteDeltaPlayerstate( msg_t *msg, struct playerState_s *from, struct p
 
             */
 
-            if (from->events[0] >= EV_ITEM_PICKUP) {
-                
-                if (from->events[0] == EV_WEAPON_CALLBACK) {
-                    fromEventParm0 = from->eventParms[0];
-                    int wpn = from->eventParms[0] & 0xFF;
-                    wpn = translateGoldWeaponToSilverWeapon(wpn);
-                    from->eventParms[0] = (from->eventParms[0] & ~0xFF) | (wpn & 0xFF);
+            {
+                int *fromEventSaves[MAX_PS_EVENTS] = { &fromEvents0, &fromEvents1, &fromEvents2, &fromEvents3 };
+                int *toEventSaves[MAX_PS_EVENTS] = { &toEvents0, &toEvents1, &toEvents2, &toEvents3 };
+                int *fromEventParmSaves[MAX_PS_EVENTS] = { &fromEventParm0, &fromEventParm1, &fromEventParm2, &fromEventParm3 };
+                int *toEventParmSaves[MAX_PS_EVENTS] = { &toEventParm0, &toEventParm1, &toEventParm2, &toEventParm3 };
+
+                for (i = 0; i < MAX_PS_EVENTS; i++) {
+                    MSG_SpoofPlayerEventGoldToSilver(&from->events[i], &from->eventParms[i], fromEventSaves[i], fromEventParmSaves[i]);
+                    MSG_SpoofPlayerEventGoldToSilver(&to->events[i], &to->eventParms[i], toEventSaves[i], toEventParmSaves[i]);
                 }
-
-                if (from->events[0] == EV_ITEM_PICKUP || from->events[0] == EV_ITEM_PICKUP_QUIET) {
-                    fromEventParm0 = from->eventParms[0];
-                    qboolean autoswitch = (from->eventParms[0] & ITEM_AUTOSWITCHBIT) ? qtrue : qfalse;;
-
-                    from->eventParms[0] = translateGoldModelIdxToSilverModelIdx(from->eventParms[0] & ~ITEM_AUTOSWITCHBIT);
-
-                    if (autoswitch) {
-                        from->eventParms[0] |= ITEM_AUTOSWITCHBIT;
-                    }
-                }
-
-                if (from->events[0] >= EV_ITEM_PICKUP_QUIET) {
-                    fromEvents0 = from->events[0];
-                    from->events[0]--;
-                }
-
-            }
-
-            if (to->events[0] >= EV_ITEM_PICKUP) {
-                
-                if (to->events[0] == EV_WEAPON_CALLBACK) {
-                    toEventParm0 = to->eventParms[0];
-                    int wpn = to->eventParms[0] & 0xFF;
-                    wpn = translateGoldWeaponToSilverWeapon(wpn);
-                    to->eventParms[0] = (to->eventParms[0] & ~0xFF) | (wpn & 0xFF);
-                }
-
-                if (to->events[0] == EV_ITEM_PICKUP || to->events[0] == EV_ITEM_PICKUP_QUIET) {
-                    toEventParm0 = to->eventParms[0];
-                    qboolean autoswitch = (to->eventParms[0] & ITEM_AUTOSWITCHBIT) ? qtrue : qfalse;;
-
-                    to->eventParms[0] = translateGoldModelIdxToSilverModelIdx(to->eventParms[0] & ~ITEM_AUTOSWITCHBIT);
-                    if (autoswitch) {
-                        to->eventParms[0] |= ITEM_AUTOSWITCHBIT;
-                    }
-                }
-
-                if (to->events[0] >= EV_ITEM_PICKUP_QUIET) {
-                    toEvents0 = to->events[0];
-                    to->events[0]--;
-                }
-            }
-
-            if (from->events[1] >= EV_ITEM_PICKUP) {
-
-                if (from->events[1] == EV_WEAPON_CALLBACK) {
-                    fromEventParm1 = from->eventParms[1];
-                    int wpn = from->eventParms[1] & 0xFF;
-                    wpn = translateGoldWeaponToSilverWeapon(wpn);
-                    from->eventParms[1] = (from->eventParms[1] & ~0xFF) | (wpn & 0xFF);
-                }
-
-                if (from->events[1] == EV_ITEM_PICKUP || from->events[1] == EV_ITEM_PICKUP_QUIET) {
-                    fromEventParm1 = from->eventParms[1];
-                    qboolean autoswitch = (from->eventParms[1] & ITEM_AUTOSWITCHBIT) ? qtrue : qfalse;;
-
-                    from->eventParms[1] = translateGoldModelIdxToSilverModelIdx(from->eventParms[1] & ~ITEM_AUTOSWITCHBIT);
-                    if (autoswitch) {
-                        from->eventParms[1] |= ITEM_AUTOSWITCHBIT;
-                    }
-                }
-
-                if (from->events[1] >= EV_ITEM_PICKUP_QUIET) {
-                    fromEvents1 = from->events[1];
-                    from->events[1]--;
-                }
-            }
-
-            if (to->events[1] >= EV_ITEM_PICKUP) {
-
-                if (to->events[1] == EV_WEAPON_CALLBACK) {
-                    toEventParm1 = to->eventParms[1];
-                    int wpn = to->eventParms[1] & 0xFF;
-                    wpn = translateGoldWeaponToSilverWeapon(wpn);
-                    to->eventParms[1] = (to->eventParms[1] & ~0xFF) | (wpn & 0xFF);
-                }
-
-                if (to->events[1] == EV_ITEM_PICKUP || to->events[1] == EV_ITEM_PICKUP_QUIET) {
-                    toEventParm1 = to->eventParms[1];
-                    qboolean autoswitch = (to->eventParms[1] & ITEM_AUTOSWITCHBIT) ? qtrue : qfalse;;
-
-                    to->eventParms[1] = translateGoldModelIdxToSilverModelIdx(to->eventParms[1] & ~ITEM_AUTOSWITCHBIT);
-                    if (autoswitch) {
-                        to->eventParms[1] |= ITEM_AUTOSWITCHBIT;
-                    }
-                }
-
-                if (to->events[1] >= EV_ITEM_PICKUP_QUIET) {
-                    toEvents1 = to->events[1];
-                    to->events[1]--;
-                }
-            }
-
-            if (from->events[2] >= EV_ITEM_PICKUP) {
-
-                if (from->events[2] == EV_WEAPON_CALLBACK) {
-                    fromEventParm2 = from->eventParms[2];
-                    int wpn = from->eventParms[2] & 0xFF;
-                    wpn = translateGoldWeaponToSilverWeapon(wpn);
-                    from->eventParms[2] = (from->eventParms[2] & ~0xFF) | (wpn & 0xFF);
-                }
-
-                if (from->events[2] == EV_ITEM_PICKUP || from->events[2] == EV_ITEM_PICKUP_QUIET) {
-                    fromEventParm2 = from->eventParms[2];
-                    qboolean autoswitch = (from->eventParms[2] & ITEM_AUTOSWITCHBIT) ? qtrue : qfalse;;
-
-                    from->eventParms[2] = translateGoldModelIdxToSilverModelIdx(from->eventParms[2] & ~ITEM_AUTOSWITCHBIT);
-
-                    if (autoswitch) {
-                        from->eventParms[2] |= ITEM_AUTOSWITCHBIT;
-                    }
-                }
-
-                if (from->events[2] >= EV_ITEM_PICKUP_QUIET) {
-                    fromEvents2 = from->events[2];
-                    from->events[2]--;
-                }
-            }
-
-            if (to->events[2] >= EV_ITEM_PICKUP) {
-
-                if (to->events[2] == EV_WEAPON_CALLBACK) {
-                    toEventParm2 = to->eventParms[2];
-                    int wpn = to->eventParms[2] & 0xFF;
-                    wpn = translateGoldWeaponToSilverWeapon(wpn);
-                    to->eventParms[2] = (to->eventParms[2] & ~0xFF) | (wpn & 0xFF);
-                }
-
-                if (to->events[2] == EV_ITEM_PICKUP || to->events[2] == EV_ITEM_PICKUP_QUIET) {
-                    toEventParm2 = to->eventParms[2];
-                    qboolean autoswitch = (to->eventParms[2] & ITEM_AUTOSWITCHBIT) ? qtrue : qfalse;;
-
-                    to->eventParms[2] = translateGoldModelIdxToSilverModelIdx(to->eventParms[2] & ~ITEM_AUTOSWITCHBIT);
-                    if (autoswitch) {
-                        to->eventParms[2] |= ITEM_AUTOSWITCHBIT;
-                    }
-                }
-
-                if (to->events[2] >= EV_ITEM_PICKUP_QUIET) {
-                    toEvents2 = to->events[2];
-                    to->events[2]--;
-                }
-            }
-
-            if (from->events[3] >= EV_ITEM_PICKUP) {
-
-                if (from->events[3] == EV_WEAPON_CALLBACK) {
-                    fromEventParm3 = from->eventParms[3];
-                    int wpn = from->eventParms[3] & 0xFF;
-                    wpn = translateGoldWeaponToSilverWeapon(wpn);
-                    from->eventParms[3] = (from->eventParms[3] & ~0xFF) | (wpn & 0xFF);
-                }
-
-                if (from->events[3] == EV_ITEM_PICKUP || from->events[3] == EV_ITEM_PICKUP_QUIET) {
-                    fromEventParm3 = from->eventParms[3];
-                    qboolean autoswitch = (from->eventParms[3] & ITEM_AUTOSWITCHBIT) ? qtrue : qfalse;;
-
-                    from->eventParms[3] = translateGoldModelIdxToSilverModelIdx(from->eventParms[3] & ~ITEM_AUTOSWITCHBIT);
-                    
-                    if (autoswitch) {
-                        from->eventParms[3] |= ITEM_AUTOSWITCHBIT;
-                    }
-                }
-
-                if (from->events[3] >= EV_ITEM_PICKUP_QUIET) {
-                    fromEvents3 = from->events[3];
-                    from->events[3]--;
-                }
-            }
-
-            if (to->events[3] >= EV_ITEM_PICKUP) {
-
-                if (to->events[3] == EV_WEAPON_CALLBACK) {
-                    toEventParm3 = to->eventParms[3];
-                    int wpn = to->eventParms[3] & 0xFF;
-                    wpn = translateGoldWeaponToSilverWeapon(wpn);
-                    to->eventParms[3] = (to->eventParms[3] & ~0xFF) | (wpn & 0xFF);
-                }
-
-                if (to->events[3] == EV_ITEM_PICKUP || to->events[3] == EV_ITEM_PICKUP_QUIET) {
-                    toEventParm3 = to->eventParms[3];
-                    qboolean autoswitch = (to->eventParms[3] & ITEM_AUTOSWITCHBIT) ? qtrue : qfalse;;
-
-                    to->eventParms[3] = translateGoldModelIdxToSilverModelIdx(to->eventParms[3] & ~ITEM_AUTOSWITCHBIT);
-                    if (autoswitch) {
-                        to->eventParms[3] |= ITEM_AUTOSWITCHBIT;
-                    }
-                }
-
-                if (to->events[3] >= EV_ITEM_PICKUP_QUIET) {
-                    toEvents3 = to->events[3];
-                    to->events[3]--;
-                }
-
-                
             }
 
             if (((from->externalEvent & ~EV_EVENT_BITS) == EV_ITEM_PICKUP || (from->externalEvent & ~EV_EVENT_BITS) == EV_ITEM_PICKUP_QUIET)) {
                 fromExternalEventParm = from->externalEventParm;
-                qboolean autoswitch = (from->externalEventParm & ITEM_AUTOSWITCHBIT) ? qtrue : qfalse;
-                from->externalEventParm = translateGoldModelIdxToSilverModelIdx(from->externalEventParm & ~(ITEM_AUTOSWITCHBIT));
-
-                if (autoswitch) {
-                    from->externalEventParm |= ITEM_AUTOSWITCHBIT;
-                }
-
+                MSG_SpoofAutoswitchModelIndex(&from->externalEventParm, translateGoldModelIdxToSilverModelIdx);
             }
 
             if ((from->externalEvent & ~EV_EVENT_BITS) >= EV_ITEM_PICKUP_QUIET) {
@@ -2984,13 +2769,7 @@ void MSG_WriteDeltaPlayerstate( msg_t *msg, struct playerState_s *from, struct p
 
             if (((to->externalEvent & ~EV_EVENT_BITS) == EV_ITEM_PICKUP || (to->externalEvent & ~EV_EVENT_BITS) == EV_ITEM_PICKUP_QUIET)) {
                 toExternalEventParm = to->externalEventParm;
-                qboolean autoswitch = (to->externalEventParm & ITEM_AUTOSWITCHBIT) ? qtrue : qfalse; 
-                to->externalEventParm = translateGoldModelIdxToSilverModelIdx(to->externalEventParm & ~(ITEM_AUTOSWITCHBIT));
-
-                if (autoswitch) {
-                    to->externalEventParm |= ITEM_AUTOSWITCHBIT;
-                }
-
+                MSG_SpoofAutoswitchModelIndex(&to->externalEventParm, translateGoldModelIdxToSilverModelIdx);
             }
 
             if ((to->externalEvent & ~EV_EVENT_BITS) >= EV_ITEM_PICKUP_QUIET) {
@@ -3069,221 +2848,21 @@ void MSG_WriteDeltaPlayerstate( msg_t *msg, struct playerState_s *from, struct p
 
             */
 
-            if (from->events[0] >= LEGACY_EV_ITEM_PICKUP) {
+            {
+                int *fromEventSaves[MAX_PS_EVENTS] = { &fromEvents0, &fromEvents1, &fromEvents2, &fromEvents3 };
+                int *toEventSaves[MAX_PS_EVENTS] = { &toEvents0, &toEvents1, &toEvents2, &toEvents3 };
+                int *fromEventParmSaves[MAX_PS_EVENTS] = { &fromEventParm0, &fromEventParm1, &fromEventParm2, &fromEventParm3 };
+                int *toEventParmSaves[MAX_PS_EVENTS] = { &toEventParm0, &toEventParm1, &toEventParm2, &toEventParm3 };
 
-                if (from->events[0] == LEGACY_EV_WEAPON_CALLBACK) {
-                    fromEventParm0 = from->eventParms[0];
-                    int wpn = from->eventParms[0] & 0xFF;
-                    wpn = translateSilverWeaponToGoldWeapon(wpn);
-                    from->eventParms[0] = (from->eventParms[0] & ~0xFF) | (wpn & 0xFF);
+                for (i = 0; i < MAX_PS_EVENTS; i++) {
+                    MSG_SpoofPlayerEventSilverToGold(&from->events[i], &from->eventParms[i], fromEventSaves[i], fromEventParmSaves[i]);
+                    MSG_SpoofPlayerEventSilverToGold(&to->events[i], &to->eventParms[i], toEventSaves[i], toEventParmSaves[i]);
                 }
-
-                if (from->events[0] == LEGACY_EV_ITEM_PICKUP) {
-                    fromEventParm0 = from->eventParms[0];
-                    qboolean autoswitch = (from->eventParms[0] & ITEM_AUTOSWITCHBIT) ? qtrue : qfalse;
-                    from->eventParms[0] = translateSilverModelIdxToGoldModelIdx(from->eventParms[0] & ~ITEM_AUTOSWITCHBIT);
-
-                    if (autoswitch) {
-                        from->eventParms[0] |= ITEM_AUTOSWITCHBIT;
-                    }
-                }
-
-
-                if (from->events[0] > LEGACY_EV_ITEM_PICKUP) {
-                    fromEvents0 = from->events[0];
-                    from->events[0]++;
-                }
-
-            }
-
-            if (to->events[0] >= LEGACY_EV_ITEM_PICKUP) {
-
-                if (to->events[0] == LEGACY_EV_WEAPON_CALLBACK) {
-                    toEventParm0 = to->eventParms[0];
-                    int wpn = to->eventParms[0] & 0xFF;
-                    wpn = translateSilverWeaponToGoldWeapon(wpn);
-                    to->eventParms[0] = (to->eventParms[0] & ~0xFF) | (wpn & 0xFF);
-                }
-
-
-                if (to->events[0] == LEGACY_EV_ITEM_PICKUP) {
-                    toEventParm0 = to->eventParms[0];
-                    qboolean autoswitch = (to->eventParms[0] & ITEM_AUTOSWITCHBIT) ? qtrue : qfalse;
-                    to->eventParms[0] = translateSilverModelIdxToGoldModelIdx(to->eventParms[0] & ~ITEM_AUTOSWITCHBIT);
-
-                    if (autoswitch) {
-                        to->eventParms[0] |= ITEM_AUTOSWITCHBIT;
-                    }
-                }
-
-
-                if (to->events[0] > LEGACY_EV_ITEM_PICKUP) {
-                    toEvents0 = to->events[0];
-                    to->events[0]++;
-                };
-            }
-
-            if (from->events[1] >= LEGACY_EV_ITEM_PICKUP) {
-
-                if (from->events[1] == LEGACY_EV_WEAPON_CALLBACK) {
-                    fromEventParm1 = from->eventParms[1];
-                    int wpn = from->eventParms[1] & 0xFF;
-                    wpn = translateSilverWeaponToGoldWeapon(wpn);
-                    from->eventParms[1] = (from->eventParms[1] & ~0xFF) | (wpn & 0xFF);
-                }
-
-                if (from->events[1] == LEGACY_EV_ITEM_PICKUP) {
-                    fromEventParm1 = from->eventParms[1];
-                    qboolean autoswitch = (from->eventParms[1] & ITEM_AUTOSWITCHBIT) ? qtrue : qfalse;
-                    from->eventParms[1] = translateSilverModelIdxToGoldModelIdx(from->eventParms[1] & ~ITEM_AUTOSWITCHBIT);
-
-                    if (autoswitch) {
-                        from->eventParms[1] |= ITEM_AUTOSWITCHBIT;
-                    }
-                }
-
-
-                if (from->events[1] > LEGACY_EV_ITEM_PICKUP) {
-                    fromEvents1 = from->events[1];
-                    from->events[1]++;
-                };
-            }
-
-            if (to->events[1] >= LEGACY_EV_ITEM_PICKUP) {
-
-                if (to->events[1] == LEGACY_EV_WEAPON_CALLBACK) {
-                    toEventParm1 = to->eventParms[1];
-                    int wpn = to->eventParms[1] & 0xFF;
-                    wpn = translateSilverWeaponToGoldWeapon(wpn);
-                    to->eventParms[1] = (to->eventParms[1] & ~0xFF) | (wpn & 0xFF);
-                }
-
-                if (to->events[1] == LEGACY_EV_ITEM_PICKUP) {
-                    toEventParm1 = to->eventParms[1];
-                    qboolean autoswitch = (to->eventParms[1] & ITEM_AUTOSWITCHBIT) ? qtrue : qfalse;
-                    to->eventParms[1] = translateSilverModelIdxToGoldModelIdx(to->eventParms[1] & ~ITEM_AUTOSWITCHBIT);
-
-                    if (autoswitch) {
-                        to->eventParms[1] |= ITEM_AUTOSWITCHBIT;
-                    }
-                }
-
-
-                if (to->events[1] > LEGACY_EV_ITEM_PICKUP) {
-                    toEvents1 = to->events[1];
-                    to->events[1]++;
-                };
-            }
-
-            if (from->events[2] >= LEGACY_EV_ITEM_PICKUP) {
-
-                if (from->events[2] == LEGACY_EV_WEAPON_CALLBACK) {
-                    fromEventParm2 = from->eventParms[2];
-                    int wpn = from->eventParms[2] & 0xFF;
-                    wpn = translateSilverWeaponToGoldWeapon(wpn);
-                    from->eventParms[2] = (from->eventParms[2] & ~0xFF) | (wpn & 0xFF);
-                }
-
-
-                if (from->events[2] == LEGACY_EV_ITEM_PICKUP) {
-                    fromEventParm2 = from->eventParms[2];
-                    qboolean autoswitch = (from->eventParms[2] & ITEM_AUTOSWITCHBIT) ? qtrue : qfalse;
-                    from->eventParms[2] = translateSilverModelIdxToGoldModelIdx(from->eventParms[2] & ~ITEM_AUTOSWITCHBIT);
-
-                    if (autoswitch) {
-                        from->eventParms[2] |= ITEM_AUTOSWITCHBIT;
-                    }
-                }
-
-
-                if (from->events[2] > LEGACY_EV_ITEM_PICKUP) {
-                    fromEvents2 = from->events[2];
-                    from->events[2]++;
-                };
-            }
-
-            if (to->events[2] >= LEGACY_EV_ITEM_PICKUP) {
-
-                if (to->events[2] == LEGACY_EV_WEAPON_CALLBACK) {
-                    toEventParm2 = to->eventParms[2];
-                    int wpn = to->eventParms[2] & 0xFF;
-                    wpn = translateSilverWeaponToGoldWeapon(wpn);
-                    to->eventParms[2] = (to->eventParms[2] & ~0xFF) | (wpn & 0xFF);
-                }
-
-                if (to->events[2] == LEGACY_EV_ITEM_PICKUP) {
-                    toEventParm2 = to->eventParms[2];
-                    qboolean autoswitch = (to->eventParms[2] & ITEM_AUTOSWITCHBIT) ? qtrue : qfalse;
-                    to->eventParms[2] = translateSilverModelIdxToGoldModelIdx(to->eventParms[2] & ~ITEM_AUTOSWITCHBIT);
-
-                    if (autoswitch) {
-                        to->eventParms[2] |= ITEM_AUTOSWITCHBIT;
-                    }
-                }
-
-
-                if (to->events[2] > LEGACY_EV_ITEM_PICKUP) {
-                    toEvents2 = to->events[2];
-                    to->events[2]++;
-                };
-            }
-
-            if (from->events[3] >= LEGACY_EV_ITEM_PICKUP) {
-
-                if (from->events[3] == LEGACY_EV_WEAPON_CALLBACK) {
-                    fromEventParm3 = from->eventParms[3];
-                    int wpn = from->eventParms[3] & 0xFF;
-                    wpn = translateSilverWeaponToGoldWeapon(wpn);
-                    from->eventParms[3] = (from->eventParms[3] & ~0xFF) | (wpn & 0xFF);
-                }
-
-
-                if (from->events[3] == LEGACY_EV_ITEM_PICKUP) {
-                    fromEventParm3 = from->eventParms[3];
-                    qboolean autoswitch = (from->eventParms[3] & ITEM_AUTOSWITCHBIT) ? qtrue : qfalse;
-                    from->eventParms[3] = translateSilverModelIdxToGoldModelIdx(from->eventParms[3] & ~ITEM_AUTOSWITCHBIT);
-
-                    if (autoswitch) {
-                        from->eventParms[3] |= ITEM_AUTOSWITCHBIT;
-                    }
-                }
-
-
-                if (from->events[3] > LEGACY_EV_ITEM_PICKUP) {
-                    fromEvents3 = from->events[3];
-                    from->events[3]++;
-                };
-            }
-
-            if (to->events[3] >= LEGACY_EV_ITEM_PICKUP) {
-
-                if (to->events[3] == LEGACY_EV_WEAPON_CALLBACK) {
-                    toEventParm3 = to->eventParms[3];
-                    int wpn = to->eventParms[3] & 0xFF;
-                    wpn = translateSilverWeaponToGoldWeapon(wpn);
-                    to->eventParms[3] = (to->eventParms[3] & ~0xFF) | (wpn & 0xFF);
-                }
-
-                if (to->events[3] == LEGACY_EV_ITEM_PICKUP) {
-                    toEventParm3 = to->eventParms[3];
-                    qboolean autoswitch = (to->eventParms[3] & ITEM_AUTOSWITCHBIT) ? qtrue : qfalse;
-                    to->eventParms[3] = translateSilverModelIdxToGoldModelIdx(to->eventParms[3] & ~ITEM_AUTOSWITCHBIT);
-
-                    if (autoswitch) {
-                        to->eventParms[3] |= ITEM_AUTOSWITCHBIT;
-                    }
-                }
-
-
-                if (to->events[3] > LEGACY_EV_ITEM_PICKUP) {
-                    toEvents3 = to->events[3];
-                    to->events[3]++;
-                };
             }
 
             if (((from->externalEvent & ~EV_EVENT_BITS) == LEGACY_EV_ITEM_PICKUP)) {
                 fromExternalEventParm = from->externalEventParm;
-                from->externalEventParm = translateSilverModelIdxToGoldModelIdx(from->externalEventParm);
+                MSG_SpoofAutoswitchModelIndex(&from->externalEventParm, translateSilverModelIdxToGoldModelIdx);
 
             }
 
@@ -3295,7 +2874,7 @@ void MSG_WriteDeltaPlayerstate( msg_t *msg, struct playerState_s *from, struct p
 
             if ((to->externalEvent & ~EV_EVENT_BITS) == LEGACY_EV_ITEM_PICKUP) {
                 toExternalEventParm = to->externalEventParm;
-                to->externalEventParm = translateSilverModelIdxToGoldModelIdx(to->externalEventParm); // Was this really modelidx being sent wwith EV_ITEM_PICKUP?
+                MSG_SpoofAutoswitchModelIndex(&to->externalEventParm, translateSilverModelIdxToGoldModelIdx);
             }
 
             if ((to->externalEvent & ~EV_EVENT_BITS) > LEGACY_EV_ITEM_PICKUP) {
