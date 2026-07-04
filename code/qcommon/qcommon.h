@@ -336,6 +336,11 @@ typedef enum {
     VMI_COMPILED
 } vmInterpret_t;
 
+typedef intptr_t (QDECL *VM_EntryPoint_t)( int callNum,
+                  intptr_t arg0, intptr_t arg1, intptr_t arg2, intptr_t arg3,
+                  intptr_t arg4, intptr_t arg5, intptr_t arg6, intptr_t arg7,
+                  intptr_t arg8, intptr_t arg9, intptr_t arg10, intptr_t arg11 );
+
 void    VM_Init( void );
 vm_t    *VM_Create( const char *module, intptr_t (*systemCalls)(qboolean, intptr_t *), vmInterpret_t interpret);
 // module should be bare: "cgame", not "cgame.dll"
@@ -1117,7 +1122,7 @@ NON-PORTABLE SYSTEM SERVICES
 void    Sys_Init (void);
 
 // general development dll loading for virtual machine testing
-void    * QDECL Sys_LoadGameDll( const char *name, intptr_t (QDECL **entryPoint)(int, ...),
+void    * QDECL Sys_LoadGameDll( const char *name, VM_EntryPoint_t *entryPoint,
                   intptr_t (QDECL *systemcalls)(intptr_t, ...) );
 void    Sys_UnloadDll( void *dllHandle );
 
