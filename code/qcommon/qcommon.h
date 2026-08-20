@@ -127,6 +127,8 @@ int translateSilverWeaponToGoldWeapon(int input);
 int translateGoldWeaponToSilverWeapon(int input);
 char* MSG_SpoofAvailableWeaponsFromSilverToGold(char* availableWeapons);
 char* MSG_SpoofAvailableWeaponsFromGoldToSilver(char* availableWeapons);
+char* MSG_SpoofCsItemsFromGoldToSilver(char* cs_items);
+char* MSG_SpoofCsItemsFromSilverToGold(char* cs_items);
 
 //============================================================================
 

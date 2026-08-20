@@ -853,6 +853,18 @@ static void SV_SendClientGameState( client_t *client ) {
                     else {
                         MSG_WriteBigString(&msg, sv.configstrings[start]);
                     }
+                } else if (start == CS_ITEMS) {
+                    if (client->commProto == COMMPROTO_SILVER && !net_runningLegacy->integer) {
+                        Q_strncpyz(bigInfoString, MSG_SpoofCsItemsFromGoldToSilver(sv.configstrings[start]), sizeof(bigInfoString));
+                        MSG_WriteBigString(&msg, bigInfoString);
+                    }
+                    else if (client->commProto == COMMPROTO_GOLD && net_runningLegacy->integer) {
+                        Q_strncpyz(bigInfoString, MSG_SpoofCsItemsFromSilverToGold(sv.configstrings[start]), sizeof(bigInfoString));
+                        MSG_WriteBigString(&msg, bigInfoString);
+                    } else {
+                        MSG_WriteBigString(&msg, sv.configstrings[start]);
+                    }
+
                 }
                 else {
                     MSG_WriteBigString(&msg, sv.configstrings[start]);
