@@ -137,7 +137,21 @@ static void SV_SendConfigstring(client_t *client, int index)
                 SV_SendServerCommand(client, "cs %i \"%s\"\n", index,
                         sv.configstrings[index]);
             }
-        } else {
+        } else if (index == CS_ITEMS){
+            if (client->commProto == COMMPROTO_SILVER && !net_runningLegacy->integer) {
+                Q_strncpyz(bigInfoString, MSG_SpoofCsItemsFromGoldToSilver(sv.configstrings[index]), sizeof(bigInfoString));
+                SV_SendServerCommand(client, "cs %i \"%s\"\n", index,
+                    bigInfoString);
+            } else if (client->commProto == COMMPROTO_GOLD && net_runningLegacy->integer) {
+                Q_strncpyz(bigInfoString, MSG_SpoofCsItemsFromSilverToGold(sv.configstrings[index]), sizeof(bigInfoString));
+                SV_SendServerCommand(client, "cs %i \"%s\"\n", index,
+                    bigInfoString);
+            } else {
+                SV_SendServerCommand(client, "cs %i \"%s\"\n", index,
+                            sv.configstrings[index]);
+            }
+        }
+        else {
             SV_SendServerCommand(client, "cs %i \"%s\"\n", index,
                         sv.configstrings[index]);
         }

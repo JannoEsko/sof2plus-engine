@@ -628,6 +628,26 @@ static int translateGoldModToSilver(int input) {
     return (input & ~0xFF) | meansOfDeathTranslations[mod].translatedMod;
 }
 
+char* MSG_SpoofCsItemsFromGoldToSilver(char* cs_items){
+    static char silverItems[] = "0000000000000000000000000000000000000000000";
+    for(int i=MODELINDEX_ARMOR_BIG; i<=MODELINDEX_WEAPON_MDN11; i++){
+        int silverId = translateGoldModelIdxToSilverModelIdx(i);
+
+        silverItems[silverId] = cs_items[i];
+    }
+    return silverItems;
+}
+
+char* MSG_SpoofCsItemsFromSilverToGold(char* cs_items){
+    static char goldItems[] = "0000000000000000000000000000000000000000000000";
+    for(int i=L_MODELINDEX_ARMOR_BIG; i<=L_MODELINDEX_THERMAL; i++){
+        int goldId = translateSilverModelIdxToGoldModelIdx(i);
+
+        goldItems[goldId] = cs_items[i];
+    }
+    return goldItems;
+}
+
 meansOfDeathDiff_t meansOfDeathTranslationsReversed[] = {
     { L_MOD_UNKNOWN, MOD_UNKNOWN },
 { L_MOD_KNIFE, MOD_KNIFE },
