@@ -596,6 +596,11 @@ static void SVC_Status( netadr_t from, commProtocol_t commProto ) {
     char    infostring[MAX_INFO_STRING];
     char    keywords[MAX_INFO_STRING];
 
+    int redScore = 0, blueScore = 0;
+    // As per disassembly, how the original engine does it, is by checking it per player and then checking for the max value.
+    // I find it weird because we could just call it from the game module, but to preserve the original logic, we will do it this way.
+    
+
     // Prevent using getstatus as an amplifier
     if ( SVC_RateLimitAddress( from, 10, 1000 ) ) {
         Com_DPrintf( "SVC_Status: rate limit from %s exceeded, dropping request\n",
@@ -661,6 +666,14 @@ static void SVC_Status( netadr_t from, commProtocol_t commProto ) {
         if ( cl->state >= CS_CONNECTED ) {
             ps = SV_GameClientNum( i );
 
+            if (ps->persistant[PERS_RED_SCORE] > redScore) {
+                redScore = ps->persistant[PERS_RED_SCORE];
+            }
+
+            else if (ps->persistant[PERS_BLUE_SCORE] > blueScore) {
+                blueScore = ps->persistant[PERS_BLUE_SCORE];
+            }
+
             if (commProto == COMMPROTO_SILVER || commProto == COMMPROTO_DEMO) {
                 Com_sprintf(player, sizeof(player), "%i %i \"%s\"\n",
                     ps->persistant[PERS_SCORE], cl->ping, cl->name);
@@ -679,7 +692,15 @@ static void SVC_Status( netadr_t from, commProtocol_t commProto ) {
         }
     }
 
-    NET_OutOfBandPrint( NS_SERVER, from, commProto, "statusResponse\n%s\n%s", infostring, status );
+    // Don't send the redscore and bluescore to Masterserver query - we will overflow it otherwise.
+
+    if (!SV_NetadrIsMasterserver(from)) {
+        NET_OutOfBandPrint(NS_SERVER, from, commProto, "statusResponse\n%s\\redscore\\%i\\bluescore\\%i\n%s", infostring, redScore, blueScore, status);
+    }
+    else {
+        NET_OutOfBandPrint(NS_SERVER, from, commProto, "statusResponse\n%s\n%s", infostring, status);
+    }
+    
 }
 
 /*

@@ -590,6 +590,7 @@
     <ClCompile Include="..\..\code\qcommon\q_shared.c" />
     <ClCompile Include="..\..\code\qcommon\unzip.c" />
     <ClCompile Include="..\..\code\qcommon\vm.c" />
+    <ClCompile Include="..\..\code\qcommon\vm_aarch64.c" />
     <ClCompile Include="..\..\code\qcommon\vm_armv7l.c" />
     <ClCompile Include="..\..\code\qcommon\vm_interpreted.c" />
     <ClCompile Include="..\..\code\qcommon\vm_powerpc.c" />

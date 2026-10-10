@@ -330,6 +330,9 @@
     <ClCompile Include="..\..\code\server\sv_gametype.c">
       <Filter>Source Files\server</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\code\qcommon\vm_aarch64.c">
+      <Filter>Source Files\qcommon</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\code\asm\qasm.h">
