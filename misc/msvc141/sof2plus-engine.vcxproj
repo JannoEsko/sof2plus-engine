@@ -344,6 +344,7 @@
     <ClCompile Include="..\..\code\server\sv_bot.c" />
     <ClCompile Include="..\..\code\server\sv_ccmds.c" />
     <ClCompile Include="..\..\code\server\sv_client.c" />
+    <ClCompile Include="..\..\code\server\sv_demo.c" />
     <ClCompile Include="..\..\code\server\sv_game.c" />
     <ClCompile Include="..\..\code\server\sv_init.c" />
     <ClCompile Include="..\..\code\server\sv_main.c" />

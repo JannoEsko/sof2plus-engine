@@ -579,6 +579,11 @@ Called by SV_SendClientSnapshot and SV_SendClientGameState
 */
 void SV_SendMessageToClient(msg_t *msg, client_t *client)
 {
+    // emulated demo clients have no connection: never build up or send a message for them
+    if ( client->demoClient ) {
+        return;
+    }
+
     // record information about the message
     client->frames[client->netchan.outgoingSequence & PACKET_MASK].messageSize = msg->cursize;
     client->frames[client->netchan.outgoingSequence & PACKET_MASK].messageSent = svs.time;
@@ -651,6 +656,11 @@ void SV_SendClientMessages(void)
 
         if(!c->state)
             continue;       // not connected
+
+        // emulated demo clients are driven by the demo reader; they are only sent to other players,
+        // never transmitted to themselves
+        if ( sv.demoState == DS_PLAYBACK && c->demoClient )
+            continue;
 
         if(svs.time - c->lastSnapshotTime < c->snapshotMsec * com_timescale->value)
             continue;       // It's not time yet

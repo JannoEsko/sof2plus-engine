@@ -87,6 +87,16 @@ typedef struct {
     int             subBSPIndex;
     int             subBSPModelIndex;
     qboolean        inSubBSP;
+
+    // server-side demo recording/playback (SoF2Plus)
+    fileHandle_t    demoFile;                       // open demo file (0 when none)
+    demoState_t     demoState;                      // current demo activity
+    char            demoName[MAX_QPATH];            // name of the demo currently recorded/played
+    char            demoMap[MAX_QPATH];             // map the demo in demoName was recorded on
+    // previous frame state, used for delta compression of the recorded stream
+    sharedEntity_t  demoEntities[MAX_GENTITIES];
+    playerState_t   demoPlayerStates[MAX_CLIENTS];
+    usercmd_t       demoUserCmds[MAX_CLIENTS];      // last command per slot, for the delta above
 } server_t;
 
 
@@ -184,6 +194,9 @@ typedef struct client_s {
     commProtocol_t      commProto;
 
     int             lastGamestate;
+
+    qboolean        demoClient;         // server-side demo emulated client: simulated and relayed to
+                                        // real players, but NEVER transmitted to (no netchan output)
 } client_t;
 
 //=============================================================================
@@ -283,6 +296,13 @@ extern  cvar_t* sv_altmap;
 
 extern  cvar_t *sv_maxIPConnections;
 
+extern  cvar_t *sv_demoState;           // mirrors the internal demo state (read-only, for scripts)
+extern  cvar_t *sv_democlients;         // number of slots reserved for demo playback (managed automatically)
+extern  cvar_t *sv_autoDemo;            // automatically record a demo on (re)start
+extern  cvar_t *sv_demoTolerant;        // tolerate/ignore unknown demo events while playing back
+extern  cvar_t *sv_demoRecordAnonymous; // strip identifying data (ip/guid) when recording
+extern  cvar_t *sv_demoFreeze;          // pause demo playback (timescale cannot be set to 0)
+
 extern  serverBan_t serverBans[SERVER_MAXBANS];
 extern  int serverBansCount;
 
@@ -349,6 +369,7 @@ void SV_ExecuteClientMessage( client_t *cl, msg_t *msg );
 void SV_UserinfoChanged( client_t *cl );
 
 void SV_SendClientMapChange( client_t *client );
+void SV_SendClientGameState( client_t *client );
 void SV_ClientEnterWorld( client_t *client, usercmd_t *cmd );
 void SV_FreeClient(client_t *client);
 void SV_DropClient( client_t *drop, const char *reason );
@@ -385,6 +406,7 @@ void SV_SendClientSnapshot( client_t *client );
 // sv_game.c
 //
 int SV_NumForGentity( sharedEntity_t *ent );
+void SV_GameSendServerCommand( int clientNum, const char *text );
 sharedEntity_t *SV_GentityNum( int num );
 playerState_t *SV_GameClientNum( int num );
 svEntity_t  *SV_SvEntityForGentity( sharedEntity_t *gEnt );
@@ -402,6 +424,40 @@ void        SV_GT_RunFrame      ( int time );
 void        SV_GT_Start         ( int time );
 int         SV_GT_SendEvent     ( int event, int time, int arg0, int arg1, int arg2, int arg3, int arg4 );
 void        SV_GT_Shutdown      ( void );
+
+//
+// sv_demo.c
+//
+// server-side demo recording/playback (SoF2Plus). These entry points are callable both from
+// the operator console/RCON (demo_record / demo_play / demo_stop) and from a game module via
+// an engine syscall, so the demo facility can be triggered from gamecode as well.
+qboolean SV_DemoRecordStart( const char *name, qboolean anonymous );
+void     SV_DemoRecordStop( void );
+qboolean SV_DemoPlayStart( const char *name );
+void     SV_DemoPlayStop( void );
+qboolean SV_DemoIsRecording( void );
+qboolean SV_DemoIsPlaying( void );
+demoState_t SV_DemoGetState( void );
+int        SV_DemoReservedClients( void );
+
+// hooks called from the engine while a demo is being recorded/played back
+void SV_DemoWriteFrame( void );
+void SV_DemoReadFrame( void );
+void SV_DemoStopPlayback( void );
+void SV_DemoStopRecord( void );
+
+void SV_DemoWriteConfigString( int cs_index, const char *cs_string );
+void SV_DemoWriteClientConfigString( int clientNum, const char *cs_string );
+void SV_DemoWriteClientUserinfo( client_t *client, const char *userinfo );
+void SV_DemoWriteClientCommand( client_t *client, const char *cmd );
+void SV_DemoWriteUserCmd( client_t *client, usercmd_t *cmd );
+void SV_DemoWriteServerCommand( const char *cmd );
+void SV_DemoWriteGameCommand( int clientNum, const char *cmd );
+
+void SV_DemoCompleteDemoName( char *args, int argNum );
+void SV_DemoAutoRecord( void );
+void SV_DemoAddCommands( void );
+void SV_DemoPlaybackAfterRestart( void );
 
 //
 // sv_bot.c

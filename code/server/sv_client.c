@@ -405,6 +405,12 @@ void SV_DirectConnect( netadr_t from, commProtocol_t commProto ) {
         if ( cl->state == CS_FREE ) {
             continue;
         }
+        // A slot reserved for an emulated demo player must never be reused by a real client: when
+        // clients reconnect during the map change that starts a replay they will be dropped.
+        if ( i < SV_DemoReservedClients() ) {
+
+            continue;
+        }
         if ( NET_CompareBaseAdr( from, cl->netchan.remoteAddress )
             && ( cl->netchan.qport == qport
             || from.port == cl->netchan.remoteAddress.port ) ) {
@@ -438,6 +444,12 @@ void SV_DirectConnect( netadr_t from, commProtocol_t commProto ) {
     } else {
         // skip past the reserved slots
         startIndex = sv_privateClients->integer;
+    }
+
+    // skip past the slots reserved for the emulated players of a server-side demo, so a real
+    // (spectating) client can never be given a slot that belongs to the demo
+    if ( startIndex < SV_DemoReservedClients() ) {
+        startIndex = SV_DemoReservedClients();
     }
 
     newcl = NULL;
@@ -559,6 +571,7 @@ void SV_FreeClient(client_t *client)
 {
     SV_Netchan_FreeQueue(client);
     SV_CloseDownload(client);
+    client->demoClient = qfalse;
 }
 
 /*
@@ -708,7 +721,7 @@ It will be resent if the client acknowledges a later message but has
 the wrong gamestate.
 ================
 */
-static void SV_SendClientGameState( client_t *client ) {
+void SV_SendClientGameState( client_t *client ) {
     int         start;
     entityState_t   *base, nullstate;
     msg_t       msg;
@@ -968,6 +981,11 @@ void SV_ClientEnterWorld( client_t *client, usercmd_t *cmd ) {
 
     // call the game begin function
     VM_Call( gvm, GAME_CLIENT_BEGIN, client - svs.clients );
+
+    // while a demo is being replayed, connected players are locked into spectating it
+    if ( sv.demoState == DS_PLAYBACK && ( client - svs.clients ) >= sv_democlients->integer ) {
+        SV_ExecuteClientCommand( client, "team spectator", qtrue );
+    }
 }
 
 /*
@@ -1712,6 +1730,27 @@ void SV_ExecuteClientCommand( client_t *cl, const char *s, qboolean clientOK ) {
     ucmd_t  *u;
     qboolean bProcessed = qfalse;
 
+    // record client commands while a server-side demo is being written
+    if ( sv.demoState == DS_RECORDING ) {
+        SV_DemoWriteClientCommand( cl, s );
+    }
+
+    // A real player watching a replay is locked to spectating. The recorded players are demoClient
+    // slots (they must be able to be put back on their recorded team), and the engine itself issues
+    // "team spectator" when it seats a spectator - so only team switches *away* from spectator are
+    // refused here.
+    if ( sv.demoState == DS_PLAYBACK && !cl->demoClient && !Q_strncmp( s, "team", 4 ) ) {
+        const char *arg = s + 4;
+
+        while ( *arg == ' ' ) {
+            arg++;
+        }
+        if ( *arg && *arg != 's' && *arg != 'S' ) {
+            Com_Printf( "DEMO: %s cannot change teams while a demo is replaying.\n", cl->name );
+            return;
+        }
+    }
+
     Cmd_TokenizeString( s );
 
     // see if it is a server level command
@@ -1839,6 +1878,13 @@ Also called by bot code
 ==================
 */
 void SV_ClientThink (client_t *cl, usercmd_t *cmd) {
+    // Record the command the game is about to consume. Everything before this point (packet
+    // parsing, the cl_packetdup skip in SV_UserMove) has already filtered it, so this is exactly
+    // the input the live game saw - a replay can hand the same input back instead of a stub.
+    if ( sv.demoState == DS_RECORDING ) {
+        SV_DemoWriteUserCmd( cl, cmd );
+    }
+
     cl->lastUsercmd = *cmd;
 
     if ( cl->state != CS_ACTIVE ) {

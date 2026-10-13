@@ -75,6 +75,11 @@ Sends a command string to a client
 ===============
 */
 void SV_GameSendServerCommand( int clientNum, const char *text ) {
+    // record game commands while a server-side demo is being written
+    if ( sv.demoState == DS_RECORDING ) {
+        SV_DemoWriteGameCommand( clientNum, text );
+    }
+
     if ( clientNum == -1 ) {
         SV_SendServerCommand( NULL, "%s", text );
     } else {
