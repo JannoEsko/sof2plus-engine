@@ -119,6 +119,38 @@ This does make `sv_pure` usage useless, but running pure server in a multiprotoc
 
 ---
 
+#### Server-side demos
+A server-side demo records the **game** entirely, each interaction, each command etc. `demo_play` therefore reconstructs the match **on your server** and players connect to spectate it (they are locked into spectator while it runs). The recorded input is fed back into the game module and the recording restores the gametype settings it was made with, so the same mod plays the match out again - while the recording stays authoritative for what spectators see and hear, so a replay cannot drift from the original.
+
+A lot of the ideas on how to do it came from [lrq3000/ioq3-server-side-demos](https://github.com/lrq3000/ioq3-server-side-demos) repository.
+
+Demos are written next to the server gamedir as `<name>.svdm_4` (`*.svdm_*` is git-ignored) and are only readable by SoF2Plus.
+
+**Using it:**
+```
+demo_record [name]     # start recording (automatic filename if omitted);
+demo_stop              # stop recording or playback
+demo_play [name]       # replay a demo on the server
+```
+1. `demo_record` on a live server - e.g. `demo_record scrim1` - and play the match.
+2. `demo_stop` to finish the recording.
+3. `demo_play scrim1` to replay it: the server switches to the recorded map/mod/gametype, plays the match back, and restores your previous configuration when you `demo_stop`.
+
+Notes: the recorded players take the first client slots, so players connected when `demo_play` starts are moved out of them and can reconnect above them to spectate. `sv_maxclients` is never changed, and at least one slot must stay free for a spectator - otherwise `demo_play` refuses with an error.
+
+| Cvar | Default | Comment |
+|:--------------------:|:-----------------:|:---------:|
+| `sv_demoRecordAnonymous` | `0` | `0` = record normally, `1` = strip identifying userinfo (`ip`, `cl_guid`, …), `2` = also pseudonymise player names |
+| `sv_demoFreeze` | `0` | `1` pauses playback (`timescale` cannot be used for this because `SV_Frame` clamps it) |
+| `sv_autoDemo` | `0` | Automatically start recording when the server starts |
+| `sv_demoTolerant` | `0` | Ignore unknown demo records instead of aborting playback |
+| `sv_demoState` | `0` | Read-only mirror of the internal demo state (for scripting) |
+| `sv_democlients` | `0` | Slots reserved for the recorded players while replaying (managed automatically) |
+
+Playback honours `timescale` (slowed/fast-forwarded replays stay in sync).
+
+---
+
 ### 🪳 Debug Builds and Crash Logging
 
 When running a **Debug** release, SoF2Plus provides **automatic stack trace logging** on crashes. Crash logs are dumped into `fs_game/crashdumps/`, fs_game will depend on the cvar you set it to. If `fs_game` is not set, it is defaulted to `fs_homepath`.
