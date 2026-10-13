@@ -212,6 +212,11 @@ void SV_SetConfigstring (int index, const char *val) {
     Z_Free( sv.configstrings[index] );
     sv.configstrings[index] = CopyString( val );
 
+    // save config strings to the demo (player configstrings are relayed to the client writer)
+    if ( sv.demoState == DS_RECORDING ) {
+        SV_DemoWriteConfigString( index, val );
+    }
+
     // send it to all the clients if we aren't
     // spawning a new server
     if ( sv.state == SS_GAME || sv.restarting ) {
@@ -272,6 +277,11 @@ void SV_SetUserinfo( int index, const char *val ) {
 
     Q_strncpyz( svs.clients[index].userinfo, val, sizeof( svs.clients[ index ].userinfo ) );
     Q_strncpyz( svs.clients[index].name, Info_ValueForKey( val, "name" ), sizeof(svs.clients[index].name) );
+
+    // save userinfo changes to the demo (e.g. when the game module sets it)
+    if ( sv.demoState == DS_RECORDING ) {
+        SV_DemoWriteClientUserinfo( &svs.clients[index], val );
+    }
 }
 
 
@@ -488,7 +498,10 @@ static void SV_SendMapChange(void)
 
     if(svs.clients){
         for(i = 0; i < sv_maxclients->integer; i++){
+            // emulated demo clients must be skipped explicitly: a real local client is also
+            // NA_LOOPBACK, so the address type cannot be used to tell them apart
             if(svs.clients[i].state >= CS_CONNECTED
+                && !svs.clients[i].demoClient
                 && svs.clients[i].netchan.remoteAddress.type != NA_BOT)
             {
                 SV_SendClientMapChange(&svs.clients[i]);
@@ -514,6 +527,11 @@ void SV_SpawnServer( char *server, qboolean killBots ) {
     const char  *p;
 
     SV_SendMapChange();
+
+    // a server-side demo recording does not span a map change: close it cleanly
+    if ( sv.demoState == DS_RECORDING ) {
+        SV_DemoRecordStop();
+    }
 
     // shut down the existing game if it is running
     SV_ShutdownGameProgs();
@@ -850,6 +868,9 @@ void SV_SpawnServer( char *server, qboolean killBots ) {
 
     Hunk_SetMark();
 
+    // if a demo playback restart is pending, begin playing it now
+    SV_DemoPlaybackAfterRestart();
+
     Com_Printf ("-----------------------------------\n");
 }
 
@@ -924,6 +945,14 @@ void SV_Init (void)
 
     sv_altmap = Cvar_Get("sv_altmap", "0", CVAR_ROM);
 
+    // server-side demo recording/playback (SoF2Plus)
+    sv_demoState = Cvar_Get( "sv_demoState", "0", 0 );
+    sv_democlients = Cvar_Get( "sv_democlients", "0", 0 );
+    sv_autoDemo = Cvar_Get( "sv_autoDemo", "0", CVAR_ARCHIVE );
+    sv_demoTolerant = Cvar_Get( "sv_demoTolerant", "0", CVAR_ARCHIVE );
+    sv_demoRecordAnonymous = Cvar_Get( "sv_demoRecordAnonymous", "0", CVAR_ARCHIVE );
+    sv_demoFreeze = Cvar_Get( "sv_demoFreeze", "0", CVAR_TEMP );
+
     // initialize bot cvars so they are listed and can be set before loading the botlib
     SV_BotInitCvars();
 
@@ -991,6 +1020,14 @@ void SV_Shutdown( char *finalmsg ) {
     SV_RemoveOperatorCommands();
     SV_MasterShutdown();
     SV_ShutdownGameProgs();
+
+    // stop any server-side demo (do not restart the map while shutting down)
+    if ( sv.demoState == DS_RECORDING ) {
+        SV_DemoRecordStop();
+    } else if ( sv.demoState == DS_PLAYBACK ) {
+        sv.demoState = DS_NONE;
+        SV_DemoStopPlayback();
+    }
 
     // free current level
     SV_ClearServer();

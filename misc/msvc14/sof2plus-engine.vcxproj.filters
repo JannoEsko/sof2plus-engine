@@ -183,6 +183,9 @@
     <ClCompile Include="..\..\code\server\sv_client.c">
       <Filter>Source Files\server</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\code\server\sv_demo.c">
+      <Filter>Source Files\server</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\code\server\sv_game.c">
       <Filter>Source Files\server</Filter>
     </ClCompile>

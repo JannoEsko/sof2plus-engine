@@ -1082,6 +1082,12 @@ qboolean FS_IsDemoExt(const char *filename, int namelen)
             return qtrue;
         }
     }
+    else if (ext_test && !Q_stricmpn(ext_test + 1, SVDEMOEXT, ARRAY_LEN(SVDEMOEXT) - 1))
+    {
+        // SoF2Plus server-side demos use their own extension and carry a versioned,
+        // self-describing header, so no protocol validation is required here.
+        return qtrue;
+    }
 
     return qfalse;
 }

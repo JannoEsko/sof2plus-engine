@@ -355,6 +355,39 @@ static  cmd_function_t  *cmd_functions;     // possible commands to execute
 
 /*
 ============
+Cmd_SaveCmdContext / Cmd_RestoreCmdContext
+
+Save and restore the tokenized command context. Server-side demo playback re-executes
+stored commands (userinfo, team, cs, etc.) through Cmd_TokenizeString/Cmd_ExecuteString,
+which overwrites the command arguments the engine is currently processing. Saving the
+context beforehand lets the engine resume its own processing untouched afterwards.
+============
+*/
+typedef struct cmdContext_s {
+    int     argc;
+    char    *argv[MAX_STRING_TOKENS];                       // points into tokenized
+    char    tokenized[BIG_INFO_STRING + MAX_STRING_TOKENS]; // will have 0 bytes inserted
+    char    cmd[BIG_INFO_STRING];                           // the original command we received (no token processing)
+} cmdContext_t;
+
+static cmdContext_t savedCmdCtx;
+
+void Cmd_SaveCmdContext( void ) {
+    memcpy( savedCmdCtx.argv, cmd_argv, sizeof( cmd_argv ) );
+    memcpy( savedCmdCtx.tokenized, cmd_tokenized, sizeof( cmd_tokenized ) );
+    memcpy( savedCmdCtx.cmd, cmd_cmd, sizeof( cmd_cmd ) );
+    savedCmdCtx.argc = cmd_argc;
+}
+
+void Cmd_RestoreCmdContext( void ) {
+    memcpy( cmd_argv, savedCmdCtx.argv, sizeof( cmd_argv ) );
+    memcpy( cmd_tokenized, savedCmdCtx.tokenized, sizeof( cmd_tokenized ) );
+    memcpy( cmd_cmd, savedCmdCtx.cmd, sizeof( cmd_cmd ) );
+    cmd_argc = savedCmdCtx.argc;
+}
+
+/*
+============
 Cmd_Argc
 ============
 */

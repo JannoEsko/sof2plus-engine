@@ -215,6 +215,12 @@ then buffer them and make sure they get sent in correct order
 
 void SV_Netchan_Transmit( client_t *client, msg_t *msg)
 {
+    // Emulated demo clients have no connection at all, so nothing may ever be encoded or
+    // transmitted to them. 
+    if ( client->demoClient ) {
+        return;
+    }
+
     MSG_WriteByte( msg, svc_EOF );
 
     if(client->netchan.unsentFragments || client->netchan_start_queue)
