@@ -2,7 +2,7 @@
 //
 // g_public.h -- game module information visible to server
 
-#define GAME_API_VERSION    8
+#define GAME_API_VERSION    10
 
 // entity->svFlags
 // the server does not know how to interpret most of the values
@@ -490,6 +490,7 @@ typedef enum {
     GAME_GAMETYPE_COMMAND,          // ( int cmd, int arg0, int arg1, int arg2, int arg3, int arg4 );
 
     GAME_RCON_LOG,
+    GAME_CHECK_API_VERSION,
 
 } gameExport_t;
 

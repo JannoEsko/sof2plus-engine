@@ -2110,6 +2110,17 @@ static void SV_InitGameVM( qboolean restart ) {
         svs.clients[i].gentity = NULL;
     }
 
+    // Inform the mod that we're a more *modern* SoF2Plus server. If this call is missing for newer 1fxplus (which has the syscalls extended), we can run into issues.
+    // Engine->Game shouldn't have an issue if they receive a syscall they do not have, unless someone has modified the engine->game calls themselves to count them as errors.
+    // Original SDK to my knowledge always returns -1 if they do not understand the call.
+    // But we're guarding it with gameModernABI cvar, which should be only valid for 1fxplus.
+
+    if (sv_gameModernABI->integer) {
+        VM_Call(gvm, GAME_CHECK_API_VERSION, GAME_API_VERSION);
+    }
+
+
+
     // use the current msec count for a random seed
     // init for this gamestate
     VM_Call( gvm, GAME_INIT, sv.time, Com_Milliseconds(), restart );
