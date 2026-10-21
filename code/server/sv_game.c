@@ -1373,6 +1373,38 @@ intptr_t SV_GameSystemCalls(qboolean runningQVM, intptr_t *args ) {
             return (intptr_t)gameMemory;
         }
 
+        case LEGACY_G_CLIENT_GETPROTOCOL:
+            // Most likely will not introduce pmove to the Engine module. Therefore this is still a relevant syscall.
+            if (args[1] < 0 || args[1] >= sv_maxclients->integer) {
+                Com_Error(ERR_DROP, "Syscall IsLegacyProtocol: bad clientNum %i", args[1]);
+            }
+            return svs.clients[args[1]].commProto;
+
+        case LEGACY_G_TRANSLATE_SILVER_WPN_TO_GOLD:
+            return translateSilverWeaponToGoldWeapon(args[1]);
+
+        case LEGACY_G_TRANSLATE_GOLD_WPN_TO_SILVER:
+            return translateGoldWeaponToSilverWeapon(args[1]);
+
+        case LEGACY_G_VALIDATE_MAP_NAME:
+            return SV_ValidateMapName(VMA(1), VMA(2), args[3]);
+
+        case LEGACY_G_GET_MAPCYCLE_LIST:
+            return SV_MapcycleList(VMA(1), args[2]);
+
+        case LEGACY_G_SKIP_TO_MAP:
+            SV_SkipToMap(args[1]);
+            return 0;
+
+
+        case LEGACY_G_STARTDEMORECORD:
+            return SV_DemoRecordStart(VMA(1), args[2]);
+
+
+        case LEGACY_G_STOPDEMORECORD:
+            SV_DemoRecordStop();
+            return 0;
+
         default:
             Com_Error(ERR_DROP, "Bad game system trap: %ld", (long int)args[0]);
         }
@@ -2056,6 +2088,14 @@ intptr_t SV_GameSystemCalls(qboolean runningQVM, intptr_t *args ) {
 
         case G_REMOVECOMMAND:
             Cmd_RemoveCommand(VMA(1));
+            return 0;
+
+        case G_STARTDEMORECORD:
+            return SV_DemoRecordStart(VMA(1), args[2]);
+
+
+        case G_STOPDEMORECORD:
+            SV_DemoRecordStop();
             return 0;
 
             //=======================================================
