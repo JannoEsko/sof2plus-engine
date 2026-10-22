@@ -468,6 +468,11 @@ char    *Cmd_ArgsFrom( int arg );
 void    Cmd_ArgsBuffer( char *buffer, int bufferLength );
 char    *Cmd_Cmd (void);
 void    Cmd_Args_Sanitize( void );
+
+// Save/restore the tokenized command context, used by server-side demo playback so
+// that re-executing stored commands does not clobber the command the engine is processing.
+void    Cmd_SaveCmdContext( void );
+void    Cmd_RestoreCmdContext( void );
 // The functions that execute commands get their parameters with these
 // functions. Cmd_Argv () will return an empty string, not a NULL
 // if arg > argc, so string operations are allways safe.

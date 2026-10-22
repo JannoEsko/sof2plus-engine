@@ -2,7 +2,7 @@
 //
 // g_public.h -- game module information visible to server
 
-#define GAME_API_VERSION    8
+#define GAME_API_VERSION    11
 
 // entity->svFlags
 // the server does not know how to interpret most of the values
@@ -441,7 +441,9 @@ typedef enum {
     G_VALIDATE_MAP_NAME,
     G_GET_MAPCYCLE_LIST,
     G_SKIP_TO_MAP,
-    G_REMOVECOMMAND
+    G_REMOVECOMMAND,
+    G_STARTDEMORECORD,
+    G_STOPDEMORECORD
 
 } gameImport_t;
 
@@ -490,6 +492,7 @@ typedef enum {
     GAME_GAMETYPE_COMMAND,          // ( int cmd, int arg0, int arg1, int arg2, int arg3, int arg4 );
 
     GAME_RCON_LOG,
+    GAME_CHECK_API_VERSION,
 
 } gameExport_t;
 
@@ -881,7 +884,15 @@ typedef enum {
 
     // Custom traps also for legacy ABI
     LEGACY_G_REMOVECOMMAND = 1001,
-    LEGACY_G_MEM_INIT
+    LEGACY_G_MEM_INIT,
+    LEGACY_G_CLIENT_GETPROTOCOL,
+    LEGACY_G_TRANSLATE_SILVER_WPN_TO_GOLD,
+    LEGACY_G_TRANSLATE_GOLD_WPN_TO_SILVER,
+    LEGACY_G_VALIDATE_MAP_NAME,
+    LEGACY_G_GET_MAPCYCLE_LIST,
+    LEGACY_G_SKIP_TO_MAP,
+    LEGACY_G_STARTDEMORECORD,
+    LEGACY_G_STOPDEMORECORD
 
 } legacyGameImport_t;
 

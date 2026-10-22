@@ -75,6 +75,11 @@ Sends a command string to a client
 ===============
 */
 void SV_GameSendServerCommand( int clientNum, const char *text ) {
+    // record game commands while a server-side demo is being written
+    if ( sv.demoState == DS_RECORDING ) {
+        SV_DemoWriteGameCommand( clientNum, text );
+    }
+
     if ( clientNum == -1 ) {
         SV_SendServerCommand( NULL, "%s", text );
     } else {
@@ -1368,6 +1373,38 @@ intptr_t SV_GameSystemCalls(qboolean runningQVM, intptr_t *args ) {
             return (intptr_t)gameMemory;
         }
 
+        case LEGACY_G_CLIENT_GETPROTOCOL:
+            // Most likely will not introduce pmove to the Engine module. Therefore this is still a relevant syscall.
+            if (args[1] < 0 || args[1] >= sv_maxclients->integer) {
+                Com_Error(ERR_DROP, "Syscall IsLegacyProtocol: bad clientNum %i", args[1]);
+            }
+            return svs.clients[args[1]].commProto;
+
+        case LEGACY_G_TRANSLATE_SILVER_WPN_TO_GOLD:
+            return translateSilverWeaponToGoldWeapon(args[1]);
+
+        case LEGACY_G_TRANSLATE_GOLD_WPN_TO_SILVER:
+            return translateGoldWeaponToSilverWeapon(args[1]);
+
+        case LEGACY_G_VALIDATE_MAP_NAME:
+            return SV_ValidateMapName(VMA(1), VMA(2), args[3]);
+
+        case LEGACY_G_GET_MAPCYCLE_LIST:
+            return SV_MapcycleList(VMA(1), args[2]);
+
+        case LEGACY_G_SKIP_TO_MAP:
+            SV_SkipToMap(args[1]);
+            return 0;
+
+
+        case LEGACY_G_STARTDEMORECORD:
+            return SV_DemoRecordStart(VMA(1), args[2]);
+
+
+        case LEGACY_G_STOPDEMORECORD:
+            SV_DemoRecordStop();
+            return 0;
+
         default:
             Com_Error(ERR_DROP, "Bad game system trap: %ld", (long int)args[0]);
         }
@@ -1417,6 +1454,12 @@ intptr_t SV_GameSystemCalls(qboolean runningQVM, intptr_t *args ) {
             return 0;
         case G_FS_GETFILELIST:
             return FS_GetFileList(VMA(1), VMA(2), VMA(3), args[4]);
+
+        case G_BOT_GET_MEMORY:
+            return (intptr_t)Z_TagMalloc(args[1], TAG_BOTLIB);
+        case G_BOT_FREE_MEMORY:
+            Z_Free((intptr_t*)args[1]);
+            return 0;
 
         case G_LOCATE_GAME_DATA:
             SV_LocateGameData(VMA(1), args[2], args[3], VMA(4), args[5]);
@@ -2047,6 +2090,14 @@ intptr_t SV_GameSystemCalls(qboolean runningQVM, intptr_t *args ) {
             Cmd_RemoveCommand(VMA(1));
             return 0;
 
+        case G_STARTDEMORECORD:
+            return SV_DemoRecordStart(VMA(1), args[2]);
+
+
+        case G_STOPDEMORECORD:
+            SV_DemoRecordStop();
+            return 0;
+
             //=======================================================
         default:
             Com_Error(ERR_DROP, "Bad game system trap: %ld", (long int)args[0]);
@@ -2098,6 +2149,17 @@ static void SV_InitGameVM( qboolean restart ) {
     for ( i = 0 ; i < sv_maxclients->integer ; i++ ) {
         svs.clients[i].gentity = NULL;
     }
+
+    // Inform the mod that we're a more *modern* SoF2Plus server. If this call is missing for newer 1fxplus (which has the syscalls extended), we can run into issues.
+    // Engine->Game shouldn't have an issue if they receive a syscall they do not have, unless someone has modified the engine->game calls themselves to count them as errors.
+    // Original SDK to my knowledge always returns -1 if they do not understand the call.
+    // But we're guarding it with gameModernABI cvar, which should be only valid for 1fxplus.
+
+    if (sv_gameModernABI->integer) {
+        VM_Call(gvm, GAME_CHECK_API_VERSION, GAME_API_VERSION);
+    }
+
+
 
     // use the current msec count for a random seed
     // init for this gamestate

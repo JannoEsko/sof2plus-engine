@@ -60,6 +60,8 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define MAX_MASTER_SERVERS      5   // number of supported master servers
 
 #define DEMOEXT "dm_"           // standard demo extension
+#define SVDEMOEXT "svdm_"       // server-side demo extension (SoF2Plus)
+#define SVDEMO_VERSIONSTR "4"   // server-side demo format version (keep in sync with SVDEMO_VERSION)
 
 #ifdef _MSC_VER
 
@@ -1192,6 +1194,24 @@ typedef enum
     TEAM_NUM_TEAMS
 
 } team_t;
+
+/*
+ * Server-side demo recording/playback state (SoF2Plus).
+ *   DS_NONE            - no demo activity
+ *   DS_RECORDING       - a server-side demo is currently being written
+ *   DS_WAITINGPLAYBACK - playback requested; waiting for a server restart to apply latched cvars
+ *   DS_PLAYBACK        - a server-side demo is currently being replayed
+ *   DS_WAITINGSTOP     - playback stopped; waiting for a server restart to restore the previous config
+ */
+typedef enum {
+    DS_NONE,
+    DS_WAITINGPLAYBACK,
+    DS_PLAYBACK,
+    DS_WAITINGSTOP,
+    DS_RECORDING,
+
+    DS_NUM_DEMO_STATES
+} demoState_t;
 
 //====================================================================
 

@@ -57,6 +57,12 @@ cvar_t  *sv_floodProtect;
 cvar_t  *sv_mapcycle;
 cvar_t  *sv_lanForceRate; // dedicated 1 (LAN) server forces local client rates to 99999 (bug #491)
 cvar_t  *sv_banFile;
+cvar_t  *sv_demoState;           // mirrors the internal demo state
+cvar_t  *sv_democlients;         // number of slots reserved for demo playback
+cvar_t  *sv_autoDemo;            // automatically record a demo on (re)start
+cvar_t  *sv_demoTolerant;        // tolerate/ignore unknown demo events while playing back
+cvar_t  *sv_demoRecordAnonymous; // strip identifying data (ip/guid) when recording
+cvar_t  *sv_demoFreeze;          // pause demo playback
 
 cvar_t* sv_goldClientMod;
 cvar_t* sv_silverClientMod;
@@ -146,6 +152,13 @@ not have future snapshot_t executed before it is executed
 void SV_AddServerCommand( client_t *client, const char *cmd ) {
     int     index, i;
 
+    // Emulated demo clients have no connection: never queue reliable commands for them (and thus
+    // never trip the "Server command overflow" drop). They are simulated and relayed to the real
+    // players, but nothing is ever transmitted back to them.
+    if ( client->demoClient ) {
+        return;
+    }
+
     // this is very ugly but it's also a waste to for instance send multiple config string updates
     // for the same config string index in one snapshot
 //  if ( SV_ReplacePendingServerCommands( client, cmd ) ) {
@@ -216,6 +229,11 @@ void QDECL SV_SendServerCommand(client_t *cl, const char *fmt, ...) {
     // hack to echo broadcast prints to console
     if ( com_dedicated->integer && !strncmp( (char *)message, "print", 5) ) {
         Com_Printf ("broadcast: %s\n", SV_ExpandNewlines((char *)message) );
+    }
+
+    // record broadcast server commands while a demo is being written
+    if ( sv.demoState == DS_RECORDING ) {
+        SV_DemoWriteServerCommand( (const char *)message );
     }
 
     // send the data to all relevant clients
@@ -1254,8 +1272,24 @@ void SV_Frame( int msec ) {
         svs.time += frameMsec;
         sv.time += frameMsec;
 
-        // let everything in the world think and move
+        // let everything in the world think and move. This must keep running while replaying a
+        // server-side demo: the game's per-client frame (ClientEndFrame / SpectatorClientEndFrame)
+        // is what makes live clients - spectators included - able to move and look around. The demo
+        // keeps the game out of the replay by owning its entities (which are kept non-solid, so the
+        // game's traces and use-checks ignore them) and by not giving it client_t players for the
+        // recorded players.
         VM_Call (gvm, GAME_RUN_FRAME, sv.time);
+
+        // record a server-side demo frame (after GAME_RUN_FRAME so we record the final state)
+        if ( sv.demoState == DS_RECORDING ) {
+            SV_DemoWriteFrame();
+        }
+
+        // play back a server-side demo frame (after GAME_RUN_FRAME so the recorded state - which is
+        // what the spectators are sent later this frame - wins over the game's own)
+        if ( sv.demoState == DS_PLAYBACK ) {
+            SV_DemoReadFrame();
+        }
     }
 
     if ( com_speeds->integer ) {
