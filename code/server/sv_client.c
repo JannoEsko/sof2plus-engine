@@ -186,7 +186,7 @@ static qboolean SV_IsBanned(netadr_t *from, qboolean isexception)
  */
 static char* SV_TranslateOutfitting(commProtocol_t commProto, char* in) {
 
-    if (!in || strlen(in) < OUTFITTING_GROUP_MAX || commProto != COMMPROTO_GOLD || commProto != COMMPROTO_SILVER) {
+    if (!in || strlen(in) < OUTFITTING_GROUP_MAX || (commProto != COMMPROTO_GOLD && commProto != COMMPROTO_SILVER)) {
         return in;
     }
 
